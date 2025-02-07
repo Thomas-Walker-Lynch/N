@@ -1,0 +1,19 @@
+----------------------------------------
+RT-project-share 
+
+  lrwxrwxrwx. 1 Thomas-developer Thomas-developer  41 2025-01-22 06:29 emacs_30.0.92 -> /home/Thomas-masu/developer/emacs_30.0.92
+  lrwxrwxrwx. 1 Thomas-developer Thomas-developer  45 2025-01-22 06:29 RT-project-share -> /home/Thomas-masu/developer/RT-project-share/
+
+
+----------------------------------------
+# for downloads of tar files etc. for third party tools :
+  drwx------. 1 Thomas-developer Thomas-developer 354 2024-12-09 02:45 upstream
+     
+
+----------------------------------------
+generally when installing third party tools from a repo
+
+  . env_administrator
+  cd tools_shared/third_party
+  git clone <project>
+  cd project

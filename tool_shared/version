@@ -1,0 +1,5 @@
+#!/bin/env bash
+script_afp=$(realpath "${BASH_SOURCE[0]}")
+
+echo v0.1
+

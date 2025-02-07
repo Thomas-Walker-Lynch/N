@@ -1,0 +1,9 @@
+#!/bin/bash
+
+# Find empty directories and add a .githolder file
+target_file=".githolder"
+
+find . -type d -empty -print0 | while IFS= read -r -d '' dir; do
+  touch "$dir/$target_file"
+  echo "Added $target_file to $dir"
+done
