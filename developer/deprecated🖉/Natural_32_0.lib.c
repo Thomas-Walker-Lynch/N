@@ -65,23 +65,6 @@
       *destination = *source;
     }
 
-    inline N_32 N_32·c(N_32 *source){
-      return *source;
-    }
-
-    inline N_32 N_32·c_zero(void){
-      return c(N_32·zero);
-    }
-
-    inline N_32 N_32·c_one(void){
-      return c(N_32·one);
-    }
-
-    inline N_32 N_32·c_all_ones(void){
-      return c(N_32·all_ones);
-    }
-
-
     inline void N_32·set_to_zero(N_32 *instance){
       instance->d0 = 0;
     }
