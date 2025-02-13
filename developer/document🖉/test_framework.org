@@ -1,0 +1,37 @@
+* Sectioned Single-File Format
+
+  The sectioned file format provides a structured way to define a library,
+  keeping all relevant code in a single file while ensuring proper separation
+  between interface, implementation, and static definitions.
+
+
+** Structure
+   The source file is divided into three sections:
+
+   - *Interface*: Enabled by defining `IFACE` before including the file.
+   - *Implementation*: Enabled when neither `IFACE` nor `LOCAL` is defined.
+   - *Local (Static) Implementation*: Enabled by defining `LOCAL` before including the file.
+
+** Benefits
+   - **Avoids Split Headers and Source Files**: Eliminates mismatches between `.h` and `.c` files.
+   - **Improves Compiler Optimization**: The compiler has full visibility of static functions.
+   - **Reduces File Clutter**: A single source file contains everything.
+   - **Ensures Correct Compilation**: The build system automatically compiles the correct sections.
+
+** Usage
+   - To include the interface in a `.cli.c` file:
+
+     #+begin_src c
+       #define IFACE
+       #include "module.lib.c"
+       #undef IFACE
+     #+end_src
+
+   - To include the local static implementation:
+
+     #+begin_src c
+       #define LOCAL
+       #include "module.lib.c"
+     #+end_src
+
+   - The `.lib.c` file is compiled into the library separately.

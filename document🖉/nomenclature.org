@@ -1,0 +1,113 @@
+#+TITLE: Memory and Function Dictionaries
+#+AUTHOR: Thomas
+
+* Memory
+
+A *base-relative memory map* is a dictionary that associates symbol names with offsets from a base address. A C ~struct typedef~ is an example means for declaring a base-relative memory map. A base-relative memory map has a length associated with it.
+
+Another term for a *base-relative memory map* is *memory format*. A defined memory format can be bound to a name. The names are required to be distinct, though the formats bound to the names need not be.
+
+An *instance* of <X>, where <X> is the name of a memory format, is a region of memory that has been bound to memory format <X>.
+
+The *type* of an instance is the name of its memory format.
+
+* Pointer
+
+A *pointer* is a memory address that has been bound to a memory format.  This technique is used to assure that writes to the memory address conform to the bound memory format. This helps programs to respect the bounds of memory allocations.
+
+The *type* of a pointer is the name of the memory format it has been bound to.
+
+* Function Pointer
+
+The address of a function can be bound to a name and an array of memory formats, 
+one for each argument and the return value.
+
+The *type* of a function is defined by its name and its array of memory format names.
+
+The type of a function can be looked up from the function's name.
+
+* Function Dictionary
+
+A *function dictionary* is a list of function names and addresses, keyed by function names.
+
+A *function dictionary template* is a collection of function types associated with a specific memory format.
+
+A *function dictionary instance* is a collection of function implementations that conform to a function dictionary template.
+
+* Object
+
+If the potentially many instances of a given memory format are operated on exclusively by a closed set of functions, these functions can be collected into a dictionary called the memory format's *interface*.
+
+Conversely, there is no conventional name for an instance of memory that is manipulated by only a closed set of functions. In TTCA, the term *tableau* was introduced for such memory. (A *tableau* is a small chalkboard that was once used by students and could be erased and rewritten.)
+
+Another term that could be used for such memory is *taishou* (対象), meaning "subject" or "target" in Japanese.
+
+* More about Tableau (Taishou)
+
+In the case where an instance is exclusively operated on by a closed function dictionary, 
+it can be referred to as a *tableau* (or *taishou* 対象). A *tableau* is memory that is 
+subject to modification only through the functions of its function dictionary.
+
+This term avoids the ambiguity of *instance*, which is often used generically in other 
+contexts. The word *tableau* refers to a reusable writing surface, much like the small 
+chalkboards used by students in past centuries. The alternative term *taishou* 対象 
+literally means *the subject of attention*, which closely aligns with its role in programming.
+
+#+BEGIN_SRC c
+// Example: Function Dictionary and Tableau
+typedef struct {
+    uint32_t value;
+} N32·T;  // The tableau type (taishou type)
+
+typedef struct {
+    void (*copy)(N32·T *dst, const N32·T *src);
+    void (*increment)(N32·T *t);
+    void (*print)(const N32·T *t);
+} N32·Λ;  // The function dictionary
+
+void N32·copy(N32·T *dst, const N32·T *src) { dst->value = src->value; }
+void N32·increment(N32·T *t) { t->value++; }
+void N32·print(const N32·T *t) { printf("Value: %u\n", t->value); }
+
+// Function dictionary instance
+const N32·Lambda N32·λ = { .copy = N32·copy, .increment = N32·increment, .print = N32·print };
+
+// Usage example
+N32·T my_number = { .value = 10 }; // creating a tableau
+N32·λ.increment(&my_number);
+N32·λ.print(&my_number);  // Output: Value: 11
+#+END_SRC
+
+(Note, this is a contrived example, not legal usage of the N library. I should
+probably update it.)
+
+* Terminology Considerations
+
+The use of the word *type* in this document aligns with C’s conventions. However, other 
+programming paradigms, such as those in C++ and Java, may define *types* differently. 
+For example, C++ allows types to include behavior (methods), while C’s types only 
+define memory structure.
+
+---
+
+**Summary of Key Terms:**
+- *Memory Format*: A named layout of memory.
+- *Instance*: A memory region adhering to a specific format.
+- *Pointer*: A memory address bound to a memory format.
+- *Function Dictionary*: A set of functions associated with a memory format.
+- *Tableau/Taishou*: A memory instance operated on exclusively by a function dictionary.
+- *Function Dictionary Template*: A function dictionary where function types replace function implementations.
+
+
+A *base-relative memory map* is a dictionary that associates symbol names with offsets 
+from a base address. A C ~struct typedef~ is an example means for declaring a 
+base-relative memory map. A base-relative memory map has a length associated with it.
+
+Another term for a *base-relative memory map* is *memory format*. A
+defined memory format can be bound to a name. The names are required
+to be distinct, though the formats bound to the names need not be.
+
+An *instance* of <X>, where <X> is the name of a memory format, is a region
+of memory that has been bound to memory format <X>.
+
+The *type* of an instance is the name of its memory format.
