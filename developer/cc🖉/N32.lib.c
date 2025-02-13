@@ -84,8 +84,11 @@ typedef N32·T *( *N32·Allocate_MemoryFault )(Extent);
 // Interface
 
 typedef struct{
+
+  N32·T *(*allocate_array_zero)(Extent, N32·Allocate_MemoryFault);
   N32·T *(*allocate_array)(Extent, N32·Allocate_MemoryFault);
   void (*deallocate)(N32·T*);
+
   void (*copy)(N32·T*, N32·T*);
   void (*bit_and)(N32·T*, N32·T*, N32·T*);
   void (*bit_or)(N32·T*, N32·T*, N32·T*);
@@ -96,7 +99,9 @@ typedef struct{
   bool (*gt)(N32·T*, N32·T*);
   bool (*eq)(N32·T*, N32·T*);
   bool (*eq_zero)(N32·T*);
+  N32·Status (*accumulate)(N32·T *accumulator1 ,N32·T *accumulator0 ,...);
   N32·Status (*add)(N32·T*, N32·T*, N32·T*);
+  bool (*increment)(N32·T *a);
   N32·Status (*subtract)(N32·T*, N32·T*, N32·T*);
   N32·Status (*multiply)(N32·T*, N32·T*, N32·T*, N32·T*);
   N32·Status (*divide)(N32·T*, N32·T*, N32·T*, N32·T*);
@@ -104,11 +109,12 @@ typedef struct{
   N32·Status (*shift_left)(Extent, N32·T*, N32·T*, N32·T*);
   N32·Status (*shift_right)(Extent, N32·T*, N32·T*, N32·T*);
   N32·Status (*arithmetic_shift_right)(Extent, N32·T*, N32·T*);
+
   N32·T* (*access)(N32·T*, Extent);
   void (*from_uint32)(N32·T *destination ,uint32_t value);
 } N32·Λ;
 
-extern const N32·Λ N32·λ;
+Local const N32·Λ N32·λ; // initialized in the LOCAL section
 
 #endif
 
@@ -141,7 +147,7 @@ N32·T *N32·msb = &N32·constant[3];
 N32·T *N32·lsb = &N32·constant[1];
 
 // the allocate an array of N32
-N32·T *N32·allocate_array( Extent extent ,N32·T *(*memory_fault)(Extent) ){
+N32·T *N32·allocate_array(Extent extent ,N32·Allocate_MemoryFault memory_fault){
   N32·T *instance = malloc((extent + 1) * sizeof(N32·T) );
   if(!instance){
     return memory_fault ? memory_fault(extent) : NULL;
@@ -149,7 +155,7 @@ N32·T *N32·allocate_array( Extent extent ,N32·T *(*memory_fault)(Extent) ){
   return instance;
 }
 
-N32·T *N32·alloc_array_zero( Extent extent ,N32·T *(*memory_fault)(Extent) ){
+N32·T *N32·allocate_array_zero(Extent extent ,N32·Allocate_MemoryFault memory_fault){
   N32·T *instance = calloc( extent + 1 ,sizeof(N32·T) );
   if(!instance){
     return memory_fault ? memory_fault(extent) : NULL;
@@ -178,7 +184,7 @@ struct N32·T{
 // allocating a block once is more efficient
 // library code writes these, they are not on the interface
 
-Local N32·T N32·t[4]
+Local N32·T N32·t[4];
 
 
 // allocation 
@@ -267,16 +273,15 @@ Local N32·Status N32·accumulate(N32·T *accumulator1 ,N32·T *accumulator0 ,..
 
   va_list args;
   va_start(args ,accumulator0);
-
-  uint64_t *sum = &accumulator0->d0;
-  uint64_t *carry = 0;
+  uint32_t sum = accumulator0->d0;
+  uint32_t carry = 0;
   N32·T *current;
 
   while( (current = va_arg(args ,N32·T *)) ){
-    *sum += current->d0;
-    if(*sum < current->d0){  // Accumulator1 into carry
-      (*carry)++;
-      if(*carry == 0){
+    sum += current->d0;
+    if(sum < current->d0){  // Accumulator1 into carry
+      (carry)++;
+      if(carry == 0){
         va_end(args);
         return N32·Status·accumulator1_overflow;
       }
@@ -313,7 +318,7 @@ Local N32·Status N32·multiply(N32·T *product1 ,N32·T *product0 ,N32·T *a ,N
   product0->d0 = (uint32_t)product;
   product1->d0 = (uint32_t)(product >> 32);
 
-  if(product1->d0 == 0) return N32·status·one_word_product;
+  if(product1->d0 == 0) return N32·Status·one_word_product;
   return N32·Status·two_word_product;
 }
 
@@ -417,10 +422,13 @@ N32·arithmetic_shift_right(uint32_t shift_count, N32·T *operand, N32·T *spill
   return N32·shift_right(shift_count, spill, operand, fill);
 }
 
-// an interface instance
-
 Local const N32·Λ N32·λ = {
-   .copy = N32·copy
+
+  .allocate_array = N32·allocate_array
+  ,.allocate_array_zero = N32·alloc_array_zero
+  ,.deallocate = N32·deallocate
+
+  ,.copy = N32·copy
   ,.bit_and = N32·bit_and
   ,.bit_or = N32·bit_or
   ,.bit_complement = N32·bit_complement
@@ -430,10 +438,9 @@ Local const N32·Λ N32·λ = {
   ,.gt = N32·gt
   ,.eq = N32·eq
   ,.eq_zero = N32·eq_zero
-  ,.eq_one = N32·eq_one
   ,.accumulate = N32·accumulate
   ,.add = N32·add
-  ,.next = N32·next
+  ,.increment = N32·increment
   ,.subtract = N32·subtract
   ,.multiply = N32·multiply
   ,.divide = N32·divide
@@ -441,9 +448,7 @@ Local const N32·Λ N32·λ = {
   ,.shift_left = N32·shift_left
   ,.shift_right = N32·shift_right
   ,.arithmetic_shift_right = N32·arithmetic_shift_right
-  ,.allocate_array = N32·allocate_array
-  ,.allocate_array_zero = N32·alloc_array_zero
-  ,.deallocate = N32·deallocate
+
   ,.access = N32·access
   ,.from_uint32 = N32·from_uint32
 };
