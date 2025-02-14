@@ -119,6 +119,245 @@ bool test_arithmetic(){
   return true;
 }
 
+bool test_bitwise_operations(){
+  // Allocate memory
+  N32·T *array = N32·λ.allocate_array(3, NULL);
+  if(!array) return false;
+
+  N32·T *a = N32·λ.access(array, 0);
+  N32·T *b = N32·λ.access(array, 1);
+  N32·T *result = N32·λ.access(array, 2);
+
+  // a = 0x0F0F0F0F, b = 0xF0F0F0F0
+  N32·λ.from_uint32(a, 0x0F0F0F0F);
+  N32·λ.from_uint32(b, 0xF0F0F0F0);
+
+  // bit_and => expect 0x00000000
+  N32·λ.bit_and(result, a, b);
+  N32·λ.from_uint32(a, 0x00000000);
+  if(N32·λ.compare(result, a) != N32·Order_eq){
+    N32·λ.deallocate(array);
+    return false;
+  }
+
+  // Reset a to 0x0F0F0F0F for next tests
+  N32·λ.from_uint32(a, 0x0F0F0F0F);
+
+  // bit_or => expect 0xFFFFFFFF
+  N32·λ.bit_or(result, a, b);
+  N32·λ.from_uint32(b, 0xFFFFFFFF);
+  if(N32·λ.compare(result, b) != N32·Order_eq){
+    N32·λ.deallocate(array);
+    return false;
+  }
+
+  // bit_complement(a=0x0F0F0F0F) => expect 0xF0F0F0F0
+  N32·λ.from_uint32(a, 0x0F0F0F0F);
+  N32·λ.bit_complement(result, a);
+  N32·λ.from_uint32(b, 0xF0F0F0F0);
+  if(N32·λ.compare(result, b) != N32·Order_eq){
+    N32·λ.deallocate(array);
+    return false;
+  }
+
+  // bit_twos_complement(a=0x0F0F0F0F) => expect 0xF0F0F0F1
+  N32·λ.from_uint32(a, 0x0F0F0F0F);
+  N32·λ.bit_twos_complement(result, a);
+  N32·λ.from_uint32(b, 0xF0F0F0F1);
+  if(N32·λ.compare(result, b) != N32·Order_eq){
+    N32·λ.deallocate(array);
+    return false;
+  }
+
+  N32·λ.deallocate(array);
+  return true;
+}
+
+bool test_comparisons(){
+  // Allocate memory
+  N32·T *array = N32·λ.allocate_array(3, NULL);
+  if(!array) return false;
+
+  N32·T *a = N32·λ.access(array, 0);
+  N32·T *b = N32·λ.access(array, 1);
+  N32·T *c = N32·λ.access(array, 2);
+
+  // First set: a=0, b=42, c=42
+  N32·λ.from_uint32(a, 0);
+  N32·λ.from_uint32(b, 42);
+  N32·λ.from_uint32(c, 42);
+
+  // eq_zero(a) => true
+  if(!N32·λ.eq_zero(a)){
+    N32·λ.deallocate(array);
+    return false;
+  }
+  // eq_zero(b) => false
+  if(N32·λ.eq_zero(b)){
+    N32·λ.deallocate(array);
+    return false;
+  }
+  // eq(b, c) => true
+  if(!N32·λ.eq(b, c)){
+    N32·λ.deallocate(array);
+    return false;
+  }
+  // eq(a, b) => false
+  if(N32·λ.eq(a, b)){
+    N32·λ.deallocate(array);
+    return false;
+  }
+  // compare(a, b) => N32·Order_lt
+  if(N32·λ.compare(a, b) != N32·Order_lt){
+    N32·λ.deallocate(array);
+    return false;
+  }
+  // compare(b, a) => N32·Order_gt
+  if(N32·λ.compare(b, a) != N32·Order_gt){
+    N32·λ.deallocate(array);
+    return false;
+  }
+  // compare(b, c) => N32·Order_eq
+  if(N32·λ.compare(b, c) != N32·Order_eq){
+    N32·λ.deallocate(array);
+    return false;
+  }
+  // lt(a, b) => true, gt(b, a) => true
+  if(!N32·λ.lt(a, b) || !N32·λ.gt(b, a)){
+    N32·λ.deallocate(array);
+    return false;
+  }
+
+  // Second set: a=100, b=50
+  N32·λ.from_uint32(a, 100);
+  N32·λ.from_uint32(b, 50);
+  if(N32·λ.compare(a, b) != N32·Order_gt){
+    N32·λ.deallocate(array);
+    return false;
+  }
+  // eq_zero(a) => false
+  if(N32·λ.eq_zero(a)){
+    N32·λ.deallocate(array);
+    return false;
+  }
+  // eq_zero(b) => false
+  if(N32·λ.eq_zero(b)){
+    N32·λ.deallocate(array);
+    return false;
+  }
+
+  N32·λ.deallocate(array);
+  return true;
+}
+
+bool test_shifts(){
+  // Allocate memory for operand, fill, spill
+  N32·T *array = N32·λ.allocate_array(3, NULL);
+  if(!array) return false;
+
+  N32·T *operand = N32·λ.access(array, 0);
+  N32·T *fill    = N32·λ.access(array, 1);
+  N32·T *spill   = N32·λ.access(array, 2);
+
+  // Subtest A: shift_left(4) with operand=1 => expect operand=16, fill=0, spill=0
+  N32·λ.from_uint32(operand, 1);
+  N32·λ.from_uint32(fill, 0);
+  N32·λ.from_uint32(spill, 0);
+  if(N32·λ.shift_left(4, spill, operand, fill) != N32·Status·ok){
+    N32·λ.deallocate(array);
+    return false;
+  }
+  N32·T *temp = N32·λ.allocate_array(1, NULL);
+  if(!temp){
+    N32·λ.deallocate(array);
+    return false;
+  }
+  N32·λ.from_uint32(temp, 16);
+  if(N32·λ.compare(operand, temp) != N32·Order_eq){
+    N32·λ.deallocate(temp);
+    N32·λ.deallocate(array);
+    return false;
+  }
+  if(N32·λ.compare(fill, N32·zero) != N32·Order_eq){
+    N32·λ.deallocate(temp);
+    N32·λ.deallocate(array);
+    return false;
+  }
+  if(N32·λ.compare(spill, N32·zero) != N32·Order_eq){
+    N32·λ.deallocate(temp);
+    N32·λ.deallocate(array);
+    return false;
+  }
+
+  // Subtest B: shift_left(1) with operand=0x80000000 => expect operand=0, spill=1
+  N32·λ.from_uint32(operand, 0x80000000);
+  N32·λ.from_uint32(fill, 0);
+  N32·λ.from_uint32(spill, 0);
+  if(N32·λ.shift_left(1, spill, operand, fill) != N32·Status·ok){
+    N32·λ.deallocate(temp);
+    N32·λ.deallocate(array);
+    return false;
+  }
+  if(!N32·λ.eq_zero(operand)){
+    N32·λ.deallocate(temp);
+    N32·λ.deallocate(array);
+    return false;
+  }
+  N32·λ.from_uint32(temp, 1);
+  if(N32·λ.compare(spill, temp) != N32·Order_eq){
+    N32·λ.deallocate(temp);
+    N32·λ.deallocate(array);
+    return false;
+  }
+
+  // Subtest C: shift_right(1) with operand=0x80000000 => expect operand=0x40000000, spill=0
+  N32·λ.from_uint32(operand, 0x80000000);
+  N32·λ.from_uint32(fill, 0);
+  N32·λ.from_uint32(spill, 0);
+  if(N32·λ.shift_right(1, spill, operand, fill) != N32·Status·ok){
+    N32·λ.deallocate(temp);
+    N32·λ.deallocate(array);
+    return false;
+  }
+  N32·λ.from_uint32(temp, 0x40000000);
+  if(N32·λ.compare(operand, temp) != N32·Order_eq){
+    N32·λ.deallocate(temp);
+    N32·λ.deallocate(array);
+    return false;
+  }
+  if(!N32·λ.eq_zero(spill)){
+    N32·λ.deallocate(temp);
+    N32·λ.deallocate(array);
+    return false;
+  }
+
+  // Subtest D: arithmetic_shift_right(1) with operand=0x80000000 => expect operand=0xC0000000, spill=0
+  N32·λ.from_uint32(operand, 0x80000000);
+  N32·λ.from_uint32(spill, 0);
+  if(N32·λ.arithmetic_shift_right(1, operand, spill) != N32·Status·ok){
+    N32·λ.deallocate(temp);
+    N32·λ.deallocate(array);
+    return false;
+  }
+  N32·λ.from_uint32(temp, 0xC0000000);
+  if(N32·λ.compare(operand, temp) != N32·Order_eq){
+    N32·λ.deallocate(temp);
+    N32·λ.deallocate(array);
+    return false;
+  }
+  if(!N32·λ.eq_zero(spill)){
+    N32·λ.deallocate(temp);
+    N32·λ.deallocate(array);
+    return false;
+  }
+
+  N32·λ.deallocate(temp);
+  N32·λ.deallocate(array);
+  return true;
+}
+
+
+
 // Include the local section of N32.lib.c for testing
 #define LOCAL
 #include "N32.lib.c"
