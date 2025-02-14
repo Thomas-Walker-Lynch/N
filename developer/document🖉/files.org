@@ -1,0 +1,4 @@
+
+The currently the N{64,32,16,8} files make use of native types for 2x width accumulators.
+
+The generic multi-precision types with 0 digit array extent, will not have native types at 2x size but instead will use two digits.

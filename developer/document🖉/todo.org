@@ -1,0 +1,5 @@
+
+* 2025-02-14T16:12:47Z  new namespace names for the current `.lib_std` files.
+done
+
+* 2025-02-14T16:20:52Z consider adding macros to replace multi-digit sequences with native types when available in some situations.
