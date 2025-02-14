@@ -2,5 +2,16 @@
 
 set -e
 cd ${REPO_HOME}/developer
+
+# # Example m4 invocation:
+# m4 -D__NAMESPACE__=N128· \
+#    -D__DIGIT_EXTENT__=1 \
+#    -D__DIGIT_TYPE__=uint64_t \
+#    -D__EXTENT_TYPE__=uint64_t \
+#    src/N_template.lib.c.m4 > src/N128.lib.c
+
+# m4 -D__NAMESPACE__=N32· -D__DIGIT_EXTENT__=0 -D__DIGIT_TYPE__=uint32_t -D__EXTENT_TYPE__=uint32_t  cc🖉/N_template.lib.c.m4 > cc🖉N32.lib.c
+
+
 /bin/make -f tool🖉/makefile $@
 

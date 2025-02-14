@@ -1,0 +1,107 @@
+#+TITLE: The `.lib.c` Format
+#+AUTHOR: RT C Documentation
+
+
+* 1. The `.lib.c` File: Purpose and Sections
+A single `.lib.c` file contains **interface**, **implementation**, and **local** (private) code in one place. This is an alternative to the traditional “.h + .c” pairing. Below is how the sections typically appear:
+
+* 2 Overview
+1. **Interface Section** (replaces `.h` in traditional C)
+   - Guarded by `#ifndef N32·FACE ... #define N32·FACE ... #endif`.
+   - Contains `typedef`s, structs, enums, function prototypes—everything needed for external code to use the library.
+
+1. **Implementation Section** (the code compiled into the `.o` files, or `.a` or '.so' library)
+   - Enabled by `#define N32·IMPLEMENTATION`.
+   - Provides function bodies, global variables, and logic.  
+   - Typically compiled once into the library object.
+
+3. **Local (Static) Section** (private code)
+   - Guarded by `#ifdef LOCAL`.
+   - Contains helper functions or data only needed in special scenarios (like testing or advanced usage).
+   - Marked with `Local` (instead of `static`) to indicate internal linkage.
+
+* 3 Macros at the Top
+At the very top of a `.lib.c` file, you might see:
+#+BEGIN_SRC c
+//#define N32·DEBUG
+
+#ifndef FACE
+  #define N32·IMPLEMENTATION
+  #define FACE
+#endif
+#+END_SRC
+
+Explanation:
+
+- `N32·DEBUG` can be toggled for debugging features (or left commented).
+- `#ifndef FACE` ensures the code only defines `N32·IMPLEMENTATION` if another block (like an interface-only include) hasn’t already set `FACE`.
+- Once `N32·IMPLEMENTATION` is set, it means “compile the implementation code” by default.
+
+* 4 The Interface Section
+Next, we see something like:
+#+BEGIN_SRC c
+#ifndef N32·FACE
+#define N32·FACE
+
+// interface code here (typedefs, prototypes, extern definitions)
+// ...
+#endif
+#+END_SRC
+
+- Prevents multiple inclusion of the interface (`N32·FACE`).
+- Acts like a header: external code can `#define IFACE` or define `FACE` to pull in these declarations.
+
+* 5 The Implementation Section
+After the interface `#endif`, you typically see:
+#+BEGIN_SRC c
+//--------------------------------------------------------------------------------
+// Implementation
+
+#ifdef N32·IMPLEMENTATION
+  // ...
+  #ifndef LOCAL
+    // Code that goes into the library object (main .o)
+  #endif
+
+  #ifdef LOCAL
+    // Additional local or inline-like code
+  #endif
+#endif
+#+END_SRC
+
+Breakdown:
+
+1. `#ifdef N32·IMPLEMENTATION`:  
+   - If this macro is set (usually when compiling `.lib.c` directly), we include all code for the library’s global functions.
+
+1. `#ifndef LOCAL`:  
+   - Code in this block becomes part of the final `.o` or `.a` file. It is the public “library” portion, implementing the functions declared in the interface.
+
+3. `#ifdef LOCAL`:  
+   - Private or test-only code, included only when some other file includes this `.lib.c` with `#define LOCAL`.
+
+* 6 Local vs. Static
+Inside the local section, you might see `Local N32·T my_array[4]` instead of `static N32·T my_array[4]`. Historically, `static` in C means both “file scope” and “static storage duration.” The RT code style uses `Local` to clarify that these symbols have internal linkage and are “private” to this compilation unit. It’s effectively the same as `static` but more explicit in intent.
+
+* 7 Example Compilation Workflow
+1. **Library Compilation**  
+   - Invoke the compiler on `N31.lib.c` *without* defining `IFACE` or `LOCAL`.  
+   - The file sees `N32·IMPLEMENTATION` → it compiles the interface + implementation code.  
+   - Produces `N31.lib.o`, which can then be placed in `N.a` or `N.so`.
+
+1. **CLI or Test Program**  
+   - A `.cli.c` might do:
+     #+BEGIN_SRC c
+       #define LOCAL
+       #include "N31.lib.c"
+       #undef LOCAL
+       // Now we have local (private) helpers for testing
+
+       int main() {
+         // test or CLI logic calling the library
+       }
+     #+END_SRC
+   - This allows direct access to the library’s “private” or local section for debugging or specialized usage.  
+   - The resulting `.cli.o` links with `N31.lib.o` from the library build, forming an executable.
+
+With this design, everything about a module (interface, implementation, private code) resides in a single file (`.lib.c`). The build system compiles these files into objects and links them to produce either a static or dynamic library. Meanwhile, `.cli.c` files become executables that can optionally include the local code if needed.

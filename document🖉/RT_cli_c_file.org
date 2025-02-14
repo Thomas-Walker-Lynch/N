@@ -1,0 +1,147 @@
+#+TITLE: Writing `.cli.c` Files in RT C
+#+AUTHOR: RT C Documentation
+
+* Overview
+In RT C projects, a file with a “=.cli.c=” suffix typically implements a **command-line interface** i.e. a program that is run from a shell. Thus each `<X>.cli.c` file produces an **executable** named <X>. 
+
+Common usage includes:
+- **Command-Line Interaction** Typical commands run from a shell.
+- **Testing**: Execuatbles that test C functions and print pass fail results.
+- **Reusable Components**: As discussed in the section below on `main`, cli files can be called from other functions, and thus are themselves reusable components.
+
+* 1. Including library header information
+Because a `.cli.c` file makes use functionality from libraries, it will often include file headers. In RT C, there will be a single file for both the header information and C implementation called, such a file will have a `.lib.c` suffix. The separate sections in a `.lib.c` file are gated by the preprocessor macros, `FACE`, and `LOCAL`.  To include the header information from a `.lib.c` file, the `.cli.c` file will have at the top the lines:
+
+#+BEGIN_SRC c
+#define FACE
+#include "some_library.lib.c"
+#include "some__other_library.lib.c"
+... rest of program
+#undef FACE
+#+END_SRC
+
+* 2. Including static defined function
+
+Instead of using `inline` qualifications in the header, in RT coding conventions, static functions are defined in the `.lib.c`, and then included at the bottom of the `.cli.c` file.
+Again this is done by gating the sections of the `.lib.c` file:
+
+#+BEGIN_SRC c
+... rest of program
+
+#define LOCAL
+#include "some_library.lib.c"
+#include "some__other_library.lib.c"
+...
+#undef LOCAL
+#+END_SRC
+
+* 3. Both header information and static defined functions:
+
+#+BEGIN_SRC c
+#define FACE
+#include "N32.lib.c"
+#undef FACE
+
+ ... rest of program
+
+#define LOCAL
+#include "N32.lib.c"
+#undef LOCAL
+#+END_SRC
+
+- `FACE` grants access to the library’s public symbols (structs, function prototypes).
+- `LOCAL` gives access to internal (“static-like”) helpers if needed for deeper testing or debugging. Only define it if you truly require these private functions/data.
+
+The idea here is that that optimizer can do its best work when it sees everything in one place, and thus there is no need for inline functions. On paradigm can be used for defining the program.
+
+* 4. The `main()` Function in `.cli.c`
+Every `.cli.c` includes a `main()` function, but with special guidelines:
+
+1. **Minimal Parsing & Dispatch**  
+   - `main()` is primarily responsible for reading `argc`/`argv`, validating inputs, and directing calls to your actual logic or library code.
+
+2. **Reusable Subroutines**  
+   - If your `.cli.c` logic is extensive, break it out into functions that `main()` calls. This way, **other** `.cli.c` files (or even libraries) can call these same functions directly without launching a new process.
+
+3. **Avoid Side Effects**  
+   - Keep `main()` from doing excessive configuration or global side effects (e.g., changing global state). This maintains a clean separation between your library code and the command-line scaffolding.
+
+4. **Standard Return Codes**  
+   - Return 0 for success, non-zero for errors. If the CLI is also used programmatically by other modules, they can interpret these returns or, better yet, call your internal subroutines that return more detailed error codes.
+
+Example skeleton:
+
+#+BEGIN_SRC c
+int main(int argc, char **argv){
+  // 1. Parse command-line args
+  // 2. Validate or print usage
+  // 3. Call library functions or dedicated subroutines
+  // 4. Return 0 on success, or an error code otherwise
+}
+#+END_SRC
+
+* 5. Example of a `.cli.c` File
+
+
+Below is a **working** `.cli.c` program demonstrating how to use the `N32.lib.c` library:
+
+#+BEGIN_SRC c :tangle test_N32.cli.c
+#include <stdio.h>
+#include <stdlib.h>
+#include <stdint.h>
+
+// Expose the N32 interface by defining FACE
+#define FACE
+#include "N32.lib.c"
+#undef FACE
+
+int main(int argc ,char **argv){
+  if(argc < 3){
+    printf("Usage: %s <a> <b>\n", argv[0]);
+    return 1;
+  }
+
+  uint32_t a_val = (uint32_t)atoi(argv[1]);
+  uint32_t b_val = (uint32_t)atoi(argv[2]);
+
+  // Allocate N32 objects
+  N32·T *numbers = N32·λ.allocate_array(2 ,NULL);
+  if(!numbers){
+    printf("Allocation failed.\n");
+    return 2;
+  }
+
+  // Initialize
+  N32·λ.from_uint32(N32·λ.access(numbers ,0) ,a_val);
+  N32·λ.from_uint32(N32·λ.access(numbers ,1) ,b_val);
+
+  // Perform add
+  N32·T result;
+  N32·λ.add(&result, N32·λ.access(numbers ,0), N32·λ.access(numbers ,1));
+  printf("Sum of %u and %u is %u\n", a_val, b_val, result.d0);
+
+  // Perform subtract
+  N32·λ.subtract(&result, N32·λ.access(numbers ,0), N32·λ.access(numbers ,1));
+  printf("Diff of %u and %u is %u\n", a_val, b_val, result.d0);
+
+  N32·λ.deallocate(numbers);
+  return 0;
+}
+#+END_SRC
+
+Here, `main()` parses two integer arguments, allocates an array of `N32·T`,
+calls the library’s add and subtract functions, and prints the results.
+If this is compiled alongside (or linked against) the `N32.lib.c` object code,
+running `./test_N32 20 12` will produce:
+
+#+BEGIN_EXAMPLE
+Sum of 20 and 12 is 32
+Diff of 20 and 12 is 8
+#+END_EXAMPLE
+
+
+* 6. Summary
+- **`.cli.c`** files produce executables with a central `main()` function focused on argument parsing and error handling.  
+- Actual logic often lives in separate subroutines (or in `.lib.c` libraries) to encourage reuse without spawning new processes.  
+- The RT C approach puts library interfaces in the same file as their implementation (`.lib.c`), so `#define FACE` (and optionally `#define LOCAL`) is how a `.cli.c` pulls in the necessary API or private details.  
+- This design maintains a clean separation between **common library functionality** and **CLI/test scaffolding**, making it easy to test or chain multiple CLIs together within the same program.
