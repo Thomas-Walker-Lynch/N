@@ -1,4 +1,5 @@
 
+
 RT-INCOMMON:=$(REPO_HOME)/tool_shared/third_party/RT-project-share/release
 
 include $(RT-INCOMMON)/make/environment_RT_0

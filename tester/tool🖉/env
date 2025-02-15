@@ -18,7 +18,7 @@ script_afp=$(realpath "${BASH_SOURCE[0]}")
   if $error_bad_env; then return 1; fi
 
 
-export ROLE=developer
+export ROLE=tester
 
 # so we can do the build
 
@@ -37,4 +37,6 @@ export PATH=\
   export ENV=$(script_fp)
   echo ENV "$ENV"
   cd "$REPO_HOME/$ROLE"
+
+
 

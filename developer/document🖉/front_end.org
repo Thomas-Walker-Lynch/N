@@ -1,0 +1,232 @@
+#+TITLE: Python-Based Template Generation (Multi-Module Approach)
+#+AUTHOR: Example
+
+Below is a single Org-mode document containing **four** separate Python modules
+(or scripts). Each code block is top-level (not nested), ensuring they render
+correctly. Together, they demonstrate how to generate a parametric `.lib.c` file
+for an RT code format library.
+
+1. **get_template.py**: Returns a base template with `{named_blank}` placeholders.
+2. **make_constants.py**: Creates the compile-time constants block for zero, one, etc.
+3. **fill_template.py**: Combines the template and constants block, substituting parameters.
+4. **A "Main" generator script** (for instance, `gen_n64_lib.py`) that writes out a final file (like `N64.lib.c`).
+
+You can create additional “main” scripts to produce different `.lib.c` files (e.g., `N128.lib.c`).
+
+---
+
+*1. `get_template.py`*
+
+#+BEGIN_SRC python
+#!/usr/bin/env python3
+
+def get_template():
+    """
+    Returns the base RT C code template, with placeholders like:
+      {NAMESPACE}, {DIGIT_EXTENT}, {DIGIT_TYPE}, {EXTENT_TYPE}, {CONSTANTS_BLOCK}.
+    
+    The final generated .lib.c will replace these with user-specified values.
+    """
+    return r'''#define {NAMESPACE}DEBUG
+
+#ifndef FACE
+  #define {NAMESPACE}IMPLEMENTATION
+  #define FACE
+#endif
+
+#ifndef {NAMESPACE}FACE
+#define {NAMESPACE}FACE
+
+  #include <stdint.h>
+  #include <stdbool.h>
+  #include <stdarg.h>
+  #include <stdlib.h>
+
+  typedef {EXTENT_TYPE} ExtentType;
+  typedef {DIGIT_TYPE} Digit;
+
+  // Digit count is (DIGIT_EXTENT + 1)
+  #define {NAMESPACE}DIGIT_COUNT ( {DIGIT_EXTENT} + 1 )
+
+  typedef struct {NAMESPACE}T{{
+    Digit d[{NAMESPACE}DIGIT_COUNT];
+  }} {NAMESPACE}T;
+
+  // forward declarations for constants
+  extern {NAMESPACE}T *{NAMESPACE}zero;
+  extern {NAMESPACE}T *{NAMESPACE}one;
+  extern {NAMESPACE}T *{NAMESPACE}all_one_bit;
+  extern {NAMESPACE}T *{NAMESPACE}msb;
+
+  // forward declarations for allocations, etc.
+
+#endif // {NAMESPACE}FACE
+
+#ifdef {NAMESPACE}IMPLEMENTATION
+
+#ifndef LOCAL
+  #include <stdarg.h>
+  #include <stdlib.h>
+
+  // compile-time constants
+  {CONSTANTS_BLOCK}
+
+  {NAMESPACE}T *{NAMESPACE}zero        = &{NAMESPACE}constant[0];
+  {NAMESPACE}T *{NAMESPACE}one         = &{NAMESPACE}constant[1];
+  {NAMESPACE}T *{NAMESPACE}all_one_bit = &{NAMESPACE}constant[2];
+  {NAMESPACE}T *{NAMESPACE}msb         = &{NAMESPACE}constant[3];
+
+  // memory allocation prototypes, etc.
+
+#endif // not LOCAL
+
+#ifdef LOCAL
+  // local code: actual function bodies, add, subtract, etc.
+#endif // LOCAL
+
+#endif // {NAMESPACE}IMPLEMENTATION
+'''
+#+END_SRC
+
+---
+
+*2. `make_constants.py`*
+
+#+BEGIN_SRC python
+#!/usr/bin/env python3
+
+def make_constants_block(namespace: str,
+                         digit_type: str,
+                         digit_extent: int) -> str:
+    """
+    Returns a block of code defining static compile-time constants:
+      static {namespace}T {namespace}constant[4] = {
+        { { ...zero... } },
+        { { ...one... } },
+        { { ...allbits... } },
+        { { ...msb... } }
+      };
+
+    The total digit count is digit_extent + 1.
+    """
+    digit_count = digit_extent + 1
+
+    def digits_zero():
+        return ", ".join("0" for _ in range(digit_count))
+
+    def digits_one():
+        # index 0 => 1, rest => 0
+        return ", ".join("1" if i == 0 else "0" for i in range(digit_count))
+
+    def digits_allbits():
+        # each digit => (digit_type)(-1)
+        return ", ".join(f"( {digit_type} )( -1 )" for _ in range(digit_count))
+
+    def digits_msb():
+        # top index => (digit_type)1 << ((sizeof(digit_type)*8)-1)
+        items = []
+        for i in range(digit_count):
+            if i == digit_count - 1:
+                items.append(f"( {digit_type} )1 << ((sizeof({digit_type})*8) - 1)")
+            else:
+                items.append("0")
+        return ", ".join(items)
+
+    return f'''\
+static {namespace}T {namespace}constant[4] = {{
+  {{
+    // zero
+    {{ {digits_zero()} }}
+  }},
+  {{
+    // one
+    {{ {digits_one()} }}
+  }},
+  {{
+    // all bits
+    {{ {digits_allbits()} }}
+  }},
+  {{
+    // msb
+    {{ {digits_msb()} }}
+  }}
+}};'''
+
+#+END_SRC
+
+---
+
+*3. `fill_template.py`*
+
+#+BEGIN_SRC python
+#!/usr/bin/env python3
+
+from get_template import get_template
+from make_constants import make_constants_block
+
+def fill_template(namespace: str,
+                  digit_extent: int,
+                  digit_type: str,
+                  extent_type: str) -> str:
+    """
+    Renders the final .lib.c code by merging:
+      - the base template from get_template()
+      - the compile-time constants block from make_constants_block()
+      - placeholders for namespace, digit_extent, digit_type, extent_type
+    """
+    template = get_template()
+    constants_block = make_constants_block(namespace, digit_type, digit_extent)
+
+    # Substitute placeholders
+    code = template.format(
+        NAMESPACE = namespace,
+        DIGIT_EXTENT = digit_extent,
+        DIGIT_TYPE = digit_type,
+        EXTENT_TYPE = extent_type,
+        CONSTANTS_BLOCK = constants_block
+    )
+    return code
+#+END_SRC
+
+---
+
+*4. An Example “Main” Script, `gen_n64_lib.py`*
+
+#+BEGIN_SRC python
+#!/usr/bin/env python3
+
+import sys
+from fill_template import fill_template
+
+def main():
+    """
+    Example: generate a .lib.c with an 'N64·' namespace,
+    digit_extent=0 => 1 digit total,
+    digit_type='uint32_t',
+    extent_type='uint64_t'.
+    """
+    code = fill_template(
+        namespace = "N64·",
+        digit_extent = 0,     # => digit_count = 1 => 32-bit
+        digit_type = "uint32_t",
+        extent_type = "uint64_t"
+    )
+
+    with open("N64.lib.c", "w") as f:
+        f.write(code)
+    print("Generated N64.lib.c")
+
+if __name__ == "__main__":
+    main()
+#+END_SRC
+
+---
+
+### Usage
+
+1. **Place** these four files side-by-side in your project (e.g., a `scripts/` directory).
+2. **Mark** them as executable (`chmod +x`).  
+3. **Run** `./gen_n64_lib.py` to produce `N64.lib.c`. This file will appear in the same directory (or wherever you prefer).  
+4. **Compile** `N64.lib.c` using your RT C build system (`make -f tool🖉/makefile`, etc.).
+
+You can then create similar scripts like `gen_n128_lib.py` or unify them into a single driver that takes parameters for namespace, digit_extent, etc. The main advantage is that **Python code** for generating constants is much more readable than M4 macros, and you keep the RT code format in your template exactly as it should appear.
