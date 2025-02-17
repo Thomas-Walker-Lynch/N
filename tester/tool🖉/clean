@@ -12,9 +12,14 @@ script_afp=$(realpath "${BASH_SOURCE[0]}")
 set -e
 set -x
 
-  cd "$REPO_HOME"/tester || exit 1
 
-  /bin/make -f tool🖉/makefile $@
+cd "$REPO_HOME"/tester || exit 1
+
+# remove library pulled from release and other scratchpad files
+  rm_na scratchpad/{makefile-cc.deps,*.o} || true
+
+# remove built executables
+  rm_na -f machine/* || true
 
 set +x
 echo "$(script_fn) done."

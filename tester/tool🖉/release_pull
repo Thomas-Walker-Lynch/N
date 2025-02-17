@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 script_afp=$(realpath "${BASH_SOURCE[0]}")
 
-# before running this script, gather everything needed for the release on the scratchpad
+# pulls the library and include files down from the project release directory
 
 # input guards
 
@@ -10,9 +10,6 @@ script_afp=$(realpath "${BASH_SOURCE[0]}")
     echo "$(script_fp):: error: must be run in the $env_must_be environment"
     exit 1
   fi
-
-set -e
-set -x
 
   cd "$REPO_HOME"/tester || exit 1
 
@@ -28,10 +25,8 @@ set -x
     exit 1
   fi
 
+  cp -f ${release_dir}/libN.a scratchpad || true
+  cp -f ${release_dir}/*.lib.c cc || true
 
-  cp ${release_dir}/libN.a scratchpad || true
-  cp ${release_dir}/*.lib.c cc || true
-
-set +x
 echo "$(script_fn) done."
 

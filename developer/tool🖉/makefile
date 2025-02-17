@@ -7,7 +7,7 @@ CFLAGS+=-Werror -include "$(RT-INCOMMON)/make/RT_0.h"
 LINKFLAGS+= -l$(PROJECT)
 LIBFILE=$(LIBDIR)/lib$(PROJECT).a
 
-include $(RT-INCOMMON)/make/targets
+include $(RT-INCOMMON)/make/targets_developer
 -include $(DEPFILE)
 
 

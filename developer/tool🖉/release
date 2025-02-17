@@ -11,9 +11,6 @@ script_afp=$(realpath "${BASH_SOURCE[0]}")
     exit 1
   fi
 
-set -e
-set -x
-
   cd "$REPO_HOME"/developer || exit 1
 
   if [ ! -d scratchpad ]; then
@@ -21,15 +18,16 @@ set -x
     exit 1
   fi
 
+#set -e
+#set -x
+
   release_dir=$(release_dir)
   mkdir -p ${release_dir}
 
-  install_file scratchpad/libN.a ${release_dir} "ug+r"
+  install_file scratchpad/libN.a ${release_dir} "ug+r"  || true
+  install_file cc🖉/*.lib.c ${release_dir} "ug+r"  || true
+  install_file cc/*.lib.c ${release_dir} "ug+r" || true
 
-  # header files
-  install_file {cc,cc🖉}/*.lib.c ${release_dir} "ug+r"
-
-
-set +x
+#set +x
 echo "$(script_fn) done."
 
