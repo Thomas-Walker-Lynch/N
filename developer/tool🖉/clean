@@ -15,8 +15,11 @@ set -x
 
 cd "$REPO_HOME"/developer || exit 1
 
-# remove library pulled from release and other scratchpad files
-  rm_na scratchpad/{makefile-cc.deps,*.o} || true
+# remove synthesized .c files
+  rm_na cc/*
+
+# remove object files, deps file, library, and whatever else is on the scratchpad if anything
+  rm_na scratchpad/* || true
 
 # remove built executables
   rm_na -f machine/* || true

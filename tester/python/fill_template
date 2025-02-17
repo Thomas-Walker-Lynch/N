@@ -20,5 +20,12 @@ def main():
     code = test_N32(namespace = type_name)
     write(code ,type_name);
 
+    # a single digit N32
+    type_name = "N32"
+    code = test_N32(namespace = type_name)
+    write(code ,type_name);
+
+
+
 if __name__ == "__main__":
     main()
