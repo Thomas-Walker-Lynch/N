@@ -1,4 +1,4 @@
-# {NAMESPACE} must be a N32 type.
+# {NS} must be a N32 type.
 #
 # test_N32 can be used to test any 32 bit natural number types. As examples: N32PN the processor native type; N32_4_by_8 a 32 bit natural number type made of 4 digits, where each digit is 8 bits.
 #
@@ -9,7 +9,7 @@ def test_N32(namespace: str) -> str:
     """
     template = template_test_N32()
     code = template.format(
-        NAMESPACE = namespace
+        NS = namespace
     )
     return code
 
@@ -21,7 +21,7 @@ def template_test_N32():
 
 // Enable interface section
 #define FACE
-#include "{NAMESPACE}.lib.c"
+#include "{NS}.lib.c"
 #undef FACE
 
 // Jump buffer for signal handling
@@ -97,285 +97,285 @@ int main(int argc ,char **argv){{
 
 bool test_copy(){{
   // Allocate memory
-  {NAMESPACE}·T *array = {NAMESPACE}·λ.allocate_array(2 ,NULL);
+  {NS}·T *array = {NS}·λ.allocate_array(2 ,NULL);
   if( !array ) return false;
 
   // Access elements via access function
-  {NAMESPACE}·T *a = {NAMESPACE}·λ.access(array ,0);
-  {NAMESPACE}·T *b = {NAMESPACE}·λ.access(array ,1);
+  {NS}·T *a = {NS}·λ.access(array ,0);
+  {NS}·T *b = {NS}·λ.access(array ,1);
 
   // Assign value and copy
-  {NAMESPACE}·λ.from_uint32(a ,42);
-  {NAMESPACE}·λ.copy(b ,a);
+  {NS}·λ.from_uint32(a ,42);
+  {NS}·λ.copy(b ,a);
 
-  bool success = ( {NAMESPACE}·λ.compare(b ,a) == {NAMESPACE}·Order_eq );
-  {NAMESPACE}·λ.deallocate(array);
+  bool success = ( {NS}·λ.compare(b ,a) == {NS}·Order_eq );
+  {NS}·λ.deallocate(array);
   return success;
 }}
 
 bool test_arithmetic(){{
   // Allocate memory
-  {NAMESPACE}·T *array = {NAMESPACE}·λ.allocate_array(3 ,NULL);
+  {NS}·T *array = {NS}·λ.allocate_array(3 ,NULL);
   if( !array ) return false;
 
-  {NAMESPACE}·T *a = {NAMESPACE}·λ.access(array ,0);
-  {NAMESPACE}·T *b = {NAMESPACE}·λ.access(array ,1);
-  {NAMESPACE}·T *result = {NAMESPACE}·λ.access(array ,2);
+  {NS}·T *a = {NS}·λ.access(array ,0);
+  {NS}·T *b = {NS}·λ.access(array ,1);
+  {NS}·T *result = {NS}·λ.access(array ,2);
 
-  {NAMESPACE}·λ.from_uint32(a ,20);
-  {NAMESPACE}·λ.from_uint32(b ,22);
+  {NS}·λ.from_uint32(a ,20);
+  {NS}·λ.from_uint32(b ,22);
 
-  if( {NAMESPACE}·λ.add(result ,a ,b) != {NAMESPACE}·Status·ok ) return false;
-  if( {NAMESPACE}·λ.compare(result ,{NAMESPACE}·λ.access(array ,0)) != {NAMESPACE}·Order_gt ) return false;
+  if( {NS}·λ.add(result ,a ,b) != {NS}·Status·ok ) return false;
+  if( {NS}·λ.compare(result ,{NS}·λ.access(array ,0)) != {NS}·Order_gt ) return false;
 
-  if( {NAMESPACE}·λ.subtract(result ,b ,a) != {NAMESPACE}·Status·ok ) return false;
-  if( {NAMESPACE}·λ.compare(result ,{NAMESPACE}·λ.access(array ,0)) != {NAMESPACE}·Order_lt ) return false;
+  if( {NS}·λ.subtract(result ,b ,a) != {NS}·Status·ok ) return false;
+  if( {NS}·λ.compare(result ,{NS}·λ.access(array ,0)) != {NS}·Order_lt ) return false;
 
-  {NAMESPACE}·λ.deallocate(array);
+  {NS}·λ.deallocate(array);
   return true;
 }}
 
 bool test_bitwise_operations(){{
   // Allocate memory
-  {NAMESPACE}·T *array = {NAMESPACE}·λ.allocate_array(3, NULL);
+  {NS}·T *array = {NS}·λ.allocate_array(3, NULL);
   if(!array) return false;
 
-  {NAMESPACE}·T *a = {NAMESPACE}·λ.access(array, 0);
-  {NAMESPACE}·T *b = {NAMESPACE}·λ.access(array, 1);
-  {NAMESPACE}·T *result = {NAMESPACE}·λ.access(array, 2);
+  {NS}·T *a = {NS}·λ.access(array, 0);
+  {NS}·T *b = {NS}·λ.access(array, 1);
+  {NS}·T *result = {NS}·λ.access(array, 2);
 
   // a = 0x0F0F0F0F, b = 0xF0F0F0F0
-  {NAMESPACE}·λ.from_uint32(a, 0x0F0F0F0F);
-  {NAMESPACE}·λ.from_uint32(b, 0xF0F0F0F0);
+  {NS}·λ.from_uint32(a, 0x0F0F0F0F);
+  {NS}·λ.from_uint32(b, 0xF0F0F0F0);
 
   // bit_and => expect 0x00000000
-  {NAMESPACE}·λ.bit_and(result, a, b);
-  {NAMESPACE}·λ.from_uint32(a, 0x00000000);
-  if({NAMESPACE}·λ.compare(result, a) != {NAMESPACE}·Order_eq){{
-    {NAMESPACE}·λ.deallocate(array);
+  {NS}·λ.bit_and(result, a, b);
+  {NS}·λ.from_uint32(a, 0x00000000);
+  if({NS}·λ.compare(result, a) != {NS}·Order_eq){{
+    {NS}·λ.deallocate(array);
     return false;
   }}
 
   // Reset a to 0x0F0F0F0F for next tests
-  {NAMESPACE}·λ.from_uint32(a, 0x0F0F0F0F);
+  {NS}·λ.from_uint32(a, 0x0F0F0F0F);
 
   // bit_or => expect 0xFFFFFFFF
-  {NAMESPACE}·λ.bit_or(result, a, b);
-  {NAMESPACE}·λ.from_uint32(b, 0xFFFFFFFF);
-  if({NAMESPACE}·λ.compare(result, b) != {NAMESPACE}·Order_eq){{
-    {NAMESPACE}·λ.deallocate(array);
+  {NS}·λ.bit_or(result, a, b);
+  {NS}·λ.from_uint32(b, 0xFFFFFFFF);
+  if({NS}·λ.compare(result, b) != {NS}·Order_eq){{
+    {NS}·λ.deallocate(array);
     return false;
   }}
 
   // bit_complement(a=0x0F0F0F0F) => expect 0xF0F0F0F0
-  {NAMESPACE}·λ.from_uint32(a, 0x0F0F0F0F);
-  {NAMESPACE}·λ.bit_complement(result, a);
-  {NAMESPACE}·λ.from_uint32(b, 0xF0F0F0F0);
-  if({NAMESPACE}·λ.compare(result, b) != {NAMESPACE}·Order_eq){{
-    {NAMESPACE}·λ.deallocate(array);
+  {NS}·λ.from_uint32(a, 0x0F0F0F0F);
+  {NS}·λ.bit_complement(result, a);
+  {NS}·λ.from_uint32(b, 0xF0F0F0F0);
+  if({NS}·λ.compare(result, b) != {NS}·Order_eq){{
+    {NS}·λ.deallocate(array);
     return false;
   }}
 
   // bit_twos_complement(a=0x0F0F0F0F) => expect 0xF0F0F0F1
-  {NAMESPACE}·λ.from_uint32(a, 0x0F0F0F0F);
-  {NAMESPACE}·λ.bit_twos_complement(result, a);
-  {NAMESPACE}·λ.from_uint32(b, 0xF0F0F0F1);
-  if({NAMESPACE}·λ.compare(result, b) != {NAMESPACE}·Order_eq){{
-    {NAMESPACE}·λ.deallocate(array);
+  {NS}·λ.from_uint32(a, 0x0F0F0F0F);
+  {NS}·λ.bit_twos_complement(result, a);
+  {NS}·λ.from_uint32(b, 0xF0F0F0F1);
+  if({NS}·λ.compare(result, b) != {NS}·Order_eq){{
+    {NS}·λ.deallocate(array);
     return false;
   }}
 
-  {NAMESPACE}·λ.deallocate(array);
+  {NS}·λ.deallocate(array);
   return true;
 }}
 
 bool test_comparisons(){{
   // Allocate memory
-  {NAMESPACE}·T *array = {NAMESPACE}·λ.allocate_array(3, NULL);
+  {NS}·T *array = {NS}·λ.allocate_array(3, NULL);
   if(!array) return false;
 
-  {NAMESPACE}·T *a = {NAMESPACE}·λ.access(array, 0);
-  {NAMESPACE}·T *b = {NAMESPACE}·λ.access(array, 1);
-  {NAMESPACE}·T *c = {NAMESPACE}·λ.access(array, 2);
+  {NS}·T *a = {NS}·λ.access(array, 0);
+  {NS}·T *b = {NS}·λ.access(array, 1);
+  {NS}·T *c = {NS}·λ.access(array, 2);
 
   // First set: a=0, b=42, c=42
-  {NAMESPACE}·λ.from_uint32(a, 0);
-  {NAMESPACE}·λ.from_uint32(b, 42);
-  {NAMESPACE}·λ.from_uint32(c, 42);
+  {NS}·λ.from_uint32(a, 0);
+  {NS}·λ.from_uint32(b, 42);
+  {NS}·λ.from_uint32(c, 42);
 
   // eq_zero(a) => true
-  if(!{NAMESPACE}·λ.eq_zero(a)){{
-    {NAMESPACE}·λ.deallocate(array);
+  if(!{NS}·λ.eq_zero(a)){{
+    {NS}·λ.deallocate(array);
     return false;
   }}
   // eq_zero(b) => false
-  if({NAMESPACE}·λ.eq_zero(b)){{
-    {NAMESPACE}·λ.deallocate(array);
+  if({NS}·λ.eq_zero(b)){{
+    {NS}·λ.deallocate(array);
     return false;
   }}
   // eq(b, c) => true
-  if(!{NAMESPACE}·λ.eq(b, c)){{
-    {NAMESPACE}·λ.deallocate(array);
+  if(!{NS}·λ.eq(b, c)){{
+    {NS}·λ.deallocate(array);
     return false;
   }}
   // eq(a, b) => false
-  if({NAMESPACE}·λ.eq(a, b)){{
-    {NAMESPACE}·λ.deallocate(array);
+  if({NS}·λ.eq(a, b)){{
+    {NS}·λ.deallocate(array);
     return false;
   }}
-  // compare(a, b) => {NAMESPACE}·Order_lt
-  if({NAMESPACE}·λ.compare(a, b) != {NAMESPACE}·Order_lt){{
-    {NAMESPACE}·λ.deallocate(array);
+  // compare(a, b) => {NS}·Order_lt
+  if({NS}·λ.compare(a, b) != {NS}·Order_lt){{
+    {NS}·λ.deallocate(array);
     return false;
   }}
-  // compare(b, a) => {NAMESPACE}·Order_gt
-  if({NAMESPACE}·λ.compare(b, a) != {NAMESPACE}·Order_gt){{
-    {NAMESPACE}·λ.deallocate(array);
+  // compare(b, a) => {NS}·Order_gt
+  if({NS}·λ.compare(b, a) != {NS}·Order_gt){{
+    {NS}·λ.deallocate(array);
     return false;
   }}
-  // compare(b, c) => {NAMESPACE}·Order_eq
-  if({NAMESPACE}·λ.compare(b, c) != {NAMESPACE}·Order_eq){{
-    {NAMESPACE}·λ.deallocate(array);
+  // compare(b, c) => {NS}·Order_eq
+  if({NS}·λ.compare(b, c) != {NS}·Order_eq){{
+    {NS}·λ.deallocate(array);
     return false;
   }}
   // lt(a, b) => true, gt(b, a) => true
-  if(!{NAMESPACE}·λ.lt(a, b) || !{NAMESPACE}·λ.gt(b, a)){{
-    {NAMESPACE}·λ.deallocate(array);
+  if(!{NS}·λ.lt(a, b) || !{NS}·λ.gt(b, a)){{
+    {NS}·λ.deallocate(array);
     return false;
   }}
 
   // Second set: a=100, b=50
-  {NAMESPACE}·λ.from_uint32(a, 100);
-  {NAMESPACE}·λ.from_uint32(b, 50);
-  if({NAMESPACE}·λ.compare(a, b) != {NAMESPACE}·Order_gt){{
-    {NAMESPACE}·λ.deallocate(array);
+  {NS}·λ.from_uint32(a, 100);
+  {NS}·λ.from_uint32(b, 50);
+  if({NS}·λ.compare(a, b) != {NS}·Order_gt){{
+    {NS}·λ.deallocate(array);
     return false;
   }}
   // eq_zero(a) => false
-  if({NAMESPACE}·λ.eq_zero(a)){{
-    {NAMESPACE}·λ.deallocate(array);
+  if({NS}·λ.eq_zero(a)){{
+    {NS}·λ.deallocate(array);
     return false;
   }}
   // eq_zero(b) => false
-  if({NAMESPACE}·λ.eq_zero(b)){{
-    {NAMESPACE}·λ.deallocate(array);
+  if({NS}·λ.eq_zero(b)){{
+    {NS}·λ.deallocate(array);
     return false;
   }}
 
-  {NAMESPACE}·λ.deallocate(array);
+  {NS}·λ.deallocate(array);
   return true;
 }}
 
 bool test_shifts(){{
   // Allocate memory for operand, fill, spill
-  {NAMESPACE}·T *array = {NAMESPACE}·λ.allocate_array(3, NULL);
+  {NS}·T *array = {NS}·λ.allocate_array(3, NULL);
   if(!array) return false;
 
-  {NAMESPACE}·T *operand = {NAMESPACE}·λ.access(array, 0);
-  {NAMESPACE}·T *fill    = {NAMESPACE}·λ.access(array, 1);
-  {NAMESPACE}·T *spill   = {NAMESPACE}·λ.access(array, 2);
+  {NS}·T *operand = {NS}·λ.access(array, 0);
+  {NS}·T *fill    = {NS}·λ.access(array, 1);
+  {NS}·T *spill   = {NS}·λ.access(array, 2);
 
   // Subtest A: shift_left(4) with operand=1 => expect operand=16, fill=0, spill=0
-  {NAMESPACE}·λ.from_uint32(operand, 1);
-  {NAMESPACE}·λ.from_uint32(fill, 0);
-  {NAMESPACE}·λ.from_uint32(spill, 0);
-  if({NAMESPACE}·λ.shift_left(4, spill, operand, fill) != {NAMESPACE}·Status·ok){{
-    {NAMESPACE}·λ.deallocate(array);
+  {NS}·λ.from_uint32(operand, 1);
+  {NS}·λ.from_uint32(fill, 0);
+  {NS}·λ.from_uint32(spill, 0);
+  if({NS}·λ.shift_left(4, spill, operand, fill) != {NS}·Status·ok){{
+    {NS}·λ.deallocate(array);
     return false;
   }}
-  {NAMESPACE}·T *temp = {NAMESPACE}·λ.allocate_array(1, NULL);
+  {NS}·T *temp = {NS}·λ.allocate_array(1, NULL);
   if(!temp){{
-    {NAMESPACE}·λ.deallocate(array);
+    {NS}·λ.deallocate(array);
     return false;
   }}
-  {NAMESPACE}·λ.from_uint32(temp, 16);
-  if({NAMESPACE}·λ.compare(operand, temp) != {NAMESPACE}·Order_eq){{
-    {NAMESPACE}·λ.deallocate(temp);
-    {NAMESPACE}·λ.deallocate(array);
+  {NS}·λ.from_uint32(temp, 16);
+  if({NS}·λ.compare(operand, temp) != {NS}·Order_eq){{
+    {NS}·λ.deallocate(temp);
+    {NS}·λ.deallocate(array);
     return false;
   }}
-  if({NAMESPACE}·λ.compare(fill, {NAMESPACE}·zero) != {NAMESPACE}·Order_eq){{
-    {NAMESPACE}·λ.deallocate(temp);
-    {NAMESPACE}·λ.deallocate(array);
+  if({NS}·λ.compare(fill, {NS}·zero) != {NS}·Order_eq){{
+    {NS}·λ.deallocate(temp);
+    {NS}·λ.deallocate(array);
     return false;
   }}
-  if({NAMESPACE}·λ.compare(spill, {NAMESPACE}·zero) != {NAMESPACE}·Order_eq){{
-    {NAMESPACE}·λ.deallocate(temp);
-    {NAMESPACE}·λ.deallocate(array);
+  if({NS}·λ.compare(spill, {NS}·zero) != {NS}·Order_eq){{
+    {NS}·λ.deallocate(temp);
+    {NS}·λ.deallocate(array);
     return false;
   }}
 
   // Subtest B: shift_left(1) with operand=0x80000000 => expect operand=0, spill=1
-  {NAMESPACE}·λ.from_uint32(operand, 0x80000000);
-  {NAMESPACE}·λ.from_uint32(fill, 0);
-  {NAMESPACE}·λ.from_uint32(spill, 0);
-  if({NAMESPACE}·λ.shift_left(1, spill, operand, fill) != {NAMESPACE}·Status·ok){{
-    {NAMESPACE}·λ.deallocate(temp);
-    {NAMESPACE}·λ.deallocate(array);
+  {NS}·λ.from_uint32(operand, 0x80000000);
+  {NS}·λ.from_uint32(fill, 0);
+  {NS}·λ.from_uint32(spill, 0);
+  if({NS}·λ.shift_left(1, spill, operand, fill) != {NS}·Status·ok){{
+    {NS}·λ.deallocate(temp);
+    {NS}·λ.deallocate(array);
     return false;
   }}
-  if(!{NAMESPACE}·λ.eq_zero(operand)){{
-    {NAMESPACE}·λ.deallocate(temp);
-    {NAMESPACE}·λ.deallocate(array);
+  if(!{NS}·λ.eq_zero(operand)){{
+    {NS}·λ.deallocate(temp);
+    {NS}·λ.deallocate(array);
     return false;
   }}
-  {NAMESPACE}·λ.from_uint32(temp, 1);
-  if({NAMESPACE}·λ.compare(spill, temp) != {NAMESPACE}·Order_eq){{
-    {NAMESPACE}·λ.deallocate(temp);
-    {NAMESPACE}·λ.deallocate(array);
+  {NS}·λ.from_uint32(temp, 1);
+  if({NS}·λ.compare(spill, temp) != {NS}·Order_eq){{
+    {NS}·λ.deallocate(temp);
+    {NS}·λ.deallocate(array);
     return false;
   }}
 
   // Subtest C: shift_right(1) with operand=0x80000000 => expect operand=0x40000000, spill=0
-  {NAMESPACE}·λ.from_uint32(operand, 0x80000000);
-  {NAMESPACE}·λ.from_uint32(fill, 0);
-  {NAMESPACE}·λ.from_uint32(spill, 0);
-  if({NAMESPACE}·λ.shift_right(1, spill, operand, fill) != {NAMESPACE}·Status·ok){{
-    {NAMESPACE}·λ.deallocate(temp);
-    {NAMESPACE}·λ.deallocate(array);
+  {NS}·λ.from_uint32(operand, 0x80000000);
+  {NS}·λ.from_uint32(fill, 0);
+  {NS}·λ.from_uint32(spill, 0);
+  if({NS}·λ.shift_right(1, spill, operand, fill) != {NS}·Status·ok){{
+    {NS}·λ.deallocate(temp);
+    {NS}·λ.deallocate(array);
     return false;
   }}
-  {NAMESPACE}·λ.from_uint32(temp, 0x40000000);
-  if({NAMESPACE}·λ.compare(operand, temp) != {NAMESPACE}·Order_eq){{
-    {NAMESPACE}·λ.deallocate(temp);
-    {NAMESPACE}·λ.deallocate(array);
+  {NS}·λ.from_uint32(temp, 0x40000000);
+  if({NS}·λ.compare(operand, temp) != {NS}·Order_eq){{
+    {NS}·λ.deallocate(temp);
+    {NS}·λ.deallocate(array);
     return false;
   }}
-  if(!{NAMESPACE}·λ.eq_zero(spill)){{
-    {NAMESPACE}·λ.deallocate(temp);
-    {NAMESPACE}·λ.deallocate(array);
+  if(!{NS}·λ.eq_zero(spill)){{
+    {NS}·λ.deallocate(temp);
+    {NS}·λ.deallocate(array);
     return false;
   }}
 
   // Subtest D: arithmetic_shift_right(1) with operand=0x80000000 => expect operand=0xC0000000, spill=0
-  {NAMESPACE}·λ.from_uint32(operand, 0x80000000);
-  {NAMESPACE}·λ.from_uint32(spill, 0);
-  if({NAMESPACE}·λ.arithmetic_shift_right(1, operand, spill) != {NAMESPACE}·Status·ok){{
-    {NAMESPACE}·λ.deallocate(temp);
-    {NAMESPACE}·λ.deallocate(array);
+  {NS}·λ.from_uint32(operand, 0x80000000);
+  {NS}·λ.from_uint32(spill, 0);
+  if({NS}·λ.arithmetic_shift_right(1, operand, spill) != {NS}·Status·ok){{
+    {NS}·λ.deallocate(temp);
+    {NS}·λ.deallocate(array);
     return false;
   }}
-  {NAMESPACE}·λ.from_uint32(temp, 0xC0000000);
-  if({NAMESPACE}·λ.compare(operand, temp) != {NAMESPACE}·Order_eq){{
-    {NAMESPACE}·λ.deallocate(temp);
-    {NAMESPACE}·λ.deallocate(array);
+  {NS}·λ.from_uint32(temp, 0xC0000000);
+  if({NS}·λ.compare(operand, temp) != {NS}·Order_eq){{
+    {NS}·λ.deallocate(temp);
+    {NS}·λ.deallocate(array);
     return false;
   }}
-  if(!{NAMESPACE}·λ.eq_zero(spill)){{
-    {NAMESPACE}·λ.deallocate(temp);
-    {NAMESPACE}·λ.deallocate(array);
+  if(!{NS}·λ.eq_zero(spill)){{
+    {NS}·λ.deallocate(temp);
+    {NS}·λ.deallocate(array);
     return false;
   }}
 
-  {NAMESPACE}·λ.deallocate(temp);
-  {NAMESPACE}·λ.deallocate(array);
+  {NS}·λ.deallocate(temp);
+  {NS}·λ.deallocate(array);
   return true;
 }}
 
 
 
-// Include the local section of {NAMESPACE}.lib.c for testing
+// Include the local section of {NS}.lib.c for testing
 #define LOCAL
-#include "{NAMESPACE}.lib.c"
+#include "{NS}.lib.c"
 #undef LOCAL
 '''
