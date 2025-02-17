@@ -19,7 +19,7 @@ def main():
   #----------------------------------------
   # N32 made from 1 digit, of 32 bits.
   
-  type_name = "N32"
+  type_name = "N32_1x32"
   digit_type = "uint32_t"
   digit_extent = 0
 

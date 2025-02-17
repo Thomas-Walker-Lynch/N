@@ -15,16 +15,25 @@ def main():
     generates `.c` source code from templates
     """
 
-    # base line test N32 test
-    type_name = "N32PN"
-    code = test_N32(namespace = type_name)
-    write(code ,type_name);
-
-    # a single digit N32
+    # N32 processor native
     type_name = "N32"
     code = test_N32(namespace = type_name)
     write(code ,type_name);
 
+    # N32 1 digit of 32 bits
+    type_name = "N32_1x32"
+    code = test_N32(namespace = type_name)
+    write(code ,type_name);
+
+    # N32 2 digits of 16 bits
+    # type_name = "N32_4x8"
+    # code = test_N32(namespace = type_name)
+    # write(code ,type_name);
+
+    # N32 4 digits of 8 bits
+    type_name = "N32_4x8"
+    code = test_N32(namespace = type_name)
+    write(code ,type_name);
 
 
 if __name__ == "__main__":
