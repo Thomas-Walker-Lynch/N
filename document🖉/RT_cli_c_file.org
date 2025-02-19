@@ -105,26 +105,26 @@ int main(int argc ,char **argv){
   uint32_t b_val = (uint32_t)atoi(argv[2]);
 
   // Allocate N32 objects
-  N32·T *numbers = N32·λ.allocate_array(2 ,NULL);
+  N32·T *numbers = N32·m.allocate_array(2 ,NULL);
   if(!numbers){
     printf("Allocation failed.\n");
     return 2;
   }
 
   // Initialize
-  N32·λ.from_uint32(N32·λ.access(numbers ,0) ,a_val);
-  N32·λ.from_uint32(N32·λ.access(numbers ,1) ,b_val);
+  N32·m.from_uint32(N32·m.access(numbers ,0) ,a_val);
+  N32·m.from_uint32(N32·m.access(numbers ,1) ,b_val);
 
   // Perform add
   N32·T result;
-  N32·λ.add(&result, N32·λ.access(numbers ,0), N32·λ.access(numbers ,1));
+  N32·m.add(&result, N32·m.access(numbers ,0), N32·m.access(numbers ,1));
   printf("Sum of %u and %u is %u\n", a_val, b_val, result.d0);
 
   // Perform subtract
-  N32·λ.subtract(&result, N32·λ.access(numbers ,0), N32·λ.access(numbers ,1));
+  N32·m.subtract(&result, N32·m.access(numbers ,0), N32·m.access(numbers ,1));
   printf("Diff of %u and %u is %u\n", a_val, b_val, result.d0);
 
-  N32·λ.deallocate(numbers);
+  N32·m.deallocate(numbers);
   return 0;
 }
 #+END_SRC

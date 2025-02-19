@@ -1,6 +1,42 @@
 #+TITLE: Manifold Interpretation
 #+AUTHOR: Thomas
 
+* Concept
+
+The general idea is to use non-standard analysis to formalize the Arithmetic grid of
+Kulisch and Miranker.
+
+The increment on K&M's grid is then the epsilon of non-standard analysis, or a high enough power of epsilon such that the analysis will standardize to zero.
+
+When at a first point located from input X, one can reach a second point by incrementing X, the two points are said to be neighbors, which might or might not be mutual.  Neighbors are said to be connected, neighborliness is not mutual, then connection is directed.
+
+In this manner we can claim that our discrete work is non-standard analysis of continuous functions.  We can then pull in terminology from topology and analysis.
+
+Well at least this establishes a framework for naming some variables.
+
+* Definition of a Manifold in this context.
+
+Given a tableau.
+
+Given a function space of commutable functions of N natural numbers.
+
+Define a mathematical object that consists of a subset of the functions that have
+some of their inputs bound to come from the given tableau.
+
+Curry away the free variable inputs to each functions and build in a direct
+reference to the shared tableau.
+
+Call this object a manifold.
+
+Consider the value of the tableau to be a location on the manifold.  The set
+of functions then behave differently depending where on the manifold we look.
+
+* Nonstandard extension
+
+Define a vector function as the values of the functions on the manifold, say F.  This defines the local space.  Our location in the local space is X, the inputs to the functions.
+
+There is incremental change in F with incremental change in X. Consider F to be describing a Hyperreal space. Standardization leads to differential behavior in the corresponding real space.
+
 
 * Space and Hyperreal Local Space
 

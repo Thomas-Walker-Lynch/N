@@ -111,9 +111,9 @@
 
     N16·T* (*access)(N16·T*, Extent);
     void (*from_uint32)(N16·T *destination ,uint32_t value);
-  } N16·Λ;
+  } N16·M;
 
-  Local const N16·Λ N16·λ; // initialized in the LOCAL section
+  Local const N16·M N16·m; // initialized in the LOCAL section
 
 #endif
 
@@ -397,7 +397,7 @@
       return N16·shift_right(shift_count, spill, operand, fill);
     }
 
-    Local const N16·Λ N16·λ = {
+    Local const N16·M N16·m = {
 
       .allocate_array = N16·allocate_array
      ,.allocate_array_zero = N16·allocate_array_zero

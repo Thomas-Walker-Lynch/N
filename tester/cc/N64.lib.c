@@ -114,9 +114,9 @@
     N64·T*      (*access)(N64·T*, Extent);
     void        (*from_uint64)(N64·T *destination, uint64_t value);
 
-  } N64·Λ;
+  } N64·M;
 
-  Local const N64·Λ N64·λ; // initialized in the LOCAL section
+  Local const N64·M N64·m; // initialized in the LOCAL section
 
 #endif
 
@@ -442,7 +442,7 @@
       return N64·shift_right(shift_count, spill, operand, fill);
     }
 
-    Local const N64·Λ N64·λ = {
+    Local const N64·M N64·m = {
       .allocate_array = N64·allocate_array
      ,.allocate_array_zero = N64·allocate_array_zero
      ,.deallocate = N64·deallocate

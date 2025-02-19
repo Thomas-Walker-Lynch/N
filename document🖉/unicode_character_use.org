@@ -12,9 +12,9 @@ The following characters are used:
 · - The center dot is a proposed namespace sepearator for C. Currently it is used ad       
     hoc as the prefix portion of identifiers. There is some support in Python scripts.
 
-Λ - This is used to name function dictionary type. Function dictionaries are struct types
+M - This is used to name function dictionary type. Function dictionaries are struct types
     full of functions, and act as interfaces.
 
-λ - A common name or prefix for an instance of a function dictionary type. This follows
+m - A common name or prefix for an instance of a function dictionary type. This follows
     the convention that type names are PascalCase, and instance names are snake_case.
      

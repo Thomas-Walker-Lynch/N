@@ -111,9 +111,9 @@
 
     N8·T* (*access)(N8·T*, Extent);
     void (*from_uint32)(N8·T *destination ,uint32_t value);
-  } N8·Λ;
+  } N8·M;
 
-  Local const N8·Λ N8·λ; // initialized in the LOCAL section
+  Local const N8·M N8·m; // initialized in the LOCAL section
 
 #endif
 
@@ -397,7 +397,7 @@
       return N8·shift_right(shift_count, spill, operand, fill);
     }
 
-    Local const N8·Λ N8·λ = {
+    Local const N8·M N8·m = {
 
       .allocate_array = N8·allocate_array
      ,.allocate_array_zero = N8·allocate_array_zero

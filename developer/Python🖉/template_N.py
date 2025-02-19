@@ -1,4 +1,11 @@
-def N(namespace: str ,digit_type: str ,digit_extent: int ,constants_block: str) -> str:
+def N(
+      namespace: str 
+      ,digit_type: str 
+      ,digit_array_extent_type: int
+      ,address_type: str
+      ,constants_block: str
+      ) -> str:
+
     """
     Returns a source code file for cc to munch on
     """
@@ -6,7 +13,8 @@ def N(namespace: str ,digit_type: str ,digit_extent: int ,constants_block: str) 
     code = template.format(
         NS = namespace
         ,DIGIT_TYPE = digit_type
-        ,DIGIT_EXTENT = digit_extent
+        ,DIGIT_ARRAY_EXTENT_TYPE = digit_array_extent_type
+        ,AddressType = address_type
         ,CONSTANTS_BLOCK = constants_block
     )
     return code
@@ -14,10 +22,9 @@ def N(namespace: str ,digit_type: str ,digit_extent: int ,constants_block: str) 
 def template_N():
     return r'''
 /*
-  M - The type for the function dictionary.
-  m - A function dictionary.
-  T - Is the type for the tableau.  The tableau is a memory shared among the functions
-      In the function dictionary.
+  M - The type for the function dictionary (manifold).
+  m - a manifold instance, there can be many, m0, m1 ...
+  T - Is the type for the tableau. 
 
 */
 #define {NS}·DEBUG
@@ -41,9 +48,10 @@ def template_N():
   //----------------------------------------
   // Instance Data (Declaration Only)
 
-  typedef uint32_t Extent;
-  typedef uint32_t Digit;
+  typedef {ADDRESS_TYPE} Address;
+// +3 - 1  due to 0x and the trailing null character, and being an extent
 
+  // tableau type, encapsulated data is unavailable to user code
   typedef struct {NS}·T {NS}·T;
 
   extern {NS}·T *{NS}·zero;
@@ -58,7 +66,7 @@ def template_N():
   typedef enum{{
     {NS}·Status·ok = 0
     ,{NS}·Status·overflow = 1
-    ,{NS}·Status·accumulator1_overflow = 2
+    ,{NS}·Status·accumulator_overflow = 2
     ,{NS}·Status·carry = 3
     ,{NS}·Status·borrow = 4
     ,{NS}·Status·undefined_divide_by_zero = 5
@@ -75,27 +83,35 @@ def template_N():
     ,{NS}·Order_gt = 1
   }} {NS}·Order;
 
-  typedef {NS}·T *( *{NS}·Allocate_MemoryFault )(Extent);
+  // when alloc runs out of memory
+  typedef {NS}·T *( *{NS}·Allocate_MemoryFault )(Address);
 
   //----------------------------------------
   // Interface
 
   typedef struct{{
 
-    {NS}·T *(*allocate_array_zero)(Extent, {NS}·Allocate_MemoryFault);
-    {NS}·T *(*allocate_array)(Extent, {NS}·Allocate_MemoryFault);
+    // memory allocation 
+    {NS}·T *(*allocate_array_zero)(Address, {NS}·Allocate_MemoryFault);
+    {NS}·T *(*allocate_array)(Address, {NS}·Allocate_MemoryFault);
     void (*deallocate)({NS}·T*);
+    {NS}·T* (*access)({NS}·T*, Address);
 
+    // results fits in operand type functions
     void (*copy)({NS}·T*, {NS}·T*);
     void (*bit_and)({NS}·T*, {NS}·T*, {NS}·T*);
     void (*bit_or)({NS}·T*, {NS}·T*, {NS}·T*);
     void (*bit_complement)({NS}·T*, {NS}·T*);
     void (*bit_twos_complement)({NS}·T*, {NS}·T*);
+
+    // tests  
     {NS}·Order (*compare)({NS}·T*, {NS}·T*);
     bool (*lt)({NS}·T*, {NS}·T*);
     bool (*gt)({NS}·T*, {NS}·T*);
     bool (*eq)({NS}·T*, {NS}·T*);
     bool (*eq_zero)({NS}·T*);
+
+    // arithmetic
     {NS}·Status (*accumulate)({NS}·T *accumulator1 ,{NS}·T *accumulator0 ,...);
     {NS}·Status (*add)({NS}·T*, {NS}·T*, {NS}·T*);
     bool (*increment)({NS}·T *a);
@@ -103,15 +119,20 @@ def template_N():
     {NS}·Status (*multiply)({NS}·T*, {NS}·T*, {NS}·T*, {NS}·T*);
     {NS}·Status (*divide)({NS}·T*, {NS}·T*, {NS}·T*, {NS}·T*);
     {NS}·Status (*modulus)({NS}·T*, {NS}·T*, {NS}·T*);
-    {NS}·Status (*shift_left)(Extent, {NS}·T*, {NS}·T*, {NS}·T*);
-    {NS}·Status (*shift_right)(Extent, {NS}·T*, {NS}·T*, {NS}·T*);
-    {NS}·Status (*arithmetic_shift_right)(Extent, {NS}·T*, {NS}·T*);
 
-    {NS}·T* (*access)({NS}·T*, Extent);
+    // shift
+    {NS}·Status (*shift_left)(Address, {NS}·T*, {NS}·T*, {NS}·T*);
+    {NS}·Status (*shift_right)(Address, {NS}·T*, {NS}·T*, {NS}·T*);
+    {NS}·Status (*arithmetic_shift_right)(Address, {NS}·T*, {NS}·T*);
+
+    // import/export
+    void (*to_string)(char [print_buffer_extent + 1] ,uint32_t value);
     void (*from_uint32)({NS}·T *destination ,uint32_t value);
-  }} {NS}·Λ;
 
-  Local const {NS}·Λ {NS}·λ; // initialized in the LOCAL section
+
+  }} {NS}·M;
+
+  Local const {NS}·M {NS}·m; // initialized in the LOCAL section
 
 #endif
 
@@ -120,31 +141,23 @@ def template_N():
 
 #ifdef {NS}·IMPLEMENTATION
 
-  // this part goes into the library
+  typedef {DIGIT_TYPE} Digit;
+  const {DIGIT_ARRAY_EXTENT_TYPE} digit_array_extent = {DIGIT_ARRAY_EXTENT};
+
+  // full type definition for Tableau
+  struct {NS}·T{{
+    Digit d[digit_array_extent + 1];
+  }};
+
+  // this part goes into Nlib.a
   #ifndef LOCAL
 
     #include <stdarg.h>
     #include <stdlib.h>
-
-    struct {NS}·T{{
-      Digit d0;
-    }};
-
-    {NS}·T {NS}·constant[4] = {{
-      {{.d0 = 0}},
-      {{.d0 = 1}},
-      {{.d0 = ~(uint32_t)0}},
-      {{.d0 = 1 << 31}}
-    }};
-
-    {NS}·T *{NS}·zero = &{NS}·constant[0];
-    {NS}·T *{NS}·one = &{NS}·constant[1];
-    {NS}·T *{NS}·all_one_bit = &{NS}·constant[2];
-    {NS}·T *{NS}·msb = &{NS}·constant[3];
-    {NS}·T *{NS}·lsb = &{NS}·constant[1];
+    #include <stdio.h>
 
     // the allocate an array of N32
-    {NS}·T *{NS}·allocate_array(Extent extent ,{NS}·Allocate_MemoryFault memory_fault){{
+    {NS}·T *{NS}·allocate_array(Address extent ,{NS}·Allocate_MemoryFault memory_fault){{
       {NS}·T *instance = malloc((extent + 1) * sizeof({NS}·T) );
       if(!instance){{
         return memory_fault ? memory_fault(extent) : NULL;
@@ -152,7 +165,7 @@ def template_N():
       return instance;
     }}
 
-    {NS}·T *{NS}·allocate_array_zero(Extent extent ,{NS}·Allocate_MemoryFault memory_fault){{
+    {NS}·T *{NS}·allocate_array_zero(Address extent ,{NS}·Allocate_MemoryFault memory_fault){{
       {NS}·T *instance = calloc( extent + 1 ,sizeof({NS}·T) );
       if(!instance){{
         return memory_fault ? memory_fault(extent) : NULL;
@@ -164,16 +177,40 @@ def template_N():
       free(unencumbered);
     }}
 
+  char *to_string({NS}·T *n) {
+    // Each byte requires two hex characters, plus "0x" prefix and null terminator
+    const Address string_length = (sizeof(Digit) * (digit_array_extent + 1) * 2) + 3;   
+    char *buffer = malloc(string_length);
+    if (!buffer) {
+      return NULL;  // Handle allocation failure
+    }
+
+    strcpy(buffer, "0x");  // Prefix the hex representation
+    char *ps = buffer + 2;  // Pointer to string buffer (after "0x")
+
+    // Pointer to the most significant digit
+    Digit *pd = n->d + digit_array_extent;
+
+    for (; pd >= n->d; pd--) {
+      sprintf(ps, "%0*X", (int)(sizeof(Digit) * 2), *pd);
+      ps += sizeof(Digit) * 2;  // Move forward in buffer
+    }
+
+    return buffer;  // Caller must free the allocated buffer
+  }
+
   #endif
 
-  // This part is included after the library user's code
+  // This part is included after the user's code. If the code at top is a 'header, then this is a 'tailer'.
   #ifdef LOCAL
 
-    // instance
+    {CONSTANTS_BLOCK}
 
-    struct {NS}·T{{
-      Digit d0;
-    }};
+    {NS}·T *{NS}·zero = &{NS}·constant[0];
+    {NS}·T *{NS}·one = &{NS}·constant[1];
+    {NS}·T *{NS}·all_one_bit = &{NS}·constant[2];
+    {NS}·T *{NS}·msb = &{NS}·constant[3];
+    {NS}·T *{NS}·lsb = &{NS}·constant[1];
 
     // temporary variables
     // making these LOCAL rather than reserving one block in the library is thread safe
@@ -185,19 +222,87 @@ def template_N():
 
     // allocation 
 
-    extern {NS}·T *{NS}·allocate_array(Extent, {NS}·Allocate_MemoryFault);
-    extern {NS}·T *{NS}·allocate_array_zero(Extent, {NS}·Allocate_MemoryFault);
+    extern {NS}·T *{NS}·allocate_array(Address, {NS}·Allocate_MemoryFault);
+    extern {NS}·T *{NS}·allocate_array_zero(Address, {NS}·Allocate_MemoryFault);
     extern void {NS}·deallocate({NS}·T *);
 
     // so the user can access numbers in an array allocation
-    Local {NS}·T* {NS}·access({NS}·T *array ,Extent index){{
-      return &array[index];
+    Local {NS}·T* {NS}·access({NS}·T *array ,Address index){{
+      return array + index;
     }}
 
-    Local void {NS}·from_uint32({NS}·T *destination ,uint32_t value){{
-      if(destination == NULL) return;
-      destination->d0 = value;
-    }}
+    /*
+      // a hackish approach
+      void from_uint64_hack({NS}·T *n, uint64_t value) {
+        char buffer[24]; // Enough for "0xFFFFFFFFFFFFFFFF"
+        sprintf(buffer, "0x%llX", (unsigned long long)value);
+        from_string(n, buffer);
+      }
+
+     // as it should expand out to:
+      void from_uint64({NS}·T *n, uint64_t value) {
+        Digit *pd = n->d;
+        for (int i = 0; i <= digit_array_extent; i++, pd++) {
+          *pd = (Digit)(value & ((1ULL << (sizeof(Digit) * 8)) - 1)); // Extract lower bits
+          value >>= sizeof(Digit) * 8; // Shift right to process next part
+        }
+      }
+    */
+
+
+    #if defined(__BYTE_ORDER__) && (__BYTE_ORDER__ == __ORDER_BIG_ENDIAN__)
+      #define ENDIAN_DIRECTION -1  // Big-endian: Store high-to-low
+    #else
+      #define ENDIAN_DIRECTION 1   // Little-endian: Store low-to-high
+    #endif
+
+    #define DEFINE_FROM_UINT(TYPE) \
+      void from_##TYPE({{NS}}·T *n, TYPE value) {{ \
+        const Digit digit_mask = (Digit)((1ULL << (sizeof(Digit) * 8)) - 1); \
+        const Digit bits_in_digit = sizeof(Digit) * 8;
+        Digit *pd = (ENDIAN_DIRECTION == 1) ? n->d : (n->d + digit_array_extent); \
+        for (int i = 0; i <= digit_array_extent; i++, pd += ENDIAN_DIRECTION) {{ \
+          *pd = (Digit)(value & digit_mask); \
+          value >>= bits_in_digit; \
+        }} \
+      }}
+
+    #define DEFINE_TO_UINT(TYPE) \
+      TYPE to_##TYPE(const {{NS}}·T *n) {{ \
+        const Digit bits_in_digit = sizeof(Digit) * 8; \
+        TYPE value = 0; \
+        const Digit *pd = (ENDIAN_DIRECTION == 1) ? (n->d + digit_array_extent) : n->d; \
+        for (int i = 0; i <= digit_array_extent; i++, pd -= ENDIAN_DIRECTION) {{ \
+          value = (value << bits_in_digit) | *pd; \
+        }} \
+        return value; \
+      }}
+
+
+    #ifdef UINT8_MAX
+      DEFINE_FROM_UINT(uint8_t)
+      DEFINE_TO_UINT(uint8_t)
+    #endif
+
+    #ifdef UINT16_MAX
+      DEFINE_FROM_UINT(uint16_t)
+      DEFINE_TO_UINT(uint16_t)
+    #endif
+
+    #ifdef UINT32_MAX
+      DEFINE_FROM_UINT(uint32_t)
+      DEFINE_TO_UINT(uint32_t)
+    #endif
+
+    #ifdef UINT64_MAX
+      DEFINE_FROM_UINT(uint64_t)
+      DEFINE_TO_UINT(uint64_t)
+    #endif
+
+    #ifdef __UINT128_MAX
+      DEFINE_FROM_UINT(__uint128_t)
+      DEFINE_TO_UINT(__uint128_t)
+    #endif
 
     // copy, convenience copy
 
@@ -308,7 +413,6 @@ def template_N():
       return (diff > a->d0) ? {NS}·Status·borrow : {NS}·Status·ok;
     }}
 
-
     Local {NS}·Status {NS}·multiply({NS}·T *product1 ,{NS}·T *product0 ,{NS}·T *a ,{NS}·T *b){{
       uint64_t product = (uint64_t)a->d0 * (uint64_t)b->d0;
       product0->d0 = (uint32_t)product;
@@ -418,7 +522,7 @@ def template_N():
       return {NS}·shift_right(shift_count, spill, operand, fill);
     }}
 
-    Local const {NS}·Λ {NS}·λ = {{
+    Local const {NS}·M {NS}·m = {{
 
       .allocate_array = {NS}·allocate_array
       ,.allocate_array_zero = {NS}·allocate_array_zero
