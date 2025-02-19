@@ -1,5 +1,5 @@
 #+TITLE: Python-Based Template Generation (Multi-Module Approach)
-#+AUTHOR: Example
+#+AUTHOR: Chat GPT
 
 Below is a single Org-mode document containing **four** separate Python modules
 (or scripts). Each code block is top-level (not nested), ensuring they render

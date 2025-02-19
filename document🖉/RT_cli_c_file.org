@@ -1,5 +1,5 @@
 #+TITLE: Writing `.cli.c` Files in RT C
-#+AUTHOR: RT C Documentation
+#+AUTHOR: Thomas
 
 * Overview
 In RT C projects, a file with a “=.cli.c=” suffix typically implements a **command-line interface** i.e. a program that is run from a shell. Thus each `<X>.cli.c` file produces an **executable** named <X>. 

@@ -1,0 +1,20 @@
+#+TITLE: Unicode Character Use
+#+AUTHOR: RT C Documentation
+
+The following characters are used:
+
+🖉 - The pencil suffix is placed on the end of directory or file names. It indicates that
+     the contents of the directory contains authored files, or in the case of the suffix on the end of a file name, that the specific file is authored. 
+
+     Authored files should not be deleted by scripts.  The command `rm_na` will not delete
+     authored files, and it is used in scripts. It can be found in the RT-project-share project.
+
+· - The center dot is a proposed namespace sepearator for C. Currently it is used ad       
+    hoc as the prefix portion of identifiers. There is some support in Python scripts.
+
+Λ - This is used to name function dictionary type. Function dictionaries are struct types
+    full of functions, and act as interfaces.
+
+λ - A common name or prefix for an instance of a function dictionary type. This follows
+    the convention that type names are PascalCase, and instance names are snake_case.
+     

@@ -1,0 +1,50 @@
+#+TITLE: Tester Build Proceedure
+#+AUTHOR: RT C Documentation
+
+*. To enter the tester environment:
+
+  Be sure the installation is complete, and that tool_shared/third_party/RT-project-share has been installed. See the tool_shared/document🖉/install.txt
+
+  #BEGIN{SRC}
+  > cd N  # enter the project
+  > . env_tester # to inititialie the test environment
+  #END{SRC}
+
+  After initializing the environment you will be in the `tester` directory.
+
+*. To build the tests from the first time:
+
+  #BEGIN{SRC}
+  > release_pull
+  > make cli
+  #END{SRC}
+
+*. After editing header inclusion structure the dependency file must be rebuilt
+
+  #BEGIN{SRC}
+  > make dependency
+  #END{SRC}
+
+*. To rebuild the tests after other edits
+
+  #BEGIN{SRC}
+  > make cli
+  #END{SRC}
+
+*. To resample the release.
+
+  See which directory the developer places our platform release files
+
+  #BEGIN{SRC}
+  > release_dir
+  #END{SRC}
+
+  See the files in the release directory, accepts same arguments as ls
+
+  #BEGIN{SRC}
+  > release_ls -l
+  #END{SRC}
+
+  Note that `release_dir` and `release_ls` are in the `RT-project-share` project mentioned in the first point.
+
+

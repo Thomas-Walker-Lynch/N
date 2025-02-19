@@ -1,0 +1,177 @@
+#+TITLE: RT Tableau Method
+#+AUTHOR: Thomas
+
+* Memory
+
+A *base-relative memory map* is a dictionary that associates symbol names with offsets from a base address. A C ~struct typedef~ is an example means for declaring a base-relative memory map. A base-relative memory map has a length associated with it.
+
+Another term for a *base-relative memory map* is *memory format*. A defined memory format can be bound to a name. The names are required to be distinct, though the formats bound to the names need not be.
+
+An *instance* of <X>, where <X> is the name of a memory format, is a region of memory that has been bound to memory format <X>.
+
+The *type* of an instance is the name of its memory format.
+
+* Pointer
+
+A *pointer* is a memory address that has been bound to a memory format.  This technique is used to assure that writes to the memory address conform to the bound memory format. This helps programs to respect the bounds of memory allocations.
+
+The *type* of a pointer is the name of the memory format it has been bound to.
+
+* Function Pointer
+
+The address of a function can be bound to a name and an array of memory formats, 
+one for each argument and the return value.
+
+The *type* of a function is defined by its name and its array of memory format names.
+
+The type of a function can be looked up from the function's name.
+
+* Function Dictionary
+
+A *function dictionary* is a list of function names and addresses, keyed by function names.
+
+A *function dictionary template* is a collection of function types associated with a specific memory format.
+
+A *function dictionary instance* is a collection of function implementations that conform to a function dictionary template.
+
+* Object
+
+If the potentially many instances of a given memory format are operated on exclusively by a closed set of functions, these functions can be collected into a dictionary called the memory format's *interface*.
+
+Conversely, there is no conventional name for an instance of memory that is manipulated by only a closed set of functions. In TTCA, the term *tableau* was introduced for such memory. (A *tableau* is a small chalkboard that was once used by students and could be erased and rewritten.)
+
+Another term that could be used for such memory is *taishou* (対象), meaning "subject" or "target" in Japanese.
+
+* Working with `.lib.c` Files in RT C
+
+In the RT C design, each module’s interface **and** implementation are contained in 
+a single file named `something.lib.c`. Traditional `.h` headers are replaced by 
+preprocessor-guarded interface sections, while the main implementation and any 
+“local” (private) code appear in separate blocks. If you want to learn more about 
+this format, there is a dedicated document explaining how `.lib.c` files are structured, 
+along with how and why they’re compiled.
+
+Briefly:
+
+- **Interface Section**  
+  Declares the memory format (`struct N32·T`, for instance) and the function dictionary 
+  type (`N32·Λ`), along with any prototypes that external code needs.
+  
+- **Implementation Section**  
+  Provides the actual definitions of the functions from the interface, compiled into 
+  an object file (e.g., `N32.lib.o`) that goes into a library (`.a` or `.so`).  
+
+- **Local Section**  
+  (Guarded by `#ifdef LOCAL`) Contains private utility functions or test helpers. 
+  Only included when a `.cli.c` test or other special code explicitly requests it.
+
+This structure keeps all relevant code (interface, implementation, internal helpers) 
+in a single `.lib.c` file, yet still enforces encapsulation via preprocessor macros. 
+It aligns well with the *tableau* and *function dictionary* concepts described here:
+the memory format and method table are declared in the interface section, their 
+implementations go in the implementation section, and if you need advanced debugging 
+routines or private details, you can optionally include the local section.
+
+
+* More about Tableau (Taishou)
+
+Below is a minimal example that shows how an instance of a memory format (`N32·T`) can be exclusively manipulated by a *function dictionary* (`N32·Λ`). This concrete “tableau” (taishou) usage illustrates how the memory is bound to specific operations—no external code should modify the memory except through the provided dictionary functions.
+
+#+BEGIN_SRC c
+#include <stdio.h>
+#include <stdint.h>
+
+// 1. Define the memory format (tableau)
+typedef struct {
+  uint32_t value;
+} N32·T;  // This struct is our 'tableau'.
+
+// 2. Provide some functions that operate on N32·T
+void N32·copy(N32·T *dst, const N32·T *src){
+  dst->value = src->value;
+}
+
+void N32·increment(N32·T *t){
+  t->value++;
+}
+
+void N32·print(const N32·T *t){
+  printf("Value: %u\n", t->value);
+}
+
+// 3. Declare a function dictionary (method table)
+typedef struct {
+  void (*copy)(N32·T*, const N32·T*);
+  void (*increment)(N32·T*);
+  void (*print)(const N32·T*);
+} N32·Λ;
+
+// 4. Provide a concrete instance of the dictionary
+const N32·Λ N32·λ = {
+  .copy = N32·copy,
+  .increment = N32·increment,
+  .print = N32·print
+};
+
+// 5. Demonstrate usage in a main function
+int main(void) {
+  // Create an instance of N32·T (our tableau)
+  N32·T my_number = { .value = 10 };
+
+  // Manipulate it exclusively through the function dictionary
+  N32·λ.increment(&my_number);  // Increment by 1
+  N32·λ.print(&my_number);      // Output should show "Value: 11"
+
+  // Create another instance and copy its contents
+  N32·T another_number = { .value = 42 };
+  N32·λ.copy(&my_number, &another_number);
+  N32·λ.print(&my_number);      // Output should show "Value: 42"
+
+  return 0;
+}
+#+END_SRC
+
+When compiled and run (e.g., `gcc example.c -o example && ./example`), the program
+prints:
+
+#+BEGIN_EXAMPLE
+Value: 11
+Value: 42
+#+END_EXAMPLE
+
+In this way, `my_number` is a tableau. All modifications happen via a *closed set of
+functions*—here, the operations are defined in the function dictionary `N32·λ`. No
+external code is allowed to poke into `my_number.value` directly (beyond this demonstration),
+upholding the idea that a “tableau” is memory dedicated to a specific “function dictionary.”
+
+
+* Terminology Considerations
+
+The use of the word *type* in this document aligns with C’s conventions. However, other 
+programming paradigms, such as those in C++ and Java, may define *types* differently. 
+For example, C++ allows types to include behavior (methods), while C’s types only 
+define memory structure.
+
+---
+
+**Summary of Key Terms:**
+- *Memory Format*: A named layout of memory.
+- *Instance*: A memory region adhering to a specific format.
+- *Pointer*: A memory address bound to a memory format.
+- *Function Dictionary*: A set of functions associated with a memory format.
+- *Tableau/Taishou*: A memory instance operated on exclusively by a function dictionary.
+- *Function Dictionary Template*: A function dictionary where function types replace function implementations.
+
+
+A *base-relative memory map* is a dictionary that associates symbol names with offsets 
+from a base address. A C ~struct typedef~ is an example means for declaring a 
+base-relative memory map. A base-relative memory map has a length associated with it.
+
+Another term for a *base-relative memory map* is *memory format*. A
+defined memory format can be bound to a name. The names are required
+to be distinct, though the formats bound to the names need not be.
+
+An *instance* of <X>, where <X> is the name of a memory format, is a region
+of memory that has been bound to memory format <X>.
+
+The *type* of an instance is the name of its memory format.

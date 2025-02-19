@@ -1,0 +1,23 @@
+#+TITLE: Adding new N types
+#+AUTHOR: Thomas
+
+* Project Name
+
+N == Natural Number, aka 'unsigned int'.
+
+* Pencil directories / pencil suffix.
+
+The files in the pencil directory, e.g. cc🖉, are 'authored files'. The program 'rm_na' will not delete them. Use 'rm_na" in scripts.
+
+* Parameterized types
+
+The templated N type allows a user to specify a digit type, and number of digits.  To generate a new multiple digit type, go into the `Python🖉/` directory, add a new write section to the `fill_template` file, and fill in the digit type and number of digits the new type will have. Run `fill_template` and the synthesized file will be written to the `cc/` directory.
+
+
+* Custom types
+
+Some processors will have processor native types that the templating scheme does not take advantage of. 
+
+Put custom `N<Bits>_<Config>.lib.cc` files in the `cc🖉/` directory.  Or new templates in the `Python🖉` directory. Be sure the file name is distinct from existing types, because the testing setup installs all the files.
+
+

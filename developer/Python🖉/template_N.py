@@ -12,31 +12,14 @@ def N(namespace: str ,digit_type: str ,digit_extent: int ,constants_block: str) 
     return code
 
 def template_N():
-    return r'''/*
-  N32 - a processor native type
-
-  For binary operations:  a op b -> c
-
-  See the document on the proper use of the Natural types.
-
-  On the subject of multiple pointers indicating the same location in memory:
-
-  When a routine has multiple results, and one or more of the result location
-  pointers point to the same storage, the routine will either return an error
-  status, or have defined behavior.
-
-  When a routine has multiple operands, in any combination, those
-  pointers can point to the same location, and the routine will
-  function as advertised.
-
-  When an operand functions as both an input and a result, perhaps due
-  to a result pointer pointing to the same place as an operand
-  pointer, the routine will function as advertised. (Internally the
-  routine might make a temporary copy of the operand to accomplish
-  this.)
+    return r'''
+/*
+  M - The type for the function dictionary.
+  m - A function dictionary.
+  T - Is the type for the tableau.  The tableau is a memory shared among the functions
+      In the function dictionary.
 
 */
-
 #define {NS}·DEBUG
 
 #ifndef FACE

@@ -1,0 +1,83 @@
+#+TITLE: Manifold Interpretation
+#+AUTHOR: Thomas
+
+
+* Space and Hyperreal Local Space
+
+Space is defined from the variables on the tableau taken as natural numbers. There are as many dimensions as variables on the tableau.
+
+A vector-valued function is defined with components being the values of all the functions in the dictionary.
+
+Hyperreal local space is then defined as this vector. Incremental changes in the function parameters determine the distance between points in the local space. It follows that local space is only Euclidean when the functions are arithmetic.
+
+* Reasoned Explanation
+
+** Proposed Setup
+
+*** Tableau Variables as Coordinates
+
+You have a tableau \( t \) whose variables are all natural-number-valued (in standard or nonstandard sense). The dimension of the "space" is the number of these variables. Each point in that space, therefore, is a tuple \( (t_0, t_1, ..., t_{n-1}) \) of naturals (or hypernaturals).
+
+*** Dictionary of Functions
+
+Suppose you have a "function dictionary" \( m \) with some finite number of function pointers \( \{ f_0, f_1, ..., f_{k-1} \} \). If you collect these into a vector-valued function, then for each point \( t \) (your tableau), you get:
+\[
+F(t) = ( f_0(t), f_1(t), ..., f_{k-1}(t) )
+\]
+
+*** Hyperreal Local Space
+
+Locally, if you allow infinitesimal changes \( \Delta t_i \) to the tableau's coordinates, you look at how \( F(t) \) changes to \( F(t + \Delta t) \) with \( \Delta t \) in the (hyper)natural domain. The difference \( F(t + \Delta t) - F(t) \) is, from an external perspective, a vector of infinitesimal increments—provided each \( f_i \) is sufficiently "nice" (like a function admitting a finite-difference or nonstandard derivative).
+
+*** When is Local Space Euclidean?
+
+You say: "Local space is only Euclidean when the functions are arithmetic." Indeed:
+- If each \( f_i \) is a linear or affine function of the tableau variables, then small increments in \( \Delta t \) produce changes in \( F(t) \) that mimic linear transformations in \( \mathbb{R}^n \).
+- If the functions are more general (e.g., polynomial or nonlinear), then locally the geometry might not be "flat Euclidean," but you can still define a tangent space or local linear approximations (in the sense of finite differences or a "nonstandard derivative").
+
+** Observations & Comments
+
+*** Discrete vs. Continuous
+
+- If all tableau variables are standard natural numbers (with no nonstandard extension), you get a purely discrete grid. Usually, that grid won’t be “locally Euclidean” in the classical sense—each point is isolated.
+- If you incorporate nonstandard analysis with hypernatural indices, you can have infinitesimal increments \( \Delta t \). Externally, it “looks continuous,” internally it’s still a large discrete set.
+- Hence, you can get a scenario that feels like \( \mathbb{R}^n \) locally, if your increments are infinitesimals.
+
+*** Manifold vs. Arithmetic
+
+- In classical manifold theory, local charts map open sets of your manifold to open sets of \( \mathbb{R}^n \). That can hold even if the manifold is nonlinear (like a sphere, which is “locally Euclidean” but globally curved).
+- Being “arithmetic” or “linear” is not required for local Euclideanness in the manifold sense; you only need the ability to map small neighborhoods to an open set in \( \mathbb{R}^n \). Nonlinear functions can still do so, provided you track a smooth structure.
+- You might need a “smoothness” assumption in your difference approach so that \( F \) locally has something akin to a Jacobian, letting you define a tangent space.
+
+*** When is it Exactly Euclidean?
+
+- If the manifold is globally flat (like \( \mathbb{R}^n \) itself), then yes, the structure is Euclidean.
+- In your approach: if the dictionary of functions is linear in the tableau coordinates, you get a global linear map. That indeed yields a globally Euclidean geometry (assuming you define distance in a certain consistent way).
+- If the dictionary is more complicated, you might only get local linear approximations—like expansions used in nonstandard or standard differential geometry.
+
+*** Distance Metric
+
+You mention “incremental changes in the function parameters determine the distance between points in local space.” This suggests you define a metric like:
+\[
+d(t, t + \Delta t) = \| F(t + \Delta t) - F(t) \|
+\]
+or something analogous.
+- If each \( f_i \) is linear, that metric can reduce to something Euclidean.
+- If the \( f_i \) are nonlinear, you get a more complicated geometry (like a Riemannian structure if you handle second-order expansions).
+
+** Conclusion from o1:
+
+- Yes, with a hyperreal or hypernatural approach, you can treat a discrete set of tableau variables as “infinitesimally spaced.”
+- Yes, you can define a vector of function outputs as your local coordinate system.
+- Yes, if the dictionary’s functions are purely arithmetic/linear, you get a globally Euclidean structure in that local space.
+- If the functions are more general, you can still have a “manifold” in the sense of local Euclideanness (via expansions or finite-difference approximations), but it may not be globally Euclidean.
+
+Your statement *“Space is only Euclidean if the functions are arithmetic”* can be rephrased:
+
+- *Globally Euclidean* if your function dictionary is linear or affine.
+- *Locally you might still approximate Euclideanness* if you assume finite differences behave like differentials.
+
+Ultimately, you’re using nonstandard analysis to unify discrete and continuous perspectives on the tableau. This is a well-known strategy in internal hyperreal approaches to “smooth” or “manifold-like” structures.
+
+
+

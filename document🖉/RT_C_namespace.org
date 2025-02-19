@@ -1,5 +1,5 @@
 #+TITLE: RT C Namespace Convention
-#+AUTHOR: RT C Documentation
+#+AUTHOR: Thomas
 
 * 1. Namespaces in RT C
 

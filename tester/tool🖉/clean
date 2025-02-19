@@ -15,8 +15,11 @@ set -x
 
 cd "$REPO_HOME"/tester || exit 1
 
-# remove library pulled from release and other scratchpad files
+# remove test program dependency and objects
   rm_na scratchpad/{makefile-cc.deps,*.o} || true
+
+# remove synthesized test sources
+  rm_na cc/test_*.c || true
 
 # remove built executables
   rm_na -f machine/* || true

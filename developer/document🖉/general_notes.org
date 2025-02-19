@@ -1,0 +1,10 @@
+#+TITLE: General notes
+#+AUTHOR: Thomas
+
+* Files in the `cc/` directory are .gitignore and can be deleted by clean scripts. This directory is for the output of template generation.
+
+* There is a stylistic form for using these files.  The `FACE` section include goes at the top and the `LOCAL` include at the bottom of the user's source files. Then link with `N.lib.a`.
+
+* Most of the work is done in the `LOCAL` section.
+
+* Compile with optimization to make the calls to the `LOCAL` functions compile out, leaving clean inline code. (That is the intention anyway, as of this writing development is still ongoing.)

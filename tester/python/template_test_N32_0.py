@@ -3,17 +3,17 @@
 # test_N32 can be used to test any 32 bit natural number types. As examples: N32PN the processor native type; N32_4_by_8 a 32 bit natural number type made of 4 digits, where each digit is 8 bits.
 #
 
-def test_N32(namespace: str) -> str:
+def test_N32_0(namespace: str) -> str:
     """
     Returns a source code file for cc.
     """
-    template = template_test_N32()
+    template = template_test_N32_0()
     code = template.format(
         NS = namespace
     )
     return code
 
-def template_test_N32():
+def template_test_N32_0():
     return r'''#include <stdio.h>
 #include <stdbool.h>
 #include <signal.h>
@@ -97,7 +97,7 @@ int main(int argc ,char **argv){{
 
 bool test_copy(){{
   // Allocate memory
-  {NS}·T *array = {NS}·λ.allocate_array(2 ,NULL);
+  {NS}·T *array = {NS}·λ.allocate_array(1 ,NULL);
   if( !array ) return false;
 
   // Access elements via access function
@@ -115,7 +115,7 @@ bool test_copy(){{
 
 bool test_arithmetic(){{
   // Allocate memory
-  {NS}·T *array = {NS}·λ.allocate_array(3 ,NULL);
+  {NS}·T *array = {NS}·λ.allocate_array(2 ,NULL);
   if( !array ) return false;
 
   {NS}·T *a = {NS}·λ.access(array ,0);
@@ -137,7 +137,7 @@ bool test_arithmetic(){{
 
 bool test_bitwise_operations(){{
   // Allocate memory
-  {NS}·T *array = {NS}·λ.allocate_array(3, NULL);
+  {NS}·T *array = {NS}·λ.allocate_array(2, NULL);
   if(!array) return false;
 
   {NS}·T *a = {NS}·λ.access(array, 0);
@@ -191,7 +191,7 @@ bool test_bitwise_operations(){{
 
 bool test_comparisons(){{
   // Allocate memory
-  {NS}·T *array = {NS}·λ.allocate_array(3, NULL);
+  {NS}·T *array = {NS}·λ.allocate_array(2, NULL);
   if(!array) return false;
 
   {NS}·T *a = {NS}·λ.access(array, 0);
@@ -268,7 +268,7 @@ bool test_comparisons(){{
 
 bool test_shifts(){{
   // Allocate memory for operand, fill, spill
-  {NS}·T *array = {NS}·λ.allocate_array(3, NULL);
+  {NS}·T *array = {NS}·λ.allocate_array(2, NULL);
   if(!array) return false;
 
   {NS}·T *operand = {NS}·λ.access(array, 0);
