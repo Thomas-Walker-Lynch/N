@@ -2,7 +2,6 @@
 
 import sys
 from template_N import N
-from make_constants import make_constants_block
 
 def write(code ,basename):
   filepath = "../cc/" + basename + ".lib.c" 
@@ -21,21 +20,35 @@ def main():
   
   type_name = "N32_1x32"
   digit_type = "uint32_t"
-  digit_extent = 0
+  digit_array_extent_type = "uint32_t"
+  digit_array_extent = 0
+  address_type = "uint64_t"
 
-  constants_block = make_constants_block(type_name, digit_type, digit_extent)
-  code = N(type_name ,digit_type ,digit_extent ,constants_block)
+  code = N(
+    type_name
+    ,digit_type 
+    ,digit_array_extent_type 
+    ,digit_array_extent 
+    ,address_type
+  )
   write(code ,type_name);
 
   #----------------------------------------
   # N32 made from 4 digits, each 8 bits.
 
-  type_name = "N32_4x8"
-  digit_type = "uint8_t"
-  digit_extent = 3
+  type_name = "N32_1x32"
+  digit_type = "uint32_t"
+  digit_array_extent_type = "uint8_t"
+  digit_array_extent = 3
+  address_type = "uint64_t"
 
-  constants_block = make_constants_block(type_name, digit_type, digit_extent)
-  code = N(type_name ,digit_type ,digit_extent ,constants_block)
+  code = N(
+    type_name
+    ,digit_type 
+    ,digit_array_extent_type 
+    ,digit_array_extent 
+    ,address_type
+  )
   write(code ,type_name);
 
 if __name__ == "__main__":

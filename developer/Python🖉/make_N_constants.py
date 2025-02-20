@@ -1,6 +1,9 @@
-def make_constants_block(namespace: str,
-                         digit_type: str,
-                         digit_extent: int) -> str:
+
+def make_N_constants(
+        namespace: str,
+        digit_type: str,
+        digit_array_extent: int
+) -> str:
     """
     Returns a block of code defining static compile-time constants:
       static {namespace}T {namespace}constant[4] = {
@@ -10,9 +13,9 @@ def make_constants_block(namespace: str,
         { { ...msb... } }
       };
 
-    The total digit count is digit_extent + 1.
+    The total digit count is digit_array_extent + 1.
     """
-    digit_count = digit_extent + 1
+    digit_count = digit_array_extent + 1
 
     def digits_zero():
         return ", ".join("0" for _ in range(digit_count))
@@ -35,7 +38,7 @@ def make_constants_block(namespace: str,
                 items.append("0")
         return ", ".join(items)
 
-    return f'''\
+    return f'''
 static {namespace}T {namespace}constant[4] = {{
   {{
     // zero
