@@ -1,4 +1,3 @@
-
 from template_conversion import conversion
 from make_N_constants import make_N_constants
 
@@ -76,18 +75,17 @@ def template_N():
   // Return/Error Status and handlers
 
   typedef enum{
-    NS·Status·ok,
-    NS·Status·overflow,
-    NS·Status·accumulator_overflow,
-    NS·Status·carry,
-    NS·Status·borrow,
-    NS·Status·undefined_divide_by_zero,
-    NS·Status·undefined_modulus_zero,
-    NS·Status·gt_max_shift_count,
-    NS·Status·spill_eq_operand, // not currently signaled, result will be spill value
-    NS·Status·one_word_product,
-    NS·Status·two_word_product,
-    NS·Status·ConversionOverflow
+    NS·Status·ok = 0
+    ,NS·Status·overflow
+    ,NS·Status·accumulator_overflow
+    ,NS·Status·carry
+    ,NS·Status·borrow
+    ,NS·Status·undefined_divide_by_zero
+    ,NS·Status·undefined_modulus_zero
+    ,NS·Status·gt_max_shift_count
+    ,NS·Status·spill_eq_operand // not currently signaled, result will be spill value
+    ,NS·Status·one_word_product
+    ,NS·Status·two_word_product
   } NS·Status;
 
   typedef enum{
@@ -95,6 +93,12 @@ def template_N():
     ,NS·Order_eq = 0
     ,NS·Order_gt = 1
   } NS·Order;
+
+  // when alloc runs out of memory
+  typedef NS·T *( *NS·Allocate_MemoryFault )(Address);
+
+  //----------------------------------------
+  // Interface
 
   // Incomplete conversion NS·T -> PNT,  NS·T leftovers
   typedef struct {
@@ -109,30 +113,8 @@ def template_N():
       PNT leftover;   // Residual value in PNT format\
     } NS·Leftover_##PNT;
 
-  #ifdef UINT8_MAX
-    NS·LEFTOVER_PNT(uint8_t)
-  #endif
-  #ifdef UINT16_MAX
-    NS·LEFTOVER_PNT(uint16_t)
-  #endif
-  #ifdef UINT32_MAX
-    NS·LEFTOVER_PNT(uint32_t)
-  #endif
-  #ifdef UINT64_MAX
-    NS·LEFTOVER_PNT(uint64_t)
-  #endif
-  #ifdef __UINT128_MAX
-    NS·LEFTOVER_PNT(__uint128_t)
-  #endif
-
-  // when alloc runs out of memory
-  typedef NS·T *( *NS·Allocate_MemoryFault )(Address);
-
-  //----------------------------------------
-  // Interface
-
-  #define NS·TO_TYPE(PNT) NS·Status (*to_##PNT)(const NS·T *, PNT *, NS·Leftover_N *)
-  #define NS·FROM_TYPE(PNT) NS·Status (*from_##PNT)(const PNT *, NS·T * ,NS·Leftover_##PNT *)
+  #define NS·WRITE(PNT) NS·Status (*write_##PNT)(const NS·T *, PNT *, NS·Leftover_N *)
+  #define NS·READ(PNT) NS·Status (*read_##PNT)(const PNT *, NS·T * ,NS·Leftover_##PNT *)
 
   typedef struct{
 
@@ -267,6 +249,8 @@ def template_N():
 
   // This part is included after the user's code. If the code at top is a 'header, then this is a 'tailer'.
   #ifdef LOCAL
+
+    #include "Copy.lib.c"
 
     CONSTANTS_BLOCK
 
@@ -514,19 +498,14 @@ def template_N():
     }
 
     #ifdef UINT8_MAX
-      CONV_8
     #endif
     #ifdef UINT16_MAX
-      CONV_16
     #endif
     #ifdef UINT32_MAX
-      CONV_32
     #endif
     #ifdef UINT64_MAX
-      CONV_64
     #endif
     #ifdef __UINT128_MAX
-      CONV_128
     #endif
 
     Local const NS·M NS·m = {
@@ -582,9 +561,12 @@ def template_N():
 
     };
 
-  #endif
+    #undef FACE
+    #include "Copy.lib.c"
 
-#endif
+  #endif // LOCAL
+
+#endif // IMPLEMENTATION
 '''
 
 

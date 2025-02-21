@@ -3,3 +3,10 @@
 done
 
 * 2025-02-14T16:20:52Z consider adding macros to replace multi-digit sequences with native types when available in some situations.
+
+
+* 2025-02-21T09:43:26Z Copy.lib.c should be templated with the block copy type, currently uint64_t templated, and the alginment mask templated.  Also need macro gates to
+  turn off expansion when there is no uint64_t support.  Also need a naive byte
+  copy version that works when there is not even a unint32_t type.
+
+
