@@ -114,9 +114,9 @@
     N64PN·T*      (*access)(N64PN·T*, Extent);
     void        (*from_uint64)(N64PN·T *destination, uint64_t value);
 
-  } N64PN·M;
+  } N64PN·Λ;
 
-  Local const N64PN·M N64PN·m; // initialized in the LOCAL section
+  Local const N64PN·Λ N64PN·λ; // initialized in the LOCAL section
 
 #endif
 
@@ -442,7 +442,7 @@
       return N64PN·shift_right(shift_count, spill, operand, fill);
     }
 
-    Local const N64PN·M N64PN·m = {
+    Local const N64PN·Λ N64PN·λ = {
       .allocate_array = N64PN·allocate_array
      ,.allocate_array_zero = N64PN·allocate_array_zero
      ,.deallocate = N64PN·deallocate

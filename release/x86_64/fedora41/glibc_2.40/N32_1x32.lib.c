@@ -1,28 +1,10 @@
+
 /*
-  N32 - a processor native type
-
-  For binary operations:  a op b -> c
-
-  See the document on the proper use of the Natural types.
-
-  On the subject of multiple pointers indicating the same location in memory:
-
-  When a routine has multiple results, and one or more of the result location
-  pointers point to the same storage, the routine will either return an error
-  status, or have defined behavior.
-
-  When a routine has multiple operands, in any combination, those
-  pointers can point to the same location, and the routine will
-  function as advertised.
-
-  When an operand functions as both an input and a result, perhaps due
-  to a result pointer pointing to the same place as an operand
-  pointer, the routine will function as advertised. (Internally the
-  routine might make a temporary copy of the operand to accomplish
-  this.)
+  M - The type for the function dictionary (manifold).
+  m - a manifold instance, there can be many, m0, m1 ...
+  T - Is the type for the tableau. 
 
 */
-
 #define N32_1x32·DEBUG
 
 #ifndef FACE
@@ -44,9 +26,9 @@
   //----------------------------------------
   // Instance Data (Declaration Only)
 
-  typedef uint32_t Extent;
-  typedef uint32_t Digit;
+  typedef uint64_t Address;
 
+  // tableau type, encapsulated data is unavailable to user code
   typedef struct N32_1x32·T N32_1x32·T;
 
   extern N32_1x32·T *N32_1x32·zero;
@@ -59,17 +41,18 @@
   // Return/Error Status and handlers
 
   typedef enum{
-    N32_1x32·Status·ok = 0
-    ,N32_1x32·Status·overflow = 1
-    ,N32_1x32·Status·accumulator1_overflow = 2
-    ,N32_1x32·Status·carry = 3
-    ,N32_1x32·Status·borrow = 4
-    ,N32_1x32·Status·undefined_divide_by_zero = 5
-    ,N32_1x32·Status·undefined_modulus_zero = 6
-    ,N32_1x32·Status·gt_max_shift_count = 7
-    ,N32_1x32·Status·spill_eq_operand = 8 // not currently signaled, result will be spill value
-    ,N32_1x32·Status·one_word_product = 9
-    ,N32_1x32·Status·two_word_product = 10
+    N32_1x32·Status·ok,
+    N32_1x32·Status·overflow,
+    N32_1x32·Status·accumulator_overflow,
+    N32_1x32·Status·carry,
+    N32_1x32·Status·borrow,
+    N32_1x32·Status·undefined_divide_by_zero,
+    N32_1x32·Status·undefined_modulus_zero,
+    N32_1x32·Status·gt_max_shift_count,
+    N32_1x32·Status·spill_eq_operand, // not currently signaled, result will be spill value
+    N32_1x32·Status·one_word_product,
+    N32_1x32·Status·two_word_product,
+    N32_1x32·Status·ConversionOverflow
   } N32_1x32·Status;
 
   typedef enum{
@@ -78,27 +61,67 @@
     ,N32_1x32·Order_gt = 1
   } N32_1x32·Order;
 
-  typedef N32_1x32·T *( *N32_1x32·Allocate_MemoryFault )(Extent);
+  // Incomplete conversion N32_1x32·T -> PNT,  N32_1x32·T leftovers
+  typedef struct {
+    size_t scale; // this is in bytes
+    N32_1x32·T *d;      // digits, programmer must point this to a register
+  } N32_1x32·Leftover_N;
+
+  // Incomplete conversion PNT -> N32_1x32·T, PNT leftovers
+  #define N32_1x32·LEFTOVER_PNT(PNT)\
+    typedef struct {\
+      size_t scale; // this is in bytes\
+      PNT leftover;   // Residual value in PNT format\
+    } N32_1x32·Leftover_##PNT;
+
+  #ifdef UINT8_MAX
+    N32_1x32·LEFTOVER_PNT(uint8_t)
+  #endif
+  #ifdef UINT16_MAX
+    N32_1x32·LEFTOVER_PNT(uint16_t)
+  #endif
+  #ifdef UINT32_MAX
+    N32_1x32·LEFTOVER_PNT(uint32_t)
+  #endif
+  #ifdef UINT64_MAX
+    N32_1x32·LEFTOVER_PNT(uint64_t)
+  #endif
+  #ifdef __UINT128_MAX
+    N32_1x32·LEFTOVER_PNT(__uint128_t)
+  #endif
+
+  // when alloc runs out of memory
+  typedef N32_1x32·T *( *N32_1x32·Allocate_MemoryFault )(Address);
 
   //----------------------------------------
   // Interface
 
+  #define N32_1x32·TO_TYPE(PNT) N32_1x32·Status (*to_##PNT)(const N32_1x32·T *, PNT *, N32_1x32·Leftover_N *)
+  #define N32_1x32·FROM_TYPE(PNT) N32_1x32·Status (*from_##PNT)(const PNT *, N32_1x32·T * ,N32_1x32·Leftover_##PNT *)
+
   typedef struct{
 
-    N32_1x32·T *(*allocate_array_zero)(Extent, N32_1x32·Allocate_MemoryFault);
-    N32_1x32·T *(*allocate_array)(Extent, N32_1x32·Allocate_MemoryFault);
+    // memory allocation 
+    N32_1x32·T *(*allocate_array_zero)(Address, N32_1x32·Allocate_MemoryFault);
+    N32_1x32·T *(*allocate_array)(Address, N32_1x32·Allocate_MemoryFault);
     void (*deallocate)(N32_1x32·T*);
+    N32_1x32·T* (*access)(N32_1x32·T*, Address);
 
+    // results fits in operand type functions
     void (*copy)(N32_1x32·T*, N32_1x32·T*);
     void (*bit_and)(N32_1x32·T*, N32_1x32·T*, N32_1x32·T*);
     void (*bit_or)(N32_1x32·T*, N32_1x32·T*, N32_1x32·T*);
     void (*bit_complement)(N32_1x32·T*, N32_1x32·T*);
     void (*bit_twos_complement)(N32_1x32·T*, N32_1x32·T*);
+
+    // tests  
     N32_1x32·Order (*compare)(N32_1x32·T*, N32_1x32·T*);
     bool (*lt)(N32_1x32·T*, N32_1x32·T*);
     bool (*gt)(N32_1x32·T*, N32_1x32·T*);
     bool (*eq)(N32_1x32·T*, N32_1x32·T*);
     bool (*eq_zero)(N32_1x32·T*);
+
+    // arithmetic
     N32_1x32·Status (*accumulate)(N32_1x32·T *accumulator1 ,N32_1x32·T *accumulator0 ,...);
     N32_1x32·Status (*add)(N32_1x32·T*, N32_1x32·T*, N32_1x32·T*);
     bool (*increment)(N32_1x32·T *a);
@@ -106,15 +129,39 @@
     N32_1x32·Status (*multiply)(N32_1x32·T*, N32_1x32·T*, N32_1x32·T*, N32_1x32·T*);
     N32_1x32·Status (*divide)(N32_1x32·T*, N32_1x32·T*, N32_1x32·T*, N32_1x32·T*);
     N32_1x32·Status (*modulus)(N32_1x32·T*, N32_1x32·T*, N32_1x32·T*);
-    N32_1x32·Status (*shift_left)(Extent, N32_1x32·T*, N32_1x32·T*, N32_1x32·T*);
-    N32_1x32·Status (*shift_right)(Extent, N32_1x32·T*, N32_1x32·T*, N32_1x32·T*);
-    N32_1x32·Status (*arithmetic_shift_right)(Extent, N32_1x32·T*, N32_1x32·T*);
 
-    N32_1x32·T* (*access)(N32_1x32·T*, Extent);
-    void (*from_uint32)(N32_1x32·T *destination ,uint32_t value);
-  } N32_1x32·Λ;
+    // shift
+    N32_1x32·Status (*shift_left)(Address, N32_1x32·T*, N32_1x32·T*, N32_1x32·T*);
+    N32_1x32·Status (*shift_right)(Address, N32_1x32·T*, N32_1x32·T*, N32_1x32·T*);
+    N32_1x32·Status (*arithmetic_shift_right)(Address, N32_1x32·T*, N32_1x32·T*);
 
-  Local const N32_1x32·Λ N32_1x32·λ; // initialized in the LOCAL section
+    // import/export
+    char *(*to_string)(N32_1x32·T *);
+
+    #ifdef UINT8_MAX
+      N32_1x32·TO_TYPE(uint8_t)
+      N32_1x32·FROM_TYPE(uint8_t)
+    #endif
+    #ifdef UINT16_MAX
+      N32_1x32·TO_TYPE(uint16_t)
+      N32_1x32·FROM_TYPE(uint16_t)
+    #endif
+    #ifdef UINT32_MAX
+      N32_1x32·TO_TYPE(uint32_t)
+      N32_1x32·FROM_TYPE(uint32_t)
+    #endif
+    #ifdef UINT64_MAX
+      N32_1x32·TO_TYPE(uint64_t)
+      N32_1x32·FROM_TYPE(uint64_t)
+    #endif
+    #ifdef __UINT128_MAX
+      N32_1x32·TO_TYPE(__uint128_t)
+      N32_1x32·FROM_TYPE(__uint128_t)
+    #endif
+
+  } N32_1x32·M;
+
+  Local const N32_1x32·M N32_1x32·m; // initialized in the LOCAL section
 
 #endif
 
@@ -123,31 +170,23 @@
 
 #ifdef N32_1x32·IMPLEMENTATION
 
-  // this part goes into the library
+  typedef uint32_t Digit;
+  const uint8_t digit_array_extent = {3};
+
+  // full type definition for Tableau
+  struct N32_1x32·T{
+    Digit d[digit_array_extent + 1];
+  };
+
+  // this part goes into Nlib.a
   #ifndef LOCAL
 
     #include <stdarg.h>
     #include <stdlib.h>
-
-    struct N32_1x32·T{
-      Digit d0;
-    };
-
-    N32_1x32·T N32_1x32·constant[4] = {
-      {.d0 = 0},
-      {.d0 = 1},
-      {.d0 = ~(uint32_t)0},
-      {.d0 = 1 << 31}
-    };
-
-    N32_1x32·T *N32_1x32·zero = &N32_1x32·constant[0];
-    N32_1x32·T *N32_1x32·one = &N32_1x32·constant[1];
-    N32_1x32·T *N32_1x32·all_one_bit = &N32_1x32·constant[2];
-    N32_1x32·T *N32_1x32·msb = &N32_1x32·constant[3];
-    N32_1x32·T *N32_1x32·lsb = &N32_1x32·constant[1];
+    #include <stdio.h>
 
     // the allocate an array of N32
-    N32_1x32·T *N32_1x32·allocate_array(Extent extent ,N32_1x32·Allocate_MemoryFault memory_fault){
+    N32_1x32·T *N32_1x32·allocate_array(Address extent ,N32_1x32·Allocate_MemoryFault memory_fault){
       N32_1x32·T *instance = malloc((extent + 1) * sizeof(N32_1x32·T) );
       if(!instance){
         return memory_fault ? memory_fault(extent) : NULL;
@@ -155,7 +194,7 @@
       return instance;
     }
 
-    N32_1x32·T *N32_1x32·allocate_array_zero(Extent extent ,N32_1x32·Allocate_MemoryFault memory_fault){
+    N32_1x32·T *N32_1x32·allocate_array_zero(Address extent ,N32_1x32·Allocate_MemoryFault memory_fault){
       N32_1x32·T *instance = calloc( extent + 1 ,sizeof(N32_1x32·T) );
       if(!instance){
         return memory_fault ? memory_fault(extent) : NULL;
@@ -167,16 +206,42 @@
       free(unencumbered);
     }
 
+  char *to_string(N32_1x32·T *n) {
+    // Each byte requires two hex characters, plus "0x" prefix and null terminator
+    const Address string_length = (sizeof(Digit) * (digit_array_extent + 1) * 2) + 3;   
+    char *buffer = malloc(string_length);
+    if (!buffer) {
+      return NULL;  // Handle allocation failure
+    }
+
+    strcpy(buffer, "0x");  // Prefix the hex representation
+    char *ps = buffer + 2;  // Pointer to string buffer (after "0x")
+
+    // Pointer to the most significant digit
+    Digit *pd = n->d + digit_array_extent;
+
+    for (; pd >= n->d; pd--) {
+      sprintf(ps, "%0*X", (int)(sizeof(Digit) * 2), *pd);
+      ps += sizeof(Digit) * 2;  // Move forward in buffer
+    }
+
+    return buffer;  // Caller must free the allocated buffer
+  }
+
   #endif
 
-  // This part is included after the library user's code
+  // This part is included after the user's code. If the code at top is a 'header, then this is a 'tailer'.
   #ifdef LOCAL
 
-    // instance
+    #include "Copy.lib.c"
 
-    struct N32_1x32·T{
-      Digit d0;
-    };
+    CON32_1x32TANTS_BLOCK
+
+    N32_1x32·T *N32_1x32·zero = N32_1x32·constant + 0;
+    N32_1x32·T *N32_1x32·one =  N32_1x32·constant + 1;
+    N32_1x32·T *N32_1x32·all_one_bit = N32_1x32·constant + 2;
+    N32_1x32·T *N32_1x32·msb = &N32_1x32·constant + 3;
+    N32_1x32·T *N32_1x32·lsb = &N32_1x32·constant + 1;
 
     // temporary variables
     // making these LOCAL rather than reserving one block in the library is thread safe
@@ -188,21 +253,16 @@
 
     // allocation 
 
-    extern N32_1x32·T *N32_1x32·allocate_array(Extent, N32_1x32·Allocate_MemoryFault);
-    extern N32_1x32·T *N32_1x32·allocate_array_zero(Extent, N32_1x32·Allocate_MemoryFault);
+    extern N32_1x32·T *N32_1x32·allocate_array(Address, N32_1x32·Allocate_MemoryFault);
+    extern N32_1x32·T *N32_1x32·allocate_array_zero(Address, N32_1x32·Allocate_MemoryFault);
     extern void N32_1x32·deallocate(N32_1x32·T *);
 
     // so the user can access numbers in an array allocation
-    Local N32_1x32·T* N32_1x32·access(N32_1x32·T *array ,Extent index){
-      return &array[index];
+    Local N32_1x32·T* N32_1x32·access(N32_1x32·T *array ,Address index){
+      return array + index;
     }
 
-    Local void N32_1x32·from_uint32(N32_1x32·T *destination ,uint32_t value){
-      if(destination == NULL) return;
-      destination->d0 = value;
-    }
-
-    // copy, convenience copy
+    // copy
 
     Local void N32_1x32·copy(N32_1x32·T *destination ,N32_1x32·T *source){
       if(source == destination) return; // that was easy! 
@@ -310,7 +370,6 @@
       difference->d0 = (uint32_t)diff;
       return (diff > a->d0) ? N32_1x32·Status·borrow : N32_1x32·Status·ok;
     }
-
 
     Local N32_1x32·Status N32_1x32·multiply(N32_1x32·T *product1 ,N32_1x32·T *product0 ,N32_1x32·T *a ,N32_1x32·T *b){
       uint64_t product = (uint64_t)a->d0 * (uint64_t)b->d0;
@@ -421,7 +480,17 @@
       return N32_1x32·shift_right(shift_count, spill, operand, fill);
     }
 
-    Local const N32_1x32·Λ N32_1x32·λ = {
+    #ifdef UINT8_MAX
+    #endif
+    #ifdef UINT16_MAX
+    #endif
+    #ifdef UINT32_MAX
+    #endif
+    #ifdef UINT64_MAX
+    #endif
+
+    // Tableau share dictionary
+    Local const N32_1x32·M N32_1x32·m = {
 
       .allocate_array = N32_1x32·allocate_array
       ,.allocate_array_zero = N32_1x32·allocate_array_zero
@@ -450,7 +519,22 @@
 
       ,.access = N32_1x32·access
       ,.from_uint32 = N32_1x32·from_uint32
+
+      #ifdef UINT8_MAX
+      #endif
+      #ifdef UINT16_MAX
+      #endif
+      #ifdef UINT32_MAX
+      #endif
+      #ifdef UINT64_MAX
+      #endif
+      #ifdef __UINT128_MAX
+      #endif
+
     };
+
+    #undef FACE
+    #include "Copy.lib.c"
 
   #endif
 

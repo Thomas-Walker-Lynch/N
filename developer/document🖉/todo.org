@@ -10,3 +10,22 @@ done
   copy version that works when there is not even a unint32_t type.
 
 
+* 2025-02-24T08:09:57Z Copy.lib.c forced alginment machine might have issues with the block copy.
+
+  The block copy aligns the read pointer by copying some initial
+  bytes. It ignores the alignment on the write pointer. Then at the end it does a byte
+  by byte copy of the ragged tail (less than a full word number of bytes).
+
+  For a system that forces alignment, the initial alignment of the read pointer will get skipped. The write pointer will be aligned, so there is no problem in not checking it.
+
+  However, the ragged tail loop can fire on a forced aligned
+  system. This will happen if the bounding read pointer passed in to
+  the block copy is not pointing to the first byte of a word. This can
+  happen if it is created adding `sizeof` of an object with that is not an even number
+  of bytes in a word long.
+
+  The solution is probably to set a 'force align' macro based on the
+  architecture macro and gating the ragged tail code to do a word
+  copy, or affecting the bulk section to do one more loop -- or having
+  a differnt block copy an bytes_reversed block copy that loops on
+  words.

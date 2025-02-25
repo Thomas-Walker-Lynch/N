@@ -112,9 +112,9 @@
 
     N32PN·T* (*access)(N32PN·T*, Extent);
     void (*from_uint32)(N32PN·T *destination ,uint32_t value);
-  } N32PN·M;
+  } N32PN·Λ;
 
-  Local const N32PN·M N32PN·m; // initialized in the LOCAL section
+  Local const N32PN·Λ N32PN·λ; // initialized in the LOCAL section
 
 #endif
 
@@ -421,7 +421,7 @@
       return N32PN·shift_right(shift_count, spill, operand, fill);
     }
 
-    Local const N32PN·M N32PN·m = {
+    Local const N32PN·Λ N32PN·λ = {
 
       .allocate_array = N32PN·allocate_array
       ,.allocate_array_zero = N32PN·allocate_array_zero

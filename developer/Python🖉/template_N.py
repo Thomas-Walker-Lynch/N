@@ -153,7 +153,7 @@ def template_N():
     NS·Status (*arithmetic_shift_right)(Address, NS·T*, NS·T*);
 
     // import/export
-    char *(*to_string)(NS·T *);
+    char *(*to_hex)(NS·T *);
 
     #ifdef UINT8_MAX
       NS·TO_TYPE(uint8_t)
@@ -223,7 +223,7 @@ def template_N():
       free(unencumbered);
     }
 
-  char *to_string(NS·T *n) {
+  char *to_hex(NS·T *n) {
     // Each byte requires two hex characters, plus "0x" prefix and null terminator
     const Address string_length = (sizeof(Digit) * (digit_array_extent + 1) * 2) + 3;   
     char *buffer = malloc(string_length);

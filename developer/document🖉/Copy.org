@@ -1,0 +1,72 @@
+* Copy - Memory Copy Operations
+
+** Overview
+
+The Copy module provides optimized memory copy operations that account for memory alignment and byte order. It contains functions for standard memory copying, as well as specialized routines for reversing byte order during copying. The design ensures efficient memory operations by aligning read pointers and assuming write operations are buffered.
+
+** Features
+
+- Optimized memory copy operations
+- Byte order reversal during copy
+- Handles unaligned read memory
+- Ensures efficient bulk transfers using 64-bit word copies
+- Provides step-based copying with status reporting
+
+** Interface
+
+- `Copy·bytes(read0, read1, write0) -> void*`
+  - Copies memory from `read0` to `write0`, preserving byte order.
+  - Returns the updated write pointer.
+
+- `Copy·reverse_byte_order(read0, read1, write0) -> void*`
+  - Copies memory while reversing byte order.
+  - Reads from `read1` downward, writes from `write0` upward.
+  - Returns the updated write pointer.
+
+- `Copy·step(Copy·it *it) -> Copy·Status`
+  - Uses the `Copy·it` struct, which defines read and write intervals.
+  - Does the maximum sized copy without going outside the intervals.
+  - Updates `it` for continuation of the block copy.
+  - Returns a status indicating there is surplus data, or available write allocation.
+
+- `Copy·step_reverse_order(Copy·it *it) -> Copy·Status`
+  - Performs a copy of the block while reversing the byte order and updating the iterator.
+  - Returns a status indicating there is surplus data, or available write allocation.
+
+- `Copy·step_write_hex(Copy·it *it) -> Copy·Status`
+  - Converts read bytes into hexadecimal representation during writing.
+  - Two bytes are written for each byte read.buffer.
+  - Returns a status indicating there is surplus data, or available write allocation.
+
+** Status Codes
+
+- `Copy·Status·perfect_fit`
+  - Read and write buffers are fully utilized without remainder.
+- `Copy·Status·read_data_surplus`
+  - The write allocation was filled before the read values were all read.
+- `Copy·Status·write_allocation_available`
+  - The write allocation has space for more values.
+- `Copy·Status·write_allocation_gap`
+  - The write allocation has space, but it is not large enough to hold another value.
+
+** Implementation Notes
+
+- Alignment is only enforced on the read side to maximize efficiency.
+- Writes are assumed to be buffered, allowing unaligned writes without performance degradation.
+- The `step` functions allow for incremental processing of data streams.
+
+** Example Usage
+
+```c
+Copy·it copy_instance = {
+  .read0 = source_data,
+  .read_size = source_size,
+  .write0 = destination_buffer,
+  .write_size = destination_size
+};
+
+Copy·Status result = Copy·step(&copy_instance);
+```
+
+This module provides an efficient and flexible memory copying framework suitable for low-level data manipulation tasks.
+

@@ -4,9 +4,10 @@
 
 */
 
-#define IFACE
+#define FACE
 #include <stdio.h>
 #include <stdlib.h>
+#undef FACE
 
 // No need to define IMPLEMENTATION as `main` is one and done.
 
@@ -20,3 +21,7 @@ int main(int argc ,char *argv[] ,char *envp[]){
 
   return 0;
 }
+
+
+#define LOCAL
+#undef LOCAL
