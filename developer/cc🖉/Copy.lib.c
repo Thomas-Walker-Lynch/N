@@ -2,6 +2,7 @@
   Copy - Memory copy operations with attention to alignment.
   Provides optimized copy and byte order reversal functions.
 
+  'ATP'  At This Point in the code. Assertions follow.
 */
 
 #define Copy·DEBUG
@@ -20,27 +21,50 @@
   #include <stdint.h>
   #include <stddef.h>
 
+  #define extentof(x) (sizeof(x) - 1)
+  #define extent_t size_t
+
   typedef struct{
     void *read0; 
-    size_t read_size;
+    extent_t read_extent;
     void *write0;
-    size_t write_size;
-  } Copy·it;
+    extent_t write_extent;
+  } Copy·It;
 
   typedef enum{
-    Copy·Status·perfect_fit = 0
-    ,Copy·Status·argument_guard
-    ,Copy·Status·read_surplus
-    ,Copy·Status·read_surplus_write_gap
-    ,Copy·Status·write_available
-    ,Copy·Status·write_gap // write allocation has a terminal gap
+    Copy·It·Status·valid = 0
+    ,Copy·It·Status·null_read
+    ,Copy·It·Status·null_write
+    ,Copy·It·Status·overlap
+  } Copy·It·Status;
+
+  typedef enum{
+     Copy·Step·perfect_fit = 0
+    ,Copy·Step·argument_guard 
+    ,Copy·Step·read_surplus
+    ,Copy·Step·read_surplus_write_gap
+    ,Copy·Step·write_available
+    ,Copy·Step·write_gap
   } Copy·Status;
 
   typedef struct{
-    void *region(void *read0 ,void *read1 ,void *write0);
-    void *reverse_byte_order(void *read0 ,void *read1 ,void *write0);
-  } Copy·M;
+    bool Copy·IntervalPts·in(void *pt, void *pt0 ,void *pt1);
+    bool Copy·IntervalPts·contains(void *pt00 ,void *pt01 ,void *pt10 ,void *pt11);
+    bool Copy·IntervalPts·overlap(void *pt00 ,void *pt01, void *pt10 ,void *pt11);
 
+    bool Copy·IntervalPtSize·in(void *pt, void *pt0 ,size_t s);
+    bool Copy·IntervalPtSize·overlap(void *pt00 ,size_t s0, void *pt10 ,size_t s1);
+
+    Copy·It·Status Copy·wellformed_it(Copy·It *it)
+
+    void *identity(void *read0 ,void *read1 ,void *write0);
+    void *reverse_byte_order(void *read0 ,void *read1 ,void *write0);
+
+    Copy·Status Copy·Step·identity(Copy·It *it);
+    Copy·Status Copy·Step·reverse_order(Copy·It *it);
+    Copy·Status Copy·Step·write_hex(Copy·It *it);
+    Copy·Status Copy·Step·read_hex(Copy·It *it);
+  } Copy·M;
 
 #endif
 
@@ -49,323 +73,320 @@
 
 #ifdef Copy·IMPLEMENTATION
 
-  // this part goes into Nlib.a
+  #ifdef Copy·DEBUG
+    #include <stdio.h>
+  #endif
+
+  // this part goes into Copylib.a
+  // yes this is empty, so there is no Copylib.a
   #ifndef LOCAL
   #endif 
 
   #ifdef LOCAL
 
+    // Interval predicates.
+    // Intervals in Copy have inclusive bounds
 
-
-
-      #ifdef Copy·DEBUG
-        #include <stdio.h> // Only for debug prints, not used in production.
-
-typedef enum{
-   Copy·StatusWFIt·none                  = 0x00
-  ,Copy·StatusWFIt·null_read             = 0x01
-  ,Copy·StatusWFIt·null_write            = 0x02
-  ,Copy·StatusWFIt·zero_read_size        = 0x04
-  ,Copy·StatusWFIt·zero_write_size       = 0x08
-  ,Copy·StatusWFIt·write_too_small_hex   = 0x10
-  ,Copy·StatusWFIt·read_too_small_hex    = 0x20
-  ,Copy·StatusWFIt·read_larger_than_write = 0x40
-  ,Copy·StatusWFIt·overlapping_buffers   = 0x80
-} Copy·StatusWFIt;
-
-typedef enum{
-   Copy·ModeWFIt·none       = 0x00
-  ,Copy·ModeWFIt·bytes      = 0x01
-  ,Copy·ModeWFIt·reverse    = 0x02
-  ,Copy·ModeWFIt·write_hex  = 0x03
-  ,Copy·ModeWFIt·from_hex   = 0x04
-} Copy·ModeWFIt;
-
-
-
-
-#endif
-
-
-    /*
-      Copy·region - Copies a memory region while preserving byte order.
-      - Aligns reads for performance.
-      - Writes are assumed to be buffered and do not require alignment.
-      - Returns the updated write pointer.
-    */
-    Local void *Copy·bytes(void *read0 ,void *read1 ,void *write0){
-
-      uint8_t *r = (uint8_t *)read0;
-      uint8_t *r1 = (uint8_t *)read1;
-      uint8_t *w = (uint8_t *)write0;
-
-      //----------
-      // The potentially unaligned initial part (align read pointer).
-      if( (uintptr_t)r & 0x7 ){
-
-        // ORing in `0x7` adds at most six bytes to r.
-        uint8_t *r01 = (uint8_t *)((uintptr_t)r | 0x7);
-
-        // If the read interval is very small
-        if(r01 >= r1){
-          while(r < r1){
-            *w++ = *r++;
-          }
-          return w;
-        }
-
-        // Copy up to alignment boundary
-        do{ 
-          *w++ = *r++;
-        }while(r <= r01);
-      }
-      // r is now aligned, but *r has not yet been copied
-
-      //----------
-      // The bulk copy part (w is still possibly unaligned, but r is aligned)
-      uint8_t *r10 = (uint8_t *)((uintptr_t)r1 & ~(uintptr_t)0x7);
-
-      while(r < r10){
-        *(uint64_t *)w = *(uint64_t *)r;
-        w += 8;
-        r += 8;
-      }
-
-      // If r1 was aligned then r10 == r1 and we are done
-      if(r == r1) return w;
-
-      //----------
-      // The ragged tail, up to 7 bytes
-      do{
-        *w++ = *r++;
-      }while(r < r1);
-
-      return w;
+    Local bool Copy·IntervalPts·in(void *pt, void *pt0 ,void *pt1){
+      return pt >= pt0 && pt <= pt1; // Inclusive bounds
     }
 
-    /*
-      Copy·reverse_byte_order - Copies a memory region while reversing byte order.
-      - Reads from read1 down
-      - writes from write0 up
-      - Uses `__builtin_bswap64` for efficient 64-bit swaps.
-      - Returns the updated write pointer.
-    */
-    Local void *Copy·bytes_reverse_order(void *read0 ,void *read1 ,void *write0){
+    Local bool Copy·in_extent_interval(void *pt, void *pt0 ,extent_t e){
+      return Copy·IntervalPts·in(pt ,pt0 ,pt0 + e);
+    }
 
-      uint8_t *r = (uint8_t *)read1; // Start from the last byte
+    // interval 0 contains interval 1, overlap on boundaries allowed.
+    Local bool Copy·IntervalPts·contains(
+      void *pt00 ,void *pt01 ,void *pt10 ,void *pt11
+    ){
+     return pt10 >= pt00 && pt11 <= pt01;
+    }
+
+    // interval 0 properly contains interval 1, overlap on boundaries not allowed.
+    Local bool Copy·contains_proper_pt_interval(
+      void *pt00 ,void *pt01 ,void *pt10 ,void *pt11
+    ){
+     return pt10 > pt00 && pt11 < pt01;
+    }
+
+    // Possible cases of overlap, including just touching
+    // 1. interval 0 to the right of interval 1, just touching p00 == p11
+    // 2. interval 0 to the left of interval 1, just touching p01 == p10
+    // 3. interval 0 wholly contained in interval 1
+    // 4. interval 0 wholly contains interval 1
+    Local bool Copy·IntervalPts·overlap(void *pt00 ,void *pt01, void *pt10 ,void *pt11){
+      return 
+        Copy·IntervalPts·in(pt00 ,pt10 ,pt11) // #1, #3
+        || Copy·IntervalPts·in(pt10 ,pt00 ,pt01) // #2, #4
+        ;
+    }
+
+    Local bool Copy·overlap_extent_interval(void *pt00 ,extent_t e0, void *pt10 ,extent_t e1){
+      return Copy·IntervalPts·overlap(pt00 ,pt00 + e0 ,pt10 ,pt10 + e1);
+    }
+
+    Local Copy·It·Status Copy·It·wellformed(Copy·It *it){
+      char *this_name = "Copy·It·wellformed";
+      Copy·It·Status status = Copy·It·Status·valid;
+
+      if(it->read0 == NULL){
+        fprintf(stderr, "%s: NULL read pointer\n", this_name);
+        status |= Copy·It·Status·null_read;
+      }
+
+      if(it->write0 == NULL){
+        fprintf(stderr, "%s: NULL write pointer\n", this_name);
+        status |= Copy·It·Status·null_write;
+      }
+
+      if(
+        Copy·overlap_extent_interval(it->read0 ,it->read_extent ,it->write0 ,it->write_extent)
+        ){
+          fprintf(stderr, "%s: Read and write buffers overlap!\n", this_name);
+          status |= Copy·It·Status·overlap;
+      }
+
+      return status;
+    }
+
+    // consider an 8 byte window that is aligned
+    // returns the byte pointer to the least address byte in the window
+    Local void *Copy·floor_64(void *p){
+      return (uintptr_t)p & ~(uintptr_t)0x7;
+    }
+
+    // consider an 8 byte window that is aligned
+    // returns the byte pointer to the greatest address byte in the window
+    Local void *Copy·ceiling_64(void *p){
+      return (uintptr_t)p | 0x7;
+    }
+
+    // byte array greatest address byte at p1 (inclusive)
+    // byte array least address byte at p0 (inclusive)
+    // returns pointer to the greatest full 64-bit word-aligned address that is ≤ p1
+    // by contract, p1 must be >= p0
+    Local uint64_t *Copy·greatest_full_64(void *p0 ,void *p1){
+
+      // If p1 - 0x7 moves into a prior word while p0 does not, a prefetch hazard can occur.
+      // If p1 and p0 are more than 0x7 apart, they cannot be in the same word,
+      // but this does not guarantee a full 64-bit word exists in the range.
+      if (p1 - p0 < 0x7) return NULL;
+
+      // Compute the last fully aligned word at or before p1.
+      uint64_t *p1_64 = (void *)( ((uintptr_t)p1 - 0x7) & ~(uintptr_t)0x7 );
+
+      // If alignment rounds p1_64 below p0, there is no full word available.
+      if(p1_64 < p0) return NULL;
+
+      return p1_64;
+    }
+
+    // byte array greatest address byte at p1 (inclusive)
+    // byte array least address byte at p0 (inclusive)
+    // returns pointer to the least full 64-bit word-aligned address that is ≥ p0
+    Local uint64_t *Copy·least_full_64(void *p0 ,void *p1){
+
+      // If p0 + 0x7 moves into the next word while p1 does not, a prefetch hazard can occur.
+      // If p1 and p0 are more than 0x7 apart, they cannot be in the same word,
+      // but this does not guarantee a full 64-bit word exists in the range.
+      if(p1 - p0 < 0x7) return NULL;
+
+      // Compute the first fully aligned word at or after p0.
+      uint64_t *p0_64 = (void *)( ((uintptr_t)p0 + 0x7) & ~(uintptr_t)0x7 );
+
+      // If alignment rounds p0_64 beyond p1, there is no full word available.
+      if(p0_64 > p1) return NULL;
+
+      return p0_64;
+    }
+
+    Local void *Copy·inc64(void *p ,size_t Δ){
+      return (void *)((uint64_t *)p) + Δ;
+    }
+
+    Local void *Copy·identity(void *read0 ,void *read1 ,void *write0){
+
+      //----------------------------------------
+      // argument guard
+
+      if(read1 < read0) return NULL;
+      // ATP there is at least one byte to be copied
+
+      //----------------------------------------
+      // features of the byte arrays, optimizer should move this code around
+
       uint8_t *r0 = (uint8_t *)read0;
-      uint8_t *w = (uint8_t *)write0;
+      uint8_t *r1 = (uint8_t *)read1; // inclusive upper bound
+      uint8_t *w0 = (uint8_t *)write0;
 
-      //----------
-      // The potentially unaligned initial part (align read pointer).
-      if( (uintptr_t)r & 0x7 ){
+      uint8_t *r = r0;
+      uint8_t *w = w0;
 
-        // ANDing with `~0x7` moves it downward to the nearest lower alignment.
-        uint8_t *r10 = (uint8_t *)((uintptr_t)r & ~(uintptr_t)0x7);
+      // the contained uint64_t array
+      uint64_t *r0_64 = Copy·least_full_64(r0 ,r1);
+      uint64_t *r1_64 = Copy·greatest_full_64(r0 ,r1);
 
-        // If the read interval is very small
-        if(r10 < r0){
-          while(r > r0){
-            *w++ = *--r;
-          }
-          return w;
-        }
+      // ATP there might be unaligned smallest address in the array bytes
 
-        // Copy down to alignment boundary
+      // In fact, r0_64 and r1_64 being NULL will always occur together.
+      // .. then there are not many bytes to be copied
+      if(r0_64 == NULL || r1_64 == NULL){
         do{
-          *w++ = *--r;
-        }while(r > r10);
-      }
-      // r is now aligned, and *r has been copied
-
-      //----------
-      // The bulk copy part
-      uint8_t *r01 = (uint8_t *)( ((uintptr_t)r0 + (uintptr_t)0x7) & ~(uintptr_t)0x7);
-
-      while(r > r01){
-        r -= 8;
-        *(uint64_t *)w = __builtin_bswap64(*(uint64_t *)r);
-        w += 8;
+          *w = *r;
+          if(r == r1) break;
+          w++;
+          r++;
+        }while(true);
+        return w;
       }
 
-      // If r0 was aligned then r01 == r0 and we are done
-      if(r < r0) return w;
+      // if needed, align r
+      while(r < r0_64){ 
+        *w++ = *r++;
+      }
+      // ATP r == r0_64, though *r has not yet been copied
+      // ATP r is uint64_t aligned
+      // ATP there is at least one word to be copied
+      // ATP w is possibly not aligned
+
+      //----------------------------------------
+      // The bulk copy part 
+
+      do{
+        *(uint64_t *)w = *(uint64_t *)r;
+        if(r == r1_64) break;
+        w = Copy·inc64(w ,1);
+        r = Copy·inc64(r ,1);
+      }while(true);
+      // ATP r == r1_64
+
+      // If r1 was aligned the copy is done
+      bool aligned_r1 = (uintptr_t)r1 == (uintptr_t)Copy·ceiling_64(r1_64);
+      if(aligned_r1) return w;
+      r = Copy·inc_64(r ,1);
+      w = Copy·inc_64(w ,1);
+      // ATP there is at least one trailing unaligned byte to copy
+      // *r has not yet been copied, but needs to be
 
       //----------
       // The ragged tail, up to 7 bytes
       do{
-        *w++ = *--r;
-      }while(r >= r0);
+        *w = *r;
+        if(r == r1) break;
+        w++;
+        r++;
+      }while(true);
 
       return w;
     }
 
-    /* 
-       Read buffer is read from the lowest address, working toward higher addresses.
+    Local void *Copy·reverse_byte_order(void *read0 ,void *read1 ,void *write0){
 
-       Write buffer is written from the lowest address, working to higher addresses.
+      //----------------------------------------
+      // Argument guard
 
-       To force data to be left in the read buffer, or for capacity to be left in the
-       write buffer, reduce sizes.
-    */
-    Local Copy·Status Copy·step(
-      Copy·it *it
-    ){
-      uint8_t *r = (uint8_t *)it->read0;
-      uint8_t *w = (uint8_t *)it->write0;
+      if(read1 < read0) return NULL;
+      // ATP there is at least one byte to be copied
 
-      size_t rs = it->read_size;
-      size_t ws = it->write_size;
+      //----------------------------------------
+      // Features of the byte arrays, optimizer should move this code around
 
-      if(ws >= rs){
-        Copy·bytes(r ,r + rs ,w);
-        it->read0 += rs;
-        it->read_size = 0;
-        it->write0 += rs;
-        it->write_size -= rs;
-        if(ws == rs) return Copy·Status·perfect_fit;
-        return Copy·Status·write_available;;
+      uint8_t *r0 = (uint8_t *)read0;
+      uint8_t *r1 = (uint8_t *)read1; // inclusive upper bound
+      uint8_t *w0 = (uint8_t *)write0;
+
+      uint8_t *r = r1; // Start from the last byte
+      uint8_t *w = w0;
+
+      // The contained uint64_t array
+      uint64_t *r0_64 = Copy·least_full_64(r0 ,r1);
+      uint64_t *r1_64 = Copy·greatest_full_64(r0 ,r1);
+
+      // ATP there might be unaligned highest address in the array bytes
+
+      // If no full words exist, fallback to byte-wise copying
+      if(r0_64 == NULL || r1_64 == NULL){
+        do{
+          *w = *r;
+          if(r == r0) break;
+          w++;
+          r--;
+        }while(true);
+        return w;
       }
 
-      // ws < rs
-      Copy·bytes(r ,r + ws ,w);
-      it->read0 += ws;
-      it->read_size -= ws;
-      it->write_size = 0;
-      it->write0 += ws;
-      return Copy·Status·read_surplus;
-   }
-
-    /* 
-       Read buffer is read from top down. Start with the largest address
-       just above the read buffer. Continue into lower addresses.
-
-       write buffer is written from bottom up. Start with the lowest address,
-       continue into higher addresses.
-    */
-    Local Copy·Status Copy·step_reverse_order(Copy·it *it){
-      // How many bytes remain to be read/written
-      if( it->read_size  == 0) return Copy·Status·complete;
-      size_t rs = it->read_size;
-      uint8_t *r1   = (uint8_t *)it->read0 + rs;
-      size_t ws = it->write_size;
-      uint8_t *w0 = (uint8_t *)it->write0;
-
-      if(ws >= rs){
-        uint8_t *r0 = (uint8_t *)it->read0;
-        Copy·bytes_reverse_order(r0, r1, w0);
-        it->read_size = 0;
-        it->write0 += rs;
-        it->write_size -= rs;
-        if(it->write_size == 0) return Copy·Status·perfect_fit;
-        return Copy·Status·write_available;
+      // If needed, align r
+      while(r > (uint8_t *)r1_64){
+        *w++ = *r--;
       }
+      // ATP r == r1_64, though *r has not yet been copied
+      // ATP r is uint64_t aligned
+      // ATP there is at least one word to be copied
+      // ATP w is possibly not aligned
 
-      // ws < rs
-      uint8_t *r0 = r1 - ws;
-      Copy·bytes_reverse_order(r0, r1, w0);
-      it->read0 -= ws;
-      it->read_size -= ws;
-      it->write_size = 0;
-      it->write0 += ws;
-      return Copy·Status·read_surplus;
+      //----------------------------------------
+      // The bulk copy part 
+
+      do{
+        *(uint64_t *)w = __builtin_bswap64(*(uint64_t *)r);
+        if(r == r0_64) break;
+        w = Copy·inc64(w ,1);
+        r = Copy·inc64(r ,-1);
+      }while(true);
+      // ATP r == r0_64
+
+      // If r0 was aligned, the copy is done
+      bool aligned_r0 = (uintptr_t)r0 == (uintptr_t)Copy·floor_64(r0_64);
+      if(aligned_r0) return w;
+
+      r = Copy·inc64(r ,-1);
+      w = Copy·inc64(w ,1);
+      // ATP there is at least one trailing unaligned byte to copy
+      // *r has not yet been copied, but needs to be
+
+      //----------
+      // The ragged tail, up to 7 bytes
+      do{
+        *w = *r;
+        if(r == r0) break;
+        w++;
+        r--;
+      }while(true);
+
+      return w;
     }
+
 
     /*
-      Read bytes, write hex pairs.
-      Read and write are low address to high address.
-      Each read byte value -> 2 write allocation bytes
+      Read and write pointers are incremented by `extent + 1`, ensuring they do not skip
+      past the last valid byte. The previous `+1` was incorrect in cases where
+      stepping already processed the last byte.
     */
-    Local Copy·Status Copy·step_write_hex(
-      Copy·it *it
-    ){
-
+    Local Copy·Status Copy·Step·identity(Copy·It *it){
       uint8_t *r = (uint8_t *)it->read0;
-      size_t rs = it->read_size;
-
       uint8_t *w = (uint8_t *)it->write0;
-      size_t  ws = it->write_size & ~1; // even number write_size 
-      size_t ews = it->write_size >> 1; // effective write size 
 
-      // If ews >= rs, read bytes all coped
-      if(ews >= rs){
-        size_t ers = it->read_size << 1; // effective read size
-        it->write0 += ers;
-        it->write_size -= ers;
-        while(rs--){
-          *(uint16_t *)w = Copy·byte_to_hex(*r++);
-          w += 2;
-        }
-        it->read0 = r;
-        it->read_size = 0;
+      extent_t re = it->read_extent;
+      extent_t we = it->write_extent;
 
-        if(it->write_size == 0) return Copy·Status·perfect_fit;
-        if(it->write_size == 1) return Copy·Status·write_gap;
-        return Copy·Status·write_available;
+      if(we >= re){
+        Copy·bytes(r ,r + re ,w);
+        it->read0 += re;  // Fixed stepping logic
+        it->read_extent = 0;
+        it->write0 += re;
+        it->write_extent -= re;
+        if(we == re) return Copy·Step·perfect_fit;
+        return Copy·Step·write_available;
       }
 
-      // ews < rs, write allocation all used, read bytes surplus
-      it->read0 += ews;
-      it->read_size -= ews;
-      while(ews--){
-        *(uint16_t *)w = Copy·byte_to_hex(*r++);
-        w += 2;
-      }
-      it->write0 = w;
-      it->write_size -= ws;
-
-      if(it->write_size == 1) return Copy·Status·read_surplus_write_gap;
-      return Copy·Status·read_surplus;
+      Copy·bytes(r ,r + we ,w);
+      it->read0 += we;  // Fixed stepping logic
+      it->read_extent -= we;
+      it->write_extent = 0;
+      it->write0 += we;
+      return Copy·Step·read_surplus;
     }
-
-    /*
-      Read hex pairs, write bytes.
-      Read is low address to high address.
-      Write is low address to high address.
-      Each read hex pair -> 1 write byte.
-    */
-    Local Copy·Status Copy·step_from_hex(
-      Copy·it *it
-    ){
-      uint8_t *r = (uint8_t *)it->read0;
-      size_t rs = it->read_size & ~1; // Must be even for hex pairs.
-      size_t ers = rs >> 1; // Effective read size: half the number of bytes.
-
-      uint8_t *w = (uint8_t *)it->write0;
-      size_t ws = it->write_size; // Write size already in bytes.
-
-      // If ws >= ers, all hex values are processed
-      if(ws >= ers){
-        while(ers--){
-          *w++ = Copy·hex_to_byte(*(uint16_t *)r);
-          r += 2;
-        }
-
-        it->read0 = r;
-        it->read_size -= rs;
-        it->write0 = w;
-        it->write_size -= rs >> 1; // Each byte consumes two hex chars.
-
-        if(it->write_size == 0) return Copy·Status·perfect_fit;
-        return Copy·Status·write_available;
-      }
-
-      // ws < ers, read allocation surplus
-      while(ws--){
-        *w++ = Copy·hex_to_byte(*(uint16_t *)r);
-        r += 2;
-      }
-
-      it->read0 = r;
-      it->read_size -= ws << 1; // Each write byte consumes two hex chars.
-      it->write0 = w;
-      it->write_size = 0;
-
-      return Copy·Status·read_surplus;
-    }
-
 
   #endif // LOCAL
-
 
 #endif // IMPLEMENTATION
