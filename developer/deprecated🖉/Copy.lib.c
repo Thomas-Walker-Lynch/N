@@ -111,32 +111,37 @@
       return Copy·overlap_pt_interval(pt00 ,pt00 + s0 ,pt10 ,pt10 + s1);
     }
 
-    Local Copy·WFIt·Status Copy·wellformed_it(Copy·it *it){
+    Local Copy·WFIt·Status Copy·wellformed_it(Copy·it *it ,bool print){
       char *this_name = "Copy·wellformed_it";
       Copy·WFIt·Status status = Copy·WFIt·Status·valid;
 
+      if(it == NULL){
+        if(print) fprintf( stderr ,"%s: NULL read pointer\n" ,this_name );
+        return Core·It·Status·null;
+      }
+
       if(it->read0 == NULL){
-        fprintf( stderr ,"%s: NULL read pointer\n" ,this_name );
+        if(print) fprintf( stderr ,"%s: NULL read pointer\n" ,this_name );
         status |= Copy·WFIt·Status·null_read;
       }
 
       if(it->write0 == NULL){
-        fprintf( stderr ,"%s: NULL write pointer\n" ,this_name );
+        if(print) fprintf( stderr ,"%s: NULL write pointer\n" ,this_name );
         status |= Copy·WFIt·Status·null_write;
       }
 
       if(it->read_size == 0){
-        fprintf( stderr ,"%s: Zero-sized read buffer\n" ,this_name );
+        if(print) fprintf( stderr ,"%s: Zero-sized read buffer\n" ,this_name );
         status |= Copy·WFIt·Status·zero_read_buffer;
       }
 
       if(it->write_size == 0){
-        fprintf( stderr ,"%s: Zero-sized write buffer\n" ,this_name );
+        if(print) fprintf( stderr ,"%s: Zero-sized write buffer\n" ,this_name );
         status |= Copy·WFIt·Status·zero_write_buffer;
       }
 
       if( Copy·overlap_size_interval(it->read0 ,it->read_size ,it->write0 ,it->write_size) ){
-        fprintf( stderr ,"%s: Read and write buffers overlap!\n" ,this_name );
+        if(print) fprintf( stderr ,"%s: Read and write buffers overlap!\n" ,this_name );
         status |= Copy·WFIt·Status·overlap;
       }
 

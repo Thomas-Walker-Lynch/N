@@ -1,22 +1,22 @@
 /*
-  Copy - Memory copy operations with attention to alignment.
+  CoreCopy - Memory copy operations with attention to alignment.
   Provides optimized copy and byte order reversal functions.
 
   'ATP'  At This Point in the code. Assertions follow.
 */
 
-#define Copy·DEBUG
+#define CoreCopy·DEBUG
 
 #ifndef FACE
-#define Copy·IMPLEMENTATION
+#define CoreCopy·IMPLEMENTATION
 #define FACE
 #endif 
 
 //--------------------------------------------------------------------------------
 // Interface
 
-#ifndef Copy·FACE
-#define Copy·FACE
+#ifndef CoreCopy·FACE
+#define CoreCopy·FACE
 
   #include <stdint.h>
   #include <stddef.h>
@@ -29,51 +29,51 @@
     extent_t read_extent;
     void *write0;
     extent_t write_extent;
-  } Copy·It;
+  } CoreCopy·It;
 
   typedef enum{
-    Copy·It·Status·valid = 0
-    ,Copy·It·Status·null_read
-    ,Copy·It·Status·null_write
-    ,Copy·It·Status·overlap
-  } Copy·It·Status;
+    CoreCopy·It·Status·valid = 0
+    ,CoreCopy·It·Status·null_read
+    ,CoreCopy·It·Status·null_write
+    ,CoreCopy·It·Status·overlap
+  } CoreCopy·It·Status;
 
   typedef enum{
-     Copy·Step·perfect_fit = 0
-    ,Copy·Step·argument_guard 
-    ,Copy·Step·read_surplus
-    ,Copy·Step·read_surplus_write_gap
-    ,Copy·Step·write_available
-    ,Copy·Step·write_gap
-  } Copy·Status;
+     CoreCopy·Step·perfect_fit = 0
+    ,CoreCopy·Step·argument_guard 
+    ,CoreCopy·Step·read_surplus
+    ,CoreCopy·Step·read_surplus_write_gap
+    ,CoreCopy·Step·write_available
+    ,CoreCopy·Step·write_gap
+  } CoreCopy·Status;
 
   typedef struct{
-    bool Copy·IntervalPts·in(void *pt, void *pt0 ,void *pt1);
-    bool Copy·IntervalPts·contains(void *pt00 ,void *pt01 ,void *pt10 ,void *pt11);
-    bool Copy·IntervalPts·overlap(void *pt00 ,void *pt01, void *pt10 ,void *pt11);
+    bool CoreCopy·IntervalPts·in(void *pt, void *pt0 ,void *pt1);
+    bool CoreCopy·IntervalPts·contains(void *pt00 ,void *pt01 ,void *pt10 ,void *pt11);
+    bool CoreCopy·IntervalPts·overlap(void *pt00 ,void *pt01, void *pt10 ,void *pt11);
 
-    bool Copy·IntervalPtSize·in(void *pt, void *pt0 ,size_t s);
-    bool Copy·IntervalPtSize·overlap(void *pt00 ,size_t s0, void *pt10 ,size_t s1);
+    bool CoreCopy·IntervalPtSize·in(void *pt, void *pt0 ,size_t s);
+    bool CoreCopy·IntervalPtSize·overlap(void *pt00 ,size_t s0, void *pt10 ,size_t s1);
 
-    Copy·It·Status Copy·wellformed_it(Copy·It *it)
+    CoreCopy·It·Status CoreCopy·wellformed_it(CoreCopy·It *it)
 
     void *identity(void *read0 ,void *read1 ,void *write0);
     void *reverse_byte_order(void *read0 ,void *read1 ,void *write0);
 
-    Copy·Status Copy·Step·identity(Copy·It *it);
-    Copy·Status Copy·Step·reverse_order(Copy·It *it);
-    Copy·Status Copy·Step·write_hex(Copy·It *it);
-    Copy·Status Copy·Step·read_hex(Copy·It *it);
-  } Copy·M;
+    CoreCopy·Status CoreCopy·Step·identity(CoreCopy·It *it);
+    CoreCopy·Status CoreCopy·Step·reverse_order(CoreCopy·It *it);
+    CoreCopy·Status CoreCopy·Step·write_hex(CoreCopy·It *it);
+    CoreCopy·Status CoreCopy·Step·read_hex(CoreCopy·It *it);
+  } CoreCopy·M;
 
 #endif
 
 //--------------------------------------------------------------------------------
 // Implementation
 
-#ifdef Copy·IMPLEMENTATION
+#ifdef CoreCopy·IMPLEMENTATION
 
-  #ifdef Copy·DEBUG
+  #ifdef CoreCopy·DEBUG
     #include <stdio.h>
   #endif
 
@@ -87,23 +87,27 @@
     // Interval predicates.
     // Intervals in Copy have inclusive bounds
 
-    Local bool Copy·IntervalPts·in(void *pt, void *pt0 ,void *pt1){
+    Local bool CoreCopy·aligned64(void *p){
+      return ((uintptr_t)p & 0x7) == 0;
+    }
+
+    Local bool CoreCopy·IntervalPts·in(void *pt, void *pt0 ,void *pt1){
       return pt >= pt0 && pt <= pt1; // Inclusive bounds
     }
 
-    Local bool Copy·in_extent_interval(void *pt, void *pt0 ,extent_t e){
-      return Copy·IntervalPts·in(pt ,pt0 ,pt0 + e);
+    Local bool CoreCopy·in_extent_interval(void *pt, void *pt0 ,extent_t e){
+      return CoreCopy·IntervalPts·in(pt ,pt0 ,pt0 + e);
     }
 
     // interval 0 contains interval 1, overlap on boundaries allowed.
-    Local bool Copy·IntervalPts·contains(
+    Local bool CoreCopy·IntervalPts·contains(
       void *pt00 ,void *pt01 ,void *pt10 ,void *pt11
     ){
      return pt10 >= pt00 && pt11 <= pt01;
     }
 
     // interval 0 properly contains interval 1, overlap on boundaries not allowed.
-    Local bool Copy·contains_proper_pt_interval(
+    Local bool CoreCopy·contains_proper_pt_interval(
       void *pt00 ,void *pt01 ,void *pt10 ,void *pt11
     ){
      return pt10 > pt00 && pt11 < pt01;
@@ -114,36 +118,36 @@
     // 2. interval 0 to the left of interval 1, just touching p01 == p10
     // 3. interval 0 wholly contained in interval 1
     // 4. interval 0 wholly contains interval 1
-    Local bool Copy·IntervalPts·overlap(void *pt00 ,void *pt01, void *pt10 ,void *pt11){
+    Local bool CoreCopy·IntervalPts·overlap(void *pt00 ,void *pt01, void *pt10 ,void *pt11){
       return 
-        Copy·IntervalPts·in(pt00 ,pt10 ,pt11) // #1, #3
-        || Copy·IntervalPts·in(pt10 ,pt00 ,pt01) // #2, #4
+        CoreCopy·IntervalPts·in(pt00 ,pt10 ,pt11) // #1, #3
+        || CoreCopy·IntervalPts·in(pt10 ,pt00 ,pt01) // #2, #4
         ;
     }
 
-    Local bool Copy·overlap_extent_interval(void *pt00 ,extent_t e0, void *pt10 ,extent_t e1){
-      return Copy·IntervalPts·overlap(pt00 ,pt00 + e0 ,pt10 ,pt10 + e1);
+    Local bool CoreCopy·overlap_extent_interval(void *pt00 ,extent_t e0, void *pt10 ,extent_t e1){
+      return CoreCopy·IntervalPts·overlap(pt00 ,pt00 + e0 ,pt10 ,pt10 + e1);
     }
 
-    Local Copy·It·Status Copy·It·wellformed(Copy·It *it){
-      char *this_name = "Copy·It·wellformed";
-      Copy·It·Status status = Copy·It·Status·valid;
+    Local CoreCopy·It·Status CoreCopy·It·wellformed(CoreCopy·It *it){
+      char *this_name = "CoreCopy·It·wellformed";
+      CoreCopy·It·Status status = CoreCopy·It·Status·valid;
 
       if(it->read0 == NULL){
         fprintf(stderr, "%s: NULL read pointer\n", this_name);
-        status |= Copy·It·Status·null_read;
+        status |= CoreCopy·It·Status·null_read;
       }
 
       if(it->write0 == NULL){
         fprintf(stderr, "%s: NULL write pointer\n", this_name);
-        status |= Copy·It·Status·null_write;
+        status |= CoreCopy·It·Status·null_write;
       }
 
       if(
-        Copy·overlap_extent_interval(it->read0 ,it->read_extent ,it->write0 ,it->write_extent)
+        CoreCopy·overlap_extent_interval(it->read0 ,it->read_extent ,it->write0 ,it->write_extent)
         ){
           fprintf(stderr, "%s: Read and write buffers overlap!\n", this_name);
-          status |= Copy·It·Status·overlap;
+          status |= CoreCopy·It·Status·overlap;
       }
 
       return status;
@@ -151,13 +155,13 @@
 
     // consider an 8 byte window that is aligned
     // returns the byte pointer to the least address byte in the window
-    Local void *Copy·floor_64(void *p){
+    Local void *CoreCopy·floor64(void *p){
       return (uintptr_t)p & ~(uintptr_t)0x7;
     }
 
     // consider an 8 byte window that is aligned
     // returns the byte pointer to the greatest address byte in the window
-    Local void *Copy·ceiling_64(void *p){
+    Local void *CoreCopy·ceiling64(void *p){
       return (uintptr_t)p | 0x7;
     }
 
@@ -165,12 +169,12 @@
     // byte array least address byte at p0 (inclusive)
     // returns pointer to the greatest full 64-bit word-aligned address that is ≤ p1
     // by contract, p1 must be >= p0
-    Local uint64_t *Copy·greatest_full_64(void *p0 ,void *p1){
+    Local uint64_t *CoreCopy·greatest_full_64(void *p0 ,void *p1){
 
       // If p1 - 0x7 moves into a prior word while p0 does not, a prefetch hazard can occur.
       // If p1 and p0 are more than 0x7 apart, they cannot be in the same word,
       // but this does not guarantee a full 64-bit word exists in the range.
-      if (p1 - p0 < 0x7) return NULL;
+      if((uintptr_t)p1 < (uintptr_t)p0 + 0x7) return NULL;
 
       // Compute the last fully aligned word at or before p1.
       uint64_t *p1_64 = (void *)( ((uintptr_t)p1 - 0x7) & ~(uintptr_t)0x7 );
@@ -184,7 +188,7 @@
     // byte array greatest address byte at p1 (inclusive)
     // byte array least address byte at p0 (inclusive)
     // returns pointer to the least full 64-bit word-aligned address that is ≥ p0
-    Local uint64_t *Copy·least_full_64(void *p0 ,void *p1){
+    Local uint64_t *CoreCopy·least_full_64(void *p0 ,void *p1){
 
       // If p0 + 0x7 moves into the next word while p1 does not, a prefetch hazard can occur.
       // If p1 and p0 are more than 0x7 apart, they cannot be in the same word,
@@ -200,160 +204,111 @@
       return p0_64;
     }
 
-    Local void *Copy·inc64(void *p ,size_t Δ){
+    Local void *CoreCopy·inc64(void *p ,size_t Δ){
       return (void *)((uint64_t *)p) + Δ;
     }
 
-    Local void *Copy·identity(void *read0 ,void *read1 ,void *write0){
-
-      //----------------------------------------
-      // argument guard
-
-      if(read1 < read0) return NULL;
-      // ATP there is at least one byte to be copied
-
-      //----------------------------------------
-      // features of the byte arrays, optimizer should move this code around
-
-      uint8_t *r0 = (uint8_t *)read0;
-      uint8_t *r1 = (uint8_t *)read1; // inclusive upper bound
-      uint8_t *w0 = (uint8_t *)write0;
-
-      uint8_t *r = r0;
-      uint8_t *w = w0;
-
-      // the contained uint64_t array
-      uint64_t *r0_64 = Copy·least_full_64(r0 ,r1);
-      uint64_t *r1_64 = Copy·greatest_full_64(r0 ,r1);
-
-      // ATP there might be unaligned smallest address in the array bytes
-
-      // In fact, r0_64 and r1_64 being NULL will always occur together.
-      // .. then there are not many bytes to be copied
-      if(r0_64 == NULL || r1_64 == NULL){
-        do{
-          *w = *r;
-          if(r == r1) break;
-          w++;
-          r++;
-        }while(true);
-        return w;
-      }
-
-      // if needed, align r
-      while(r < r0_64){ 
-        *w++ = *r++;
-      }
-      // ATP r == r0_64, though *r has not yet been copied
-      // ATP r is uint64_t aligned
-      // ATP there is at least one word to be copied
-      // ATP w is possibly not aligned
-
-      //----------------------------------------
-      // The bulk copy part 
-
-      do{
-        *(uint64_t *)w = *(uint64_t *)r;
-        if(r == r1_64) break;
-        w = Copy·inc64(w ,1);
-        r = Copy·inc64(r ,1);
-      }while(true);
-      // ATP r == r1_64
-
-      // If r1 was aligned the copy is done
-      bool aligned_r1 = (uintptr_t)r1 == (uintptr_t)Copy·ceiling_64(r1_64);
-      if(aligned_r1) return w;
-      r = Copy·inc_64(r ,1);
-      w = Copy·inc_64(w ,1);
-      // ATP there is at least one trailing unaligned byte to copy
-      // *r has not yet been copied, but needs to be
-
-      //----------
-      // The ragged tail, up to 7 bytes
-      do{
-        *w = *r;
-        if(r == r1) break;
-        w++;
-        r++;
-      }while(true);
-
-      return w;
+    Local uint64_t CoreCopy·read_word_fwd(uint64_t *r){
+      return *r;
     }
 
-    Local void *Copy·reverse_byte_order(void *read0 ,void *read1 ,void *write0){
+    Local uint64_t CoreCopy·read_word_rev(uint64_t *r0, uint64_t *r1, uint64_t *r){
+      return __builtin_bswap64(*(CoreCopy·floor64(r0 + (r1 - r))));
+    }
+
+    Local void *CoreCopy·byte(
+       uint8_t *r0 ,uint8_t *r1 ,uint8_t *w0 ,bool reverse
+    ){
+       //----------------------------------------
+       // Argument guard
+       //
+
+       if(r1<r0) return NULL;
+
+       //----------------------------------------
+       // Setup pointers
+       //
+
+       uint8_t *r = r0;
+       uint8_t *w = w0;
+
+       // Function pointer for dynamic read behavior
+       uint8_t (*read_byte)(
+          uint8_t * ,uint8_t * ,uint8_t *
+       ) = reverse ? CoreCopy·read_byte_rev : CoreCopy·read_byte_fwd;
+
+       //----------------------------------------
+       // Byte-wise copy
+       //
+
+       do{
+          *w = read_byte(r0 ,r1 ,r);
+          if(r==r1) break;
+          w++;
+          r++;
+       }while(true);
+
+       return w;
+    }
+
+    Local void *CoreCopy·word64(void *read0 ,void *read1 ,void *write0 ,bool reverse){
 
       //----------------------------------------
       // Argument guard
 
       if(read1 < read0) return NULL;
-      // ATP there is at least one byte to be copied
 
       //----------------------------------------
-      // Features of the byte arrays, optimizer should move this code around
-
+      // Setup pointers
+      
+      // the read interval, for byte arrays
       uint8_t *r0 = (uint8_t *)read0;
       uint8_t *r1 = (uint8_t *)read1; // inclusive upper bound
       uint8_t *w0 = (uint8_t *)write0;
 
-      uint8_t *r = r1; // Start from the last byte
-      uint8_t *w = w0;
+      // the contained word interval, inclusive bounds
+      uint64_t *r0_64 = CoreCopy·least_full_64(r0 ,r1);
+      uint64_t *r1_64 = CoreCopy·greatest_full_64(r0 ,r1);
 
-      // The contained uint64_t array
-      uint64_t *r0_64 = Copy·least_full_64(r0 ,r1);
-      uint64_t *r1_64 = Copy·greatest_full_64(r0 ,r1);
+      // swap byte order done by overloading the read function
+      uint8_t (*read_byte)(uint8_t * ,uint8_t * ,uint8_t *)  
+          = reverse ? CoreCopy·read_byte_rev : CoreCopy·read_byte_fwd;
 
-      // ATP there might be unaligned highest address in the array bytes
+      uint64_t (*read_word)(uint64_t * ,uint64_t * ,uint64_t *) 
+          = reverse ? CoreCopy·read_word_rev : CoreCopy·read_word_fwd;
 
-      // If no full words exist, fallback to byte-wise copying
-      if(r0_64 == NULL || r1_64 == NULL){
-        do{
-          *w = *r;
-          if(r == r0) break;
-          w++;
-          r--;
-        }while(true);
-        return w;
-      }
-
-      // If needed, align r
-      while(r > (uint8_t *)r1_64){
-        *w++ = *r--;
-      }
-      // ATP r == r1_64, though *r has not yet been copied
-      // ATP r is uint64_t aligned
-      // ATP there is at least one word to be copied
-      // ATP w is possibly not aligned
+      // If no full words ,perform byte-wise copy
+      if(r0_64 == NULL || r1_64 == NULL) return CoreCopy·byte(r0 ,r1 ,w0 ,reverse);
 
       //----------------------------------------
-      // The bulk copy part 
+      // Align `r` to first full 64-bit word boundary
+
+      uint8_t *w=w0;
+      if( !CoreCopy·aligned64(r0) ){
+        w = CoreCopy·byte(r0 ,r0_64 - 1 ,w ,reverse);
+      }
+      uint8_t *r = r0_64;
+
+      //----------------------------------------
+      // Bulk word-wise copy
 
       do{
-        *(uint64_t *)w = __builtin_bswap64(*(uint64_t *)r);
-        if(r == r0_64) break;
-        w = Copy·inc64(w ,1);
-        r = Copy·inc64(r ,-1);
-      }while(true);
-      // ATP r == r0_64
-
-      // If r0 was aligned, the copy is done
-      bool aligned_r0 = (uintptr_t)r0 == (uintptr_t)Copy·floor_64(r0_64);
-      if(aligned_r0) return w;
-
-      r = Copy·inc64(r ,-1);
-      w = Copy·inc64(w ,1);
-      // ATP there is at least one trailing unaligned byte to copy
-      // *r has not yet been copied, but needs to be
-
-      //----------
-      // The ragged tail, up to 7 bytes
-      do{
-        *w = *r;
-        if(r == r0) break;
-        w++;
-        r--;
+        *(uint64_t *)w = read_word(r0_64 ,r1_64 ,(uint64_t *)r);
+        if(r == (uint8_t *)r1_64) break;
+        w = CoreCopy·inc64(w ,1);
+        r = CoreCopy·inc64(r ,1);
       }while(true);
 
-      return w;
+      // If r1 was aligned ,we're done
+      if(CoreCopy·aligned64(r1)) return w;
+      w = CoreCopy·inc64(w ,1);
+      r = CoreCopy·inc64(r ,1);
+
+      //----------------------------------------
+      // Ragged tail (byte-wise copy)
+
+      return CoreCopy·byte(r ,r1 ,w ,reverse);
+
     }
 
 
@@ -362,7 +317,7 @@
       past the last valid byte. The previous `+1` was incorrect in cases where
       stepping already processed the last byte.
     */
-    Local Copy·Status Copy·Step·identity(Copy·It *it){
+    Local CoreCopy·Status CoreCopy·Step·identity(CoreCopy·It *it){
       uint8_t *r = (uint8_t *)it->read0;
       uint8_t *w = (uint8_t *)it->write0;
 
@@ -370,21 +325,21 @@
       extent_t we = it->write_extent;
 
       if(we >= re){
-        Copy·bytes(r ,r + re ,w);
+        CoreCopy·bytes(r ,r + re ,w);
         it->read0 += re;  // Fixed stepping logic
         it->read_extent = 0;
         it->write0 += re;
         it->write_extent -= re;
-        if(we == re) return Copy·Step·perfect_fit;
-        return Copy·Step·write_available;
+        if(we == re) return CoreCopy·Step·perfect_fit;
+        return CoreCopy·Step·write_available;
       }
 
-      Copy·bytes(r ,r + we ,w);
+      CoreCopy·bytes(r ,r + we ,w);
       it->read0 += we;  // Fixed stepping logic
       it->read_extent -= we;
       it->write_extent = 0;
       it->write0 += we;
-      return Copy·Step·read_surplus;
+      return CoreCopy·Step·read_surplus;
     }
 
   #endif // LOCAL

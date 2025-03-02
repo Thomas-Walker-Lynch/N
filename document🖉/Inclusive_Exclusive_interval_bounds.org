@@ -64,6 +64,7 @@ For TTCA, inclusive bounds were chosen specifically to prevent the issues that a
 
 * References
 - Thomas, *Tom's Turing Complete Computing Architecture (TTCA)*&#8203;:contentReference[oaicite:2]{index=2}.
+
 ------------------------
 Here’s what stands out from this process:
 
@@ -86,3 +87,8 @@ Hybrid Approach Might Be the Best Path
 Inclusive lower bounds keep indexing intuitive.
 Exclusive upper bounds avoid unnecessary adjustments in word-based processing.
 This mirrors how C and assembly tend to handle memory intervals (start inclusive, end exclusive).
+
+------------------------
+Inclusive upper bound made byte reverse copy simpler, as there was symetry in pointing
+to the last byte of word to represent a word in reverse order, and pointing to the
+the first byte to represent the word in forward order.
