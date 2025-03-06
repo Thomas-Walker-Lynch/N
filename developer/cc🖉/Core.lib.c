@@ -33,7 +33,7 @@
     void *write0;  // write0 = NULL means no buffer or empty buffer.
     extent_t write_extent;
     bool reverse_byte_order;
-  } Core·AreaPairing;
+  } Core·AreaPairinng;
 
   typedef enum{
     Core·AreaPairing·Status·valid = 0
@@ -53,31 +53,33 @@
     ,Core·Step·write_gap
   } Core·Step·Status;
 
+  typedef Core·Step·Fn (*Core·Step·Fn)();
+
   typedef struct{
 
-    bool Area·encloses_pt(void *pt ,void *pt0 ,size_t s);
-    bool Area·encloses_pt_strictly(void *pt ,void *pt0 ,size_t s);
-    bool Area·encloses(void *pt00 ,size_t e0 ,void *pt10 ,size_t e1);
-    bool Area·encloses_strictly(void *pt00 ,size_t e0 ,void *pt10 ,size_t e1);
-    bool Area·overlap(void *pt00 ,size_t s0 ,void *pt10 ,size_t s1);
+    // Area predicates
+    bool Area·encloses_pt(void *pt ,void *pt0 ,extent_t e);
+    bool Area·encloses_pt_strictly(void *pt ,void *pt0 ,extent_t e);
+    bool Area·encloses(void *pt00 ,extent_t e0 ,void *pt10 ,extent_t e1);
+    bool Area·encloses_strictly(void *pt00 ,extent_t e0 ,void *pt10 ,extent_t e1);
+    bool Area·overlap(void *pt00 ,extent_t s0 ,void *pt10 ,extent_t e1);
 
-    uint64_t *greatest_full_64(void *p0 ,void *p1);
-    uint64_t *least_full_64(void *p0 ,void *p1);
-
+    // 64 bit word operations
     bool is_aligned_64(void *p);
     void *floor_64(void *p);
     void *ceiling_64(void *p);
+    uint64_t *greatest_full_64(void *p0 ,void *p1);
+    uint64_t *least_full_64(void *p0 ,void *p1);
     void *inc_64(void *p ,size_t Δ);
 
-    Core·AreaPairing·Status wellformed_it(Core·AreaPairing *it);
+    Core·AreaPairing·Status wellformed_it(Core·AreaPairing *ap);
 
-    void *identity(void *read0 ,void *read1 ,void *write0);
-    void *reverse_byte_order(void *read0 ,void *read1 ,void *write0);
+    Core·Step·Status Core·step(Core·Step·Fn fn ,Core·AreaPairing *ap);
+    Core·Step·Fn copy_8;
+    Core·Step·Fn copy_16;
 
-    Core·Step·Status Step·identity(Core·AreaPairing *it);
-    Core·Step·Status Step·reverse_order(Core·AreaPairing *it);
-    Core·Step·Status Step·write_hex(Core·AreaPairing *it);
-    Core·Step·Status Step·read_hex(Core·AreaPairing *it);
+
+
   } Core·M;
 
 #endif
@@ -98,7 +100,7 @@
 
   typedef struct {
     Core·Step·Status status;
-    Core·AreaPairing *it;
+    Core·AreaPairing *ap;
     struct {
       ReadFn8 read_fn;
     } copy_8;
@@ -130,10 +132,10 @@
     //----------------------------------------
     // Area predicates
 
-    Local bool Core·Area·encloses_point(void *pt ,void *pt0 ,extent_t e){
+    Local bool Core·Area·encloses_pt(void *pt ,void *pt0 ,extent_t e){
       return (pt >= pt0) && (pt <= pt0 + e); // Inclusive bounds
     }
-    Local bool Core·Area·encloses_point_strictly(void *pt ,void *pt0 ,extent_t e){
+    Local bool Core·Area·encloses_pt_strictly(void *pt ,void *pt0 ,extent_t e){
       return (pt > pt0) && (pt < pt0 + e); // Strictly inside
     }
     // Area 0 encloses Area 1
@@ -237,11 +239,9 @@
     }
 
     //----------------------------------------
-    // iterator
-    //   An iterator is used to fill buffers in a bucket brigade fashion
-    //   Each buffer is passed as an address to the least byte and an extent
+    // AreaPairing
 
-    Local Core·AreaPairing·Status Core·AreaPairing·wellformed(Copy·it *it){
+    Local Core·AreaPairing·Status Core·AreaPairing·wellformed(Core·AreaPairing *ap){
 
       bool print = false;
       #ifdef Core·DEBUG
@@ -256,15 +256,15 @@
         return Core·AreaPairing·Status·null;
       }
 
-      if(it->read0 == NULL){
+      if(ap->read0 == NULL){
         if(print) fprintf( stderr ,"%s: empty read buffer\n" ,this_name );
         status |= Copy·WFIt·Status·empty_read_buffer;
       }
-      if(it->write0 == NULL){
+      if(ap->write0 == NULL){
         if(print) fprintf( stderr ,"%s: empty write buffer\n" ,this_name );
         status |= Copy·WFIt·Status·empty_write_buffer;
       }
-      if( Copy·overlap_size_interval(it->read0 ,it->read_size ,it->write0 ,it->write_size) ){
+      if( Copy·overlap_size_interval(ap->read0 ,ap->read_size ,ap->write0 ,ap->write_size) ){
         if(print) fprintf( stderr ,"%s: Read and write buffers overlap!\n" ,this_name );
         status |= Copy·WFIt·Status·overlap;
       }
@@ -280,7 +280,7 @@
     typedef Core·Step·Fn (*Core·Step·Fn)();
 
     // Step function using trampoline execution model
-    Local Core·Step·Status Core·step(Core·Step·Fn fn ,Core·AreaPairing *it){
+    Local Core·Step·Status Core·step(Core·Step·Fn fn ,Core·AreaPairing *ap){
       if(
          fn != Core·copy_64 && fn != Core·copy_8
          ||
@@ -302,81 +302,83 @@
     Local Core·Step·Fn Core·copy_8(){
 
       // Assign the correct read function based on byte order
-      if(Core·tableau.it->reverse_byte_order)
+      if(Core·tableau.ap->reverse_byte_order)
         Core·tableau.copy_8.read_fn = Core·read_8_rev;
       else
         Core·tableau.copy_8.read_fn = Core·read_8_fwd;
 
       // Determine the appropriate case and dispatch
-      if(Core·tableau.it->read_extent == Core·tableau.it->write_extent)
+      if(Core·tableau.ap->read_extent == Core·tableau.ap->write_extent)
         return Core·Copy8·perfect_fit;
 
-      if(Core·tableau.it->read_extent > Core·tableau.it->write_extent)
+      if(Core·tableau.ap->read_extent > Core·tableau.ap->write_extent)
         return Core·Copy8·read_surplus;
 
       return Core·Copy8·write_available;
     }
 
     Local Core·Step·Fn Core·Copy8·perfect_fit(){
-      uint8_t *r = (uint8_t *) Core·tableau.it->read0;
-      uint8_t *r1 = (uint8_t *) (r + Core·tableau.it->read_extent);
-      uint8_t *w = (uint8_t *) Core·tableau.it->write0;
+      uint8_t *r = (uint8_t *) Core·tableau.ap->read0;
+      uint8_t *r1 = (uint8_t *) (r + Core·tableau.ap->read_extent);
+      uint8_t *w = (uint8_t *) Core·tableau.ap->write0;
 
       do{
-        *w = Core·tableau.copy_8.read_fn(Core·tableau.it->read0, r1, r);
+        *w = Core·tableau.copy_8.read_fn(Core·tableau.ap->read0, r1, r);
         if(r == r1) break;
         r++;
         w++;
       }while(true);
 
-      Core·tableau.it->read0 = NULL;  // Buffer exhausted
-      Core·tableau.it->write0 = NULL; // Buffer exhausted
+      Core·tableau.ap->read0 = NULL;  // Buffer exhausted
+      Core·tableau.ap->write0 = NULL; // Buffer exhausted
       Core·tableau.status = Core·Step·perfect_fit;
       return NULL;
     }
 
     Local Core·Step·Fn Core·Copy8·read_surplus(){
-      uint8_t *r = (uint8_t *) Core·tableau.it->read0;
-      uint8_t *r1 = (uint8_t *) (r + Core·tableau.it->write_extent);
-      uint8_t *w = (uint8_t *) Core·tableau.it->write0;
+      uint8_t *r = (uint8_t *) Core·tableau.ap->read0;
+      uint8_t *r1 = (uint8_t *) (r + Core·tableau.ap->write_extent);
+      uint8_t *w = (uint8_t *) Core·tableau.ap->write0;
 
       do{
-        *w = Core·tableau.copy_8.read_fn(Core·tableau.it->read0, r1, r);
+        *w = Core·tableau.copy_8.read_fn(Core·tableau.ap->read0, r1, r);
         if(r == r1) break;
         r++;
         w++;
       }while(true);
 
-      Core·tableau.it->read0 = r; // Advance read pointer
-      Core·tableau.it->read_extent -= Core·tableau.it->write_extent;
-      Core·tableau.it->write0 = NULL; // Write buffer exhausted
+      Core·tableau.ap->read0 = r; // Advance read pointer
+      Core·tableau.ap->read_extent -= Core·tableau.ap->write_extent;
+      Core·tableau.ap->write0 = NULL; // Write buffer exhausted
       Core·tableau.status = Core·Step·read_surplus;
       return NULL;
     }
 
     Local Core·Step·Fn Core·Copy8·write_available(){
-      uint8_t *r = (uint8_t *) Core·tableau.it->read0;
-      uint8_t *r1 = (uint8_t *) (r + Core·tableau.it->read_extent);
-      uint8_t *w = (uint8_t *) Core·tableau.it->write0;
-      uint8_t *w1 = (uint8_t *) (w + Core·tableau.it->write_extent);
+      uint8_t *r = (uint8_t *) Core·tableau.ap->read0;
+      uint8_t *r1 = (uint8_t *) (r + Core·tableau.ap->read_extent);
+      uint8_t *w = (uint8_t *) Core·tableau.ap->write0;
+      uint8_t *w1 = (uint8_t *) (w + Core·tableau.ap->write_extent);
 
       do{
-        *w = Core·tableau.copy_8.read_fn(Core·tableau.it->read0, r1, r);
+        *w = Core·tableau.copy_8.read_fn(Core·tableau.ap->read0, r1, r);
         if(w == w1) break;
         r++;
         w++;
       }while(true);
 
-      Core·tableau.it->write0 = w; // Advance write pointer
-      Core·tableau.it->write_extent -= Core·tableau.it->read_extent;
-      Core·tableau.it->read0 = NULL; // Read buffer exhausted
+      Core·tableau.ap->write0 = w; // Advance write pointer
+      Core·tableau.ap->write_extent -= Core·tableau.ap->read_extent;
+      Core·tableau.ap->read0 = NULL; // Read buffer exhausted
       Core·tableau.status = Core·Step·write_available;
       return NULL;
     }
 
-    //----------------------------------------
-    // copy_64 buffer fill step
 
+    //----------------------------------------
+    // copy_64
+
+        // 64-bit copy function with updated AreaPairing terminology
     Core·Step·Fn Core·copy_64;
     Core·Step·Fn Core·Copy64·leadin;
     Core·Step·Fn Core·Copy64·bulk;
@@ -386,113 +388,112 @@
     Local Core·Step·Fn Core·copy_64(){
 
       // Assign the correct read function based on byte order
-      if(Core·tableau.it->reverse_byte_order)
+      if(Core·tableau.ap->reverse_byte_order)
         Core·tableau.copy_64.read_fn = Core·read_64_rev;
       else
         Core·tableau.copy_64.read_fn = Core·read_64_fwd;
 
       // Determine aligned 64-bit word boundaries
       Core·tableau.copy_64.r0_64 = Core·least_full_64(
-        Core·tableau.it->read0, Core·tableau.it->read0 + Core·tableau.it->read_extent
-      );
+                                                      Core·tableau.ap->read0, Core·tableau.ap->read0 + Core·tableau.ap->read_extent
+                                                      );
       Core·tableau.copy_64.r1_64 = Core·greatest_full_64(
-        Core·tableau.it->read0, Core·tableau.it->read0 + Core·tableau.it->read_extent
-      );
+                                                         Core·tableau.ap->read0, Core·tableau.ap->read0 + Core·tableau.ap->read_extent
+                                                         );
 
       // Choose the correct function based on alignment
       if(Core·tableau.copy_64.r0_64 == NULL) return Core·Copy64·tail;
-      if(Core·is_aligned_64(Core·tableau.it->read0)) return Core·Copy64·bulk;
+      if(Core·is_aligned_64(Core·tableau.ap->read0)) return Core·Copy64·bulk;
       return Core·Copy64·leadin;
     }
 
     // Lead-in byte copy (until alignment)
     Local Core·Step·Fn Core·Copy64·leadin(){
-      uint8_t *r = (uint8_t *) Core·tableau.it->read0;
-      uint8_t *w = (uint8_t *) Core·tableau.it->write0;
+      uint8_t *r = (uint8_t *) Core·tableau.ap->read0;
+      uint8_t *w = (uint8_t *) Core·tableau.ap->write0;
       uint8_t *r0_64 = (uint8_t *) Core·tableau.copy_64.r0_64;
 
       do{
-        *w++ = Core·tableau.copy_8.read_fn(Core·tableau.it->read0, r0_64, r);
+        *w++ = Core·tableau.copy_8.read_fn(Core·tableau.ap->read0, r0_64, r);
         if(r == r0_64) break;
         r++;
       }while(1);
 
-      Core·tableau.it->read0 = r;
-      Core·tableau.it->write0 = w;
+      Core·tableau.ap->read0 = r;
+      Core·tableau.ap->write0 = w;
 
       return Core·Copy64·bulk;
     }
 
     // Bulk word copy
     Local Core·Step·Fn Core·Copy64·bulk(){
-      uint64_t *r64 = (uint64_t *) Core·tableau.it->read0;
-      uint64_t *w64 = (uint64_t *) Core·tableau.it->write0;
+      uint64_t *r64 = (uint64_t *) Core·tableau.ap->read0;
+      uint64_t *w64 = (uint64_t *) Core·tableau.ap->write0;
       uint64_t *r1_64 = Core·tableau.copy_64.r1_64;
 
       do{
         *w64++ = Core·tableau.copy_64.read_fn(
-          Core·tableau.copy_64.r0_64, Core·tableau.copy_64.r1_64, r64
-        );
+                                              Core·tableau.copy_64.r0_64, Core·tableau.copy_64.r1_64, r64
+                                              );
         if(r64 == r1_64) break;
         r64++;
       }while(1);
 
-      Core·tableau.it->read0 = r64;
-      Core·tableau.it->write0 = w64;
+      Core·tableau.ap->read0 = r64;
+      Core·tableau.ap->write0 = w64;
 
       return Core·Copy64·tail;
     }
 
     // Tail byte copy (unaligned trailing bytes)
     Local Core·Step·Fn Core·Copy64·tail(){
-      uint8_t *r = (uint8_t *) Core·tableau.it->read0;
-      uint8_t *w = (uint8_t *) Core·tableau.it->write0;
+      uint8_t *r = (uint8_t *) Core·tableau.ap->read0;
+      uint8_t *w = (uint8_t *) Core·tableau.ap->write0;
       uint8_t *r1 = (uint8_t *) Core·tableau.copy_64.r1_64;
 
       do{
-        *w++ = Core·tableau.copy_8.read_fn(Core·tableau.it->read0, r1, r);
+        *w++ = Core·tableau.copy_8.read_fn(Core·tableau.ap->read0, r1, r);
         if(r == r1) break;
         r++;
       }while(1);
 
-      Core·tableau.it->read0 = r;
-      Core·tableau.it->write0 = w;
+      Core·tableau.ap->read0 = r;
+      Core·tableau.ap->write0 = w;
 
       Core·tableau.status = Core·Step·perfect_fit;
       return NULL;
     }
 
-
     //----------------------------------------
+    // step write hex
+
     // Forward Declarations
-    Core·Step·Fn Core·write_hex;
-    Core·Step·Fn Core·write_hex_bulk;
-    Core·Step·Fn Core·write_hex_read_surplus;
-    Core·Step·Fn Core·write_hex_write_available;
+    Core·Step·Fn Core·Step·write_hex;
+    Core·Step·Fn Core·Step·write_hex_bulk;
+    Core·Step·Fn Core·Step·write_hex_read_surplus;
+    Core·Step·Fn Core·Step·write_hex_write_available;
 
-    Core·Step·Fn Core·read_hex;
-    Core·Step·Fn Core·read_hex_bulk;
-    Core·Step·Fn Core·read_hex_read_surplus;
-    Core·Step·Fn Core·read_hex_write_available;
+    Core·Step·Fn Core·Step·read_hex;
+    Core·Step·Fn Core·Step·read_hex_bulk;
+    Core·Step·Fn Core·Step·read_hex_read_surplus;
+    Core·Step·Fn Core·Step·read_hex_write_available;
 
-    //----------------------------------------
     // Hex Encoding: Initialize Step
-    Local Core·Step·Fn Core·write_hex(){
-      if(Core·tableau.it->read_extent == (Core·tableau.it->write_extent >> 1)){
-        return Core·write_hex_bulk;
+    Local Core·Step·Fn Core·Step·write_hex(){
+      if(Core·tableau.area_pairing->read_extent == (Core·tableau.area_pairing->write_extent >> 1)){
+        return Core·Step·write_hex_bulk;
       }
-      if(Core·tableau.it->read_extent > (Core·tableau.it->write_extent >> 1)){
-        return Core·write_hex_read_surplus;
+      if(Core·tableau.area_pairing->read_extent > (Core·tableau.area_pairing->write_extent >> 1)){
+        return Core·Step·write_hex_read_surplus;
       }
-      return Core·write_hex_write_available;
+      return Core·Step·write_hex_write_available;
     }
 
-    //----------------------------------------
     // Hex Encoding: Bulk Processing (Perfect Fit)
-    Local Core·Step·Fn Core·write_hex_bulk(){
-      uint8_t *r = (uint8_t *)Core·tableau.it->read0;
-      uint8_t *r1 = r + Core·tableau.it->read_extent;
-      uint8_t *w = (uint8_t *)Core·tableau.it->write0;
+    Local Core·Step·Fn Core·Step·write_hex_bulk(){
+      uint8_t *r = (uint8_t *)Core·tableau.area_pairing->read0;
+      uint8_t *r1 = r + Core·tableau.area_pairing->read_extent;
+      uint8_t *w = (uint8_t *)Core·tableau.area_pairing->write0;
 
       do {
         *(uint16_t *)w = Core·tableau.hex.convert.byte_to_hex(*r);
@@ -501,20 +502,19 @@
         w += 2;
       } while(1);
 
-      Core·tableau.it->read0 = NULL;
-      Core·tableau.it->write0 = NULL;
-      Core·tableau.it->read_extent = 0;
-      Core·tableau.it->write_extent = 0;
+      Core·tableau.area_pairing->read0 = NULL;
+      Core·tableau.area_pairing->write0 = NULL;
+      Core·tableau.area_pairing->read_extent = 0;
+      Core·tableau.area_pairing->write_extent = 0;
       Core·tableau.status = Core·Step·perfect_fit;
       return NULL;
     }
 
-    //----------------------------------------
     // Hex Encoding: Read Surplus
-    Local Core·Step·Fn Core·write_hex_read_surplus(){
-      uint8_t *r = (uint8_t *)Core·tableau.it->read0;
-      uint8_t *w = (uint8_t *)Core·tableau.it->write0;
-      size_t limit = Core·tableau.it->write_extent >> 1;
+    Local Core·Step·Fn Core·Step·write_hex_read_surplus(){
+      uint8_t *r = (uint8_t *)Core·tableau.area_pairing->read0;
+      uint8_t *w = (uint8_t *)Core·tableau.area_pairing->write0;
+      size_t limit = Core·tableau.area_pairing->write_extent >> 1;
       uint8_t *r1 = r + limit;
 
       do {
@@ -524,20 +524,19 @@
         w += 2;
       } while(1);
 
-      Core·tableau.it->read0 = r + 1;
-      Core·tableau.it->read_extent -= limit;
-      Core·tableau.it->write0 = NULL;
-      Core·tableau.it->write_extent = 0;
+      Core·tableau.area_pairing->read0 = r + 1;
+      Core·tableau.area_pairing->read_extent -= limit;
+      Core·tableau.area_pairing->write0 = NULL;
+      Core·tableau.area_pairing->write_extent = 0;
       Core·tableau.status = Core·Step·read_surplus;
       return NULL;
     }
 
-    //----------------------------------------
     // Hex Encoding: Write Available
-    Local Core·Step·Fn Core·write_hex_write_available(){
-      uint8_t *r = (uint8_t *)Core·tableau.it->read0;
-      uint8_t *w = (uint8_t *)Core·tableau.it->write0;
-      size_t limit = Core·tableau.it->read_extent;
+    Local Core·Step·Fn Core·Step·write_hex_write_available(){
+      uint8_t *r = (uint8_t *)Core·tableau.area_pairing->read0;
+      uint8_t *w = (uint8_t *)Core·tableau.area_pairing->write0;
+      size_t limit = Core·tableau.area_pairing->read_extent;
       uint8_t *r1 = r + limit;
 
       do {
@@ -547,32 +546,32 @@
         w += 2;
       } while(1);
 
-      Core·tableau.it->read0 = NULL;
-      Core·tableau.it->read_extent = 0;
-      Core·tableau.it->write0 = w + 2;
-      Core·tableau.it->write_extent -= limit << 1;
+      Core·tableau.area_pairing->read0 = NULL;
+      Core·tableau.area_pairing->read_extent = 0;
+      Core·tableau.area_pairing->write0 = w + 2;
+      Core·tableau.area_pairing->write_extent -= limit << 1;
       Core·tableau.status = Core·Step·write_available;
       return NULL;
     }
 
     //----------------------------------------
-    // Hex Decoding: Initialize Step
-    Local Core·Step·Fn Core·read_hex(){
-      if((Core·tableau.it->read_extent >> 1) == Core·tableau.it->write_extent){
-        return Core·read_hex_bulk;
+    // step read hex
+
+    Local Core·Step·Fn Core·Step·read_hex(){
+      if((Core·tableau.area_pairing->read_extent >> 1) == Core·tableau.area_pairing->write_extent){
+        return Core·Step·read_hex_bulk;
       }
-      if((Core·tableau.it->read_extent >> 1) > Core·tableau.it->write_extent){
-        return Core·read_hex_read_surplus;
+      if((Core·tableau.area_pairing->read_extent >> 1) > Core·tableau.area_pairing->write_extent){
+        return Core·Step·read_hex_read_surplus;
       }
-      return Core·read_hex_write_available;
+      return Core·Step·read_hex_write_available;
     }
 
-    //----------------------------------------
     // Hex Decoding: Bulk Processing (Perfect Fit)
-    Local Core·Step·Fn Core·read_hex_bulk(){
-      uint8_t *r = (uint8_t *)Core·tableau.it->read0;
-      uint8_t *r1 = r + Core·tableau.it->read_extent;
-      uint8_t *w = (uint8_t *)Core·tableau.it->write0;
+    Local Core·Step·Fn Core·Step·read_hex_bulk(){
+      uint8_t *r = (uint8_t *)Core·tableau.area_pairing->read0;
+      uint8_t *r1 = r + Core·tableau.area_pairing->read_extent;
+      uint8_t *w = (uint8_t *)Core·tableau.area_pairing->write0;
 
       do {
         *w = Core·tableau.hex.convert.hex_to_byte(*(uint16_t *)r);
@@ -581,20 +580,19 @@
         w++;
       } while(1);
 
-      Core·tableau.it->read0 = NULL;
-      Core·tableau.it->write0 = NULL;
-      Core·tableau.it->read_extent = 0;
-      Core·tableau.it->write_extent = 0;
+      Core·tableau.area_pairing->read0 = NULL;
+      Core·tableau.area_pairing->write0 = NULL;
+      Core·tableau.area_pairing->read_extent = 0;
+      Core·tableau.area_pairing->write_extent = 0;
       Core·tableau.status = Core·Step·perfect_fit;
       return NULL;
     }
 
-    //----------------------------------------
     // Hex Decoding: Read Surplus
-    Local Core·Step·Fn Core·read_hex_read_surplus(){
-      uint8_t *r = (uint8_t *)Core·tableau.it->read0;
-      uint8_t *w = (uint8_t *)Core·tableau.it->write0;
-      size_t limit = Core·tableau.it->write_extent;
+    Local Core·Step·Fn Core·Step·read_hex_read_surplus(){
+      uint8_t *r = (uint8_t *)Core·tableau.area_pairing->read0;
+      uint8_t *w = (uint8_t *)Core·tableau.area_pairing->write0;
+      size_t limit = Core·tableau.area_pairing->write_extent;
       uint8_t *r1 = r + (limit << 1);
 
       do {
@@ -604,20 +602,19 @@
         w++;
       } while(1);
 
-      Core·tableau.it->read0 = r + 2;
-      Core·tableau.it->read_extent -= limit << 1;
-      Core·tableau.it->write0 = NULL;
-      Core·tableau.it->write_extent = 0;
+      Core·tableau.area_pairing->read0 = r + 2;
+      Core·tableau.area_pairing->read_extent -= limit << 1;
+      Core·tableau.area_pairing->write0 = NULL;
+      Core·tableau.area_pairing->write_extent = 0;
       Core·tableau.status = Core·Step·read_surplus;
       return NULL;
     }
 
-    //----------------------------------------
     // Hex Decoding: Write Available
-    Local Core·Step·Fn Core·read_hex_write_available(){
-      uint8_t *r = (uint8_t *)Core·tableau.it->read0;
-      uint8_t *w = (uint8_t *)Core·tableau.it->write0;
-      size_t limit = Core·tableau.it->read_extent >> 1;
+    Local Core·Step·Fn Core·Step·read_hex_write_available(){
+      uint8_t *r = (uint8_t *)Core·tableau.area_pairing->read0;
+      uint8_t *w = (uint8_t *)Core·tableau.area_pairing->write0;
+      size_t limit = Core·tableau.area_pairing->read_extent >> 1;
       uint8_t *r1 = r + (limit << 1);
 
       do {
@@ -627,14 +624,13 @@
         w++;
       } while(1);
 
-      Core·tableau.it->read0 = NULL;
-      Core·tableau.it->read_extent = 0;
-      Core·tableau.it->write0 = w + 1;
-      Core·tableau.it->write_extent -= limit;
+      Core·tableau.area_pairing->read0 = NULL;
+      Core·tableau.area_pairing->read_extent = 0;
+      Core·tableau.area_pairing->write0 = w + 1;
+      Core·tableau.area_pairing->write_extent -= limit;
       Core·tableau.status = Core·Step·write_available;
       return NULL;
     }
-
 
   #endif // LOCAL
 
