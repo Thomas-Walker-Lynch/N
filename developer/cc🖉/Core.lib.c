@@ -60,8 +60,8 @@
     // Area predicates
     bool Area·encloses_pt(void *pt ,void *pt0 ,extent_t e);
     bool Area·encloses_pt_strictly(void *pt ,void *pt0 ,extent_t e);
-    bool Area·encloses(void *pt00 ,extent_t e0 ,void *pt10 ,extent_t e1);
-    bool Area·encloses_strictly(void *pt00 ,extent_t e0 ,void *pt10 ,extent_t e1);
+    bool Area·encloses_area(void *pt00 ,extent_t e0 ,void *pt10 ,extent_t e1);
+    bool Area·encloses_area_strictly(void *pt00 ,extent_t e0 ,void *pt10 ,extent_t e1);
     bool Area·overlap(void *pt00 ,extent_t s0 ,void *pt10 ,extent_t e1);
 
     // 64 bit word operations
@@ -77,8 +77,8 @@
     Core·Step·Status Core·step(Core·Step·Fn fn ,Core·AreaPairing *ap);
     Core·Step·Fn copy_8;
     Core·Step·Fn copy_16;
-
-
+    Core·Step·Fn Step·write_hex;
+    Core·Step·Fn Step·read_hex;
 
   } Core·M;
 
@@ -139,11 +139,15 @@
       return (pt > pt0) && (pt < pt0 + e); // Strictly inside
     }
     // Area 0 encloses Area 1
-    Local bool Core·Area·encloses(void *pt0 ,extent_t e0 ,void *pt1 ,extent_t e1){
+    Local bool Core·Area·encloses_area(
+      void *pt0 ,extent_t e0 ,void *pt1 ,extent_t e1
+    ){
       return (pt1 >= pt0) && (pt1 + e1 <= pt0 + e0);
     }
     // Area 0 strictly encloses Area 1
-    Local bool Core·Area·encloses_strictly(void *pt0 ,extent_t e0 ,void *pt1 ,extent_t e1){
+    Local bool Core·Area·encloses_area_strictly(
+      void *pt0 ,extent_t e0 ,void *pt1 ,extent_t e1
+    ){
       return (pt1 > pt0) && (pt1 + e1 < pt0 + e0);
     }
 
@@ -294,7 +298,7 @@
     }
 
     //----------------------------------------
-    // copy_8 buffer fill step
+    // step copy_8 
 
     Core·Step·Fn Core·copy_8;;
     Core·Step·Fn Core·Copy8·bulk;
@@ -376,7 +380,7 @@
 
 
     //----------------------------------------
-    // copy_64
+    // step copy_64
 
         // 64-bit copy function with updated AreaPairing terminology
     Core·Step·Fn Core·copy_64;
@@ -395,11 +399,11 @@
 
       // Determine aligned 64-bit word boundaries
       Core·tableau.copy_64.r0_64 = Core·least_full_64(
-                                                      Core·tableau.ap->read0, Core·tableau.ap->read0 + Core·tableau.ap->read_extent
-                                                      );
+        Core·tableau.ap->read0, Core·tableau.ap->read0 + Core·tableau.ap->read_extent
+        );
       Core·tableau.copy_64.r1_64 = Core·greatest_full_64(
-                                                         Core·tableau.ap->read0, Core·tableau.ap->read0 + Core·tableau.ap->read_extent
-                                                         );
+        Core·tableau.ap->read0, Core·tableau.ap->read0 + Core·tableau.ap->read_extent
+        );
 
       // Choose the correct function based on alignment
       if(Core·tableau.copy_64.r0_64 == NULL) return Core·Copy64·tail;
@@ -433,8 +437,8 @@
 
       do{
         *w64++ = Core·tableau.copy_64.read_fn(
-                                              Core·tableau.copy_64.r0_64, Core·tableau.copy_64.r1_64, r64
-                                              );
+            Core·tableau.copy_64.r0_64, Core·tableau.copy_64.r1_64, r64
+          );
         if(r64 == r1_64) break;
         r64++;
       }while(1);
