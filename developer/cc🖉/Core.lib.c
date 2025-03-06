@@ -3,6 +3,9 @@
 
   'ATP'  'At This Point' in the code. Used in comments to state assertions.
    by definition an 'extent' is one less than a 'size'.
+
+  'Area' refers to an area (in contrast to a point) in the address space.
+
 */
 
 #define Core·DEBUG
@@ -25,22 +28,24 @@
   #define extent_t size_t
 
   typedef struct{
-    void *read0; 
+    void *read0;  // read0 = NULL means no buffer or empty buffer
     extent_t read_extent;
-    void *write0;
+    void *write0;  // write0 = NULL means no buffer or empty buffer.
     extent_t write_extent;
-  } Core·It;
+    bool reverse_byte_order;
+  } Core·AreaPairing;
 
   typedef enum{
-    Core·It·Status·valid = 0
-    ,Core·It·Status·null
-    ,Core·It·Status·null_read
-    ,Core·It·Status·null_write
-    ,Core·It·Status·overlap
-  } Core·It·Status;
+    Core·AreaPairing·Status·valid = 0
+    ,Core·AreaPairing·Status·null = 1
+    ,Core·AreaPairing·Status·overlap = 2
+    ,Core·AreaPairing·Status·empty_read_buffer = 4
+    ,Core·AreaPairing·Status·empty_write_buffer = 8
+  } Core·AreaPairing·Status;
+
 
   typedef enum{
-     Core·Step·perfect_fit = 0
+    Core·Step·perfect_fit = 0
     ,Core·Step·argument_guard // something wrong with the arguments to step
     ,Core·Step·read_surplus
     ,Core·Step·read_surplus_write_gap
@@ -49,22 +54,30 @@
   } Core·Step·Status;
 
   typedef struct{
-    bool Core·IntervalPts·in(void *pt ,void *pt0 ,void *pt1);
-    bool Core·IntervalPts·contains(void *pt00 ,void *pt01 ,void *pt10 ,void *pt11);
-    bool Core·IntervalPts·overlap(void *pt00 ,void *pt01 ,void *pt10 ,void *pt11);
 
-    bool Core·IntervalPtSize·in(void *pt ,void *pt0 ,size_t s);
-    bool Core·IntervalPtSize·overlap(void *pt00 ,size_t s0 ,void *pt10 ,size_t s1);
+    bool Area·encloses_pt(void *pt ,void *pt0 ,size_t s);
+    bool Area·encloses_pt_strictly(void *pt ,void *pt0 ,size_t s);
+    bool Area·encloses(void *pt00 ,size_t e0 ,void *pt10 ,size_t e1);
+    bool Area·encloses_strictly(void *pt00 ,size_t e0 ,void *pt10 ,size_t e1);
+    bool Area·overlap(void *pt00 ,size_t s0 ,void *pt10 ,size_t s1);
 
-    Core·It·Status Core·wellformed_it(Core·It *it)
+    uint64_t *greatest_full_64(void *p0 ,void *p1);
+    uint64_t *least_full_64(void *p0 ,void *p1);
+
+    bool is_aligned_64(void *p);
+    void *floor_64(void *p);
+    void *ceiling_64(void *p);
+    void *inc_64(void *p ,size_t Δ);
+
+    Core·AreaPairing·Status wellformed_it(Core·AreaPairing *it);
 
     void *identity(void *read0 ,void *read1 ,void *write0);
     void *reverse_byte_order(void *read0 ,void *read1 ,void *write0);
 
-    Core·Status Core·Step·identity(Core·It *it);
-    Core·Status Core·Step·reverse_order(Core·It *it);
-    Core·Status Core·Step·write_hex(Core·It *it);
-    Core·Status Core·Step·read_hex(Core·It *it);
+    Core·Step·Status Step·identity(Core·AreaPairing *it);
+    Core·Step·Status Step·reverse_order(Core·AreaPairing *it);
+    Core·Step·Status Step·write_hex(Core·AreaPairing *it);
+    Core·Step·Status Step·read_hex(Core·AreaPairing *it);
   } Core·M;
 
 #endif
@@ -74,134 +87,93 @@
 
 #ifdef Core·IMPLEMENTATION
 
+  // declarations available only to IMPLEMENTATION 
+
   #ifdef Core·DEBUG
     #include <stdio.h>
   #endif
 
+  typedef uint8_t (*ReadFn8)(uint8_t *, uint8_t *, uint8_t *);
+  typedef uint64_t (*ReadFn64)(uint64_t *, uint64_t *, uint64_t *);
+
+  typedef struct {
+    Core·Step·Status status;
+    Core·AreaPairing *it;
+    struct {
+      ReadFn8 read_fn;
+    } copy_8;
+    union {
+      struct {
+        ReadFn64 read_fn;
+        uint64_t *r0_64;
+        uint64_t *r1_64;
+      } copy_64;
+      struct {
+        union {
+          uint16_t (*byte_to_hex)(uint8_t);
+          uint8_t (*hex_to_byte)(uint16_t);
+        } convert;
+      } hex;
+    };
+  } Core·Tableau;
+
+  extern __thread Core·Tableau tableau
+
   // this part goes into Copylib.a
   // yes this is empty, so there is no Copylib.a
   #ifndef LOCAL
+    __thread Core·Tableau tableau
   #endif 
 
   #ifdef LOCAL
 
-    // Interval predicates.
-    // Intervals in Copy have inclusive bounds
+    //----------------------------------------
+    // Area predicates
 
-    Local bool Core·aligned64(void *p){
-      return ((uintptr_t)p & 0x7) == 0;
+    Local bool Core·Area·encloses_point(void *pt ,void *pt0 ,extent_t e){
+      return (pt >= pt0) && (pt <= pt0 + e); // Inclusive bounds
     }
-
-    Local bool Core·IntervalPts·in(void *pt ,void *pt0 ,void *pt1){
-      return pt >= pt0 && pt <= pt1; // Inclusive bounds
+    Local bool Core·Area·encloses_point_strictly(void *pt ,void *pt0 ,extent_t e){
+      return (pt > pt0) && (pt < pt0 + e); // Strictly inside
     }
-
-    Local bool Core·IntervalPtExtent·in(void *pt ,void *pt0 ,extent_t e){
-      return Core·IntervalPts·in(pt ,pt0 ,pt0 + e);
+    // Area 0 encloses Area 1
+    Local bool Core·Area·encloses(void *pt0 ,extent_t e0 ,void *pt1 ,extent_t e1){
+      return (pt1 >= pt0) && (pt1 + e1 <= pt0 + e0);
     }
-
-    // interval 0 contains interval 1, overlap on boundaries allowed.
-    Local bool Core·IntervalPts·contains(
-      void *pt00 ,void *pt01 ,void *pt10 ,void *pt11
-    ){
-     return pt10 >= pt00 && pt11 <= pt01;
+    // Area 0 strictly encloses Area 1
+    Local bool Core·Area·encloses_strictly(void *pt0 ,extent_t e0 ,void *pt1 ,extent_t e1){
+      return (pt1 > pt0) && (pt1 + e1 < pt0 + e0);
     }
-
-    Local bool Core·IntervalPtExtent·contains(
-      void *pt00 ,size_t e0 ,void *pt10 ,size_t e1
-    ){
-      contains(pt00 ,pt00 + e0 ,pt10 ,pt10 + e1)
-    }
-
-    // interval 0 properly contains interval 1, overlap on boundaries not allowed.
-    Local bool Core·IntervalPts·contains_proper(
-      void *pt00 ,void *pt01 ,void *pt10 ,void *pt11
-    ){
-     return pt10 > pt00 && pt11 < pt01;
-    }
-    Local bool Core·IntervalPtExtent·contains_proper(
-      void *pt00 ,size_t e0 ,void *pt10 ,size_t e1
-    ){
-      contains_proper(pt00 ,pt00 + e0 ,pt10 ,pt10 + 1)
-    }
-
 
     // Possible cases of overlap, including just touching
     // 1. interval 0 to the right of interval 1, just touching p00 == p11
     // 2. interval 0 to the left of interval 1, just touching p01 == p10
     // 3. interval 0 wholly contained in interval 1
     // 4. interval 0 wholly contains interval 1
-    Local bool Core·IntervalPts·overlap(void *pt00 ,void *pt01 ,void *pt10 ,void *pt11){
-      return 
-        Core·IntervalPts·in(pt00 ,pt10 ,pt11) // #1, #3
-        || Core·IntervalPts·in(pt10 ,pt00 ,pt01) // #2, #4
-        ;
+    Local bool Core·Area·overlap(void *pt0 ,extent_t e0 ,void *pt1 ,extent_t e1){
+      return pt1 <= pt0 + e0 && pt0 <= pt1 + e1;
     }
 
-    Local bool Core·IntervalPtExtent·overlap(
-      void *pt00 ,extent_t e0 ,void *pt10 ,extent_t e1
-    ){
-      return Core·IntervalPts·overlap(pt00 ,pt00 + e0 ,pt10 ,pt10 + e1);
+    //----------------------------------------
+    // support for aligned uint64_t in a world of bytes
+
+    Local bool Core·is_aligned_64(void *p){
+      return ((uintptr_t)p & 0x7) == 0;
     }
-
-    Local Copy·It·Status Copy·wellformed_it(Copy·it *it){
-
-      bool print = false;
-      #ifdef Core·DEBUG
-        print = true;
-      #endif 
-      
-      char *this_name = "Copy·wellformed_it";
-      Copy·WFIt·Status status = Copy·WFIt·Status·valid;
-
-      if(it == NULL){
-        if(print) fprintf( stderr ,"%s: NULL read pointer\n" ,this_name );
-        return Core·It·Status·null;
-      }
-
-      if(it->read0 == NULL){
-        if(print) fprintf( stderr ,"%s: NULL read pointer\n" ,this_name );
-        status |= Copy·WFIt·Status·null_read;
-      }
-
-      if(it->write0 == NULL){
-        if(print) fprintf( stderr ,"%s: NULL write pointer\n" ,this_name );
-        status |= Copy·WFIt·Status·null_write;
-      }
-
-      if(it->read_size == 0){
-        if(print) fprintf( stderr ,"%s: Zero-sized read buffer\n" ,this_name );
-        status |= Copy·WFIt·Status·zero_read_buffer;
-      }
-
-      if(it->write_size == 0){
-        if(print) fprintf( stderr ,"%s: Zero-sized write buffer\n" ,this_name );
-        status |= Copy·WFIt·Status·zero_write_buffer;
-      }
-
-      if( Copy·overlap_size_interval(it->read0 ,it->read_size ,it->write0 ,it->write_size) ){
-        if(print) fprintf( stderr ,"%s: Read and write buffers overlap!\n" ,this_name );
-        status |= Copy·WFIt·Status·overlap;
-      }
-
-      return status;
-    }
-
-    // consider an 8 byte window that is aligned
+    // find the lowest address in an 8 byte aligned window
     // returns the byte pointer to the least address byte in the window
-    Local void *Core·floor64(void *p){
+    Local void *Core·floor_64(void *p){
       return (uintptr_t)p & ~(uintptr_t)0x7;
     }
 
-    // consider an 8 byte window that is aligned
+    // find the largest address in an 8 byte aligned window
     // returns the byte pointer to the greatest address byte in the window
-    Local void *Core·ceiling64(void *p){
+    Local void *Core·ceiling_64(void *p){
       return (uintptr_t)p | 0x7;
     }
 
-    // byte array greatest address byte at p1 (inclusive)
-    // byte array least address byte at p0 (inclusive)
-    // returns pointer to the greatest full 64-bit word-aligned address that is ≤ p1
+    // consider that a maximally sized interval of uint64_t is in a byte interval
+    // this returns the inclusive upper bound address pointing to aligned uint64_t
     // by contract, p1 must be >= p0
     Local uint64_t *Core·greatest_full_64(void *p0 ,void *p1){
 
@@ -219,9 +191,9 @@
       return p1_64;
     }
 
-    // byte array greatest address byte at p1 (inclusive)
-    // byte array least address byte at p0 (inclusive)
-    // returns pointer to the least full 64-bit word-aligned address that is ≥ p0
+    // consider that a maximally sized interval of uint64_t is in a byte interval
+    // this returns the inclusive lower bound address pointing to aligned uint64_t
+    // by contract, p1 must be >= p0
     Local uint64_t *Core·least_full_64(void *p0 ,void *p1){
 
       // If p0 + 0x7 moves into the next word while p1 does not, a prefetch hazard can occur.
@@ -238,226 +210,431 @@
       return p0_64;
     }
 
-    Local void *Core·inc64(void *p ,size_t Δ){
+    // point to the next uint64_t in an array of uint64_t
+    // the increment can be negative
+    Local void *Core·inc_64(void *p ,size_t Δ){
       return (void *)((uint64_t *)p) + Δ;
     }
 
-    Local uint64_t Core·read_word_fwd(uint64_t *r){
-      return *r;
+    Local uint8_t Core·read_8_fwd(void *r0 ,void *r1 ,void *r){
+      return *(uint8_t *)r;
     }
 
-    Local uint64_t Core·read_word_rev(uint64_t *r0 ,uint64_t *r1 ,uint64_t *r){
-      return __builtin_bswap64(*(Core·floor64(r0 + (r1 - r))));
+    Local uint8_t Core·read_8_rev(void *r0 ,void *r1 ,void *r){
+      return *((uint8_t *)r0 + ((uint8_t *)r1 - (uint8_t *)r));
     }
 
-Local Core·Step·Status Core·step(
-   Core·It *it
-   ,Core·Step·Status (*fn)(
-      uint8_t *r ,uint8_t *r1 ,uint8_t *w ,uint8_t *w1
-   )
-){
-   //----------------------------------------
-   // Validate Iterator
-   //
-
-   Core·It·Status status = Core·wellformed_it(it);
-   if(status != Core·It·Status·valid) return Core·Step·argument_guard;
-
-   //----------------------------------------
-   // Setup pointers
-   //
-
-   uint8_t *r0 = (uint8_t *)it->read0;
-   uint8_t *r1 = r0 + it->read_extent;  // Inclusive bound
-
-   uint8_t *w0 = (uint8_t *)it->write0;
-   uint8_t *w1 = w0 + it->write_extent; // Inclusive bound
-
-   //----------------------------------------
-   // Apply function iteratively
-   //
-
-   Core·Step·Status step_status;
-   do{
-      step_status = fn(r0 ,r1 ,w0 ,w1);
-      if(
-         step_status != Core·Step·write_available 
-         && step_status != Core·Step·read_surplus
-      ) break;
-
-   }while(true);
-
-   //----------------------------------------
-   // Update iterator
-   //
-
-   it->read0 = r0;
-   it->write0 = w0;
-   it->read_extent = r1 - r0;
-   it->write_extent = w1 - w0;
-
-   return step_status;
-}
-
-
-    Local void *Core·map(
-       uint8_t *r0 ,uint8_t *r1 ,uint8_t *w0
-       ,size_t read_inc ,size_t write_inc
-       ,uint8_t (*read_fn)(uint8_t * ,uint8_t * ,uint8_t *)  
-       ,uint8_t (*map_fn)(uint8_t)
-    ){
-       //----------------------------------------
-       // Argument guard
-       //
-
-       if(r1<r0) return NULL;
-
-       //----------------------------------------
-       // Setup pointers
-       //
-
-       uint8_t *r = r0;
-       uint8_t *w = w0;
-
-       //----------------------------------------
-       // Byte-wise copy with transformation
-       //
-
-       do{
-          *w = map_fn( read_fn(r0 ,r1 ,r) );
-          if(r==r1) break;
-          w += write_inc;
-          r += read_inc;
-       }while(true);
-
-       return w;
+    // Given a pointer to the least address byte of a uint64_t, return the value
+    Local uint64_t Core·read_64_fwd(void *r){
+      return *(uint64_t *)r;
     }
 
-    Local void *Core·copy_byte_by_byte(
-       uint8_t *r0 ,uint8_t *r1 ,uint8_t *w0 ,bool reverse
-    ){
-       //----------------------------------------
-       // Argument guard
-       //
-
-       if(r1<r0) return NULL;
-
-       //----------------------------------------
-       // Setup pointers
-       //
-
-       uint8_t *r = r0;
-       uint8_t *w = w0;
-
-       // Function pointer for dynamic read behavior
-       uint8_t (*read_byte)(uint8_t * ,uint8_t * ,uint8_t *)
-         = reverse ? Core·read_byte_rev : Core·read_byte_fwd;
-
-       //----------------------------------------
-       // Byte-wise copy
-       //
-
-       do{
-          *w = read_byte(r0 ,r1 ,r);
-          if(r==r1) break;
-          w++;
-          r++;
-       }while(true);
-
-       return w;
+    // Given a pointer to the greatest address byte of a uint64_t, return the value
+    Local uint64_t Core·read_64_rev(void *r0 ,void *r1 ,void *r){
+      return __builtin_bswap64(
+        *(uint64_t *)Core·floor_64( (uint8_t *)r0 + ((uint8_t *)r1 - (uint8_t *)r) )
+      );
     }
 
-    Local void *Core·copy_by_word64(void *read0 ,void *read1 ,void *write0 ,bool reverse){
+    //----------------------------------------
+    // iterator
+    //   An iterator is used to fill buffers in a bucket brigade fashion
+    //   Each buffer is passed as an address to the least byte and an extent
 
-      //----------------------------------------
-      // Argument guard
+    Local Core·AreaPairing·Status Core·AreaPairing·wellformed(Copy·it *it){
 
-      if(read1 < read0) return NULL;
-
-      //----------------------------------------
-      // Setup pointers
+      bool print = false;
+      #ifdef Core·DEBUG
+        print = true;
+      #endif 
       
-      // the read interval, for byte arrays
-      uint8_t *r0 = (uint8_t *)read0;
-      uint8_t *r1 = (uint8_t *)read1; // inclusive upper bound
-      uint8_t *w0 = (uint8_t *)write0;
+      char *this_name = "Core·AreaPairing·wellformed";
+      Copy·WFIt·Status status = Copy·WFIt·Status·valid;
 
-      // the contained word interval, inclusive bounds
-      uint64_t *r0_64 = Core·least_full_64(r0 ,r1);
-      uint64_t *r1_64 = Core·greatest_full_64(r0 ,r1);
-
-      // swap byte order done by overloading the read function
-      uint8_t (*read_byte)(uint8_t * ,uint8_t * ,uint8_t *)  
-          = reverse ? Core·read_byte_rev : Core·read_byte_fwd;
-
-      uint64_t (*read_word)(uint64_t * ,uint64_t * ,uint64_t *) 
-          = reverse ? Core·read_word_rev : Core·read_word_fwd;
-
-      // If no full words ,perform byte-wise copy
-      if(r0_64 == NULL || r1_64 == NULL) return Core·copy_byte_by_byte(r0 ,r1 ,w0 ,reverse);
-
-      //----------------------------------------
-      // Align `r` to first full 64-bit word boundary
-
-      uint8_t *w=w0;
-      if( !Core·aligned64(r0) ){
-        w = Core·copy_byte_by_byte(r0 ,r0_64 - 1 ,w ,reverse);
+      if(it == NULL){
+        if(print) fprintf( stderr ,"%s: NULL read pointer\n" ,this_name );
+        return Core·AreaPairing·Status·null;
       }
-      uint8_t *r = r0_64;
 
-      //----------------------------------------
-      // Bulk word-wise copy
+      if(it->read0 == NULL){
+        if(print) fprintf( stderr ,"%s: empty read buffer\n" ,this_name );
+        status |= Copy·WFIt·Status·empty_read_buffer;
+      }
+      if(it->write0 == NULL){
+        if(print) fprintf( stderr ,"%s: empty write buffer\n" ,this_name );
+        status |= Copy·WFIt·Status·empty_write_buffer;
+      }
+      if( Copy·overlap_size_interval(it->read0 ,it->read_size ,it->write0 ,it->write_size) ){
+        if(print) fprintf( stderr ,"%s: Read and write buffers overlap!\n" ,this_name );
+        status |= Copy·WFIt·Status·overlap;
+      }
+      return status;
+
+    }
+
+
+    //----------------------------------------
+    // Step
+
+    // Function pointer type
+    typedef Core·Step·Fn (*Core·Step·Fn)();
+
+    // Step function using trampoline execution model
+    Local Core·Step·Status Core·step(Core·Step·Fn fn ,Core·AreaPairing *it){
+      if(
+         fn != Core·copy_64 && fn != Core·copy_8
+         ||
+         Core·AreaPairing·wellformed(it) != Core·AreaPairing·Status·valid
+      ) 
+        return Core·Step·argument_guard;
+
+      Core·tableau.it = it;
+      while(fn) fn = fn();
+      return tableau->status;
+    }
+
+    //----------------------------------------
+    // copy_8 buffer fill step
+
+    Core·Step·Fn Core·copy_8;;
+    Core·Step·Fn Core·Copy8·bulk;
+
+    Local Core·Step·Fn Core·copy_8(){
+
+      // Assign the correct read function based on byte order
+      if(Core·tableau.it->reverse_byte_order)
+        Core·tableau.copy_8.read_fn = Core·read_8_rev;
+      else
+        Core·tableau.copy_8.read_fn = Core·read_8_fwd;
+
+      // Determine the appropriate case and dispatch
+      if(Core·tableau.it->read_extent == Core·tableau.it->write_extent)
+        return Core·Copy8·perfect_fit;
+
+      if(Core·tableau.it->read_extent > Core·tableau.it->write_extent)
+        return Core·Copy8·read_surplus;
+
+      return Core·Copy8·write_available;
+    }
+
+    Local Core·Step·Fn Core·Copy8·perfect_fit(){
+      uint8_t *r = (uint8_t *) Core·tableau.it->read0;
+      uint8_t *r1 = (uint8_t *) (r + Core·tableau.it->read_extent);
+      uint8_t *w = (uint8_t *) Core·tableau.it->write0;
 
       do{
-        *(uint64_t *)w = read_word(r0_64 ,r1_64 ,(uint64_t *)r);
-        if(r == (uint8_t *)r1_64) break;
-        w = Core·inc64(w ,1);
-        r = Core·inc64(r ,1);
+        *w = Core·tableau.copy_8.read_fn(Core·tableau.it->read0, r1, r);
+        if(r == r1) break;
+        r++;
+        w++;
       }while(true);
 
-      // If r1 was aligned ,we're done
-      if(Core·aligned64(r1)) return w;
-      w = Core·inc64(w ,1);
-      r = Core·inc64(r ,1);
+      Core·tableau.it->read0 = NULL;  // Buffer exhausted
+      Core·tableau.it->write0 = NULL; // Buffer exhausted
+      Core·tableau.status = Core·Step·perfect_fit;
+      return NULL;
+    }
 
-      //----------------------------------------
-      // Ragged tail (byte-wise copy)
+    Local Core·Step·Fn Core·Copy8·read_surplus(){
+      uint8_t *r = (uint8_t *) Core·tableau.it->read0;
+      uint8_t *r1 = (uint8_t *) (r + Core·tableau.it->write_extent);
+      uint8_t *w = (uint8_t *) Core·tableau.it->write0;
 
-      return Core·copy_byte_by_byte(r ,r1 ,w ,reverse);
+      do{
+        *w = Core·tableau.copy_8.read_fn(Core·tableau.it->read0, r1, r);
+        if(r == r1) break;
+        r++;
+        w++;
+      }while(true);
+
+      Core·tableau.it->read0 = r; // Advance read pointer
+      Core·tableau.it->read_extent -= Core·tableau.it->write_extent;
+      Core·tableau.it->write0 = NULL; // Write buffer exhausted
+      Core·tableau.status = Core·Step·read_surplus;
+      return NULL;
+    }
+
+    Local Core·Step·Fn Core·Copy8·write_available(){
+      uint8_t *r = (uint8_t *) Core·tableau.it->read0;
+      uint8_t *r1 = (uint8_t *) (r + Core·tableau.it->read_extent);
+      uint8_t *w = (uint8_t *) Core·tableau.it->write0;
+      uint8_t *w1 = (uint8_t *) (w + Core·tableau.it->write_extent);
+
+      do{
+        *w = Core·tableau.copy_8.read_fn(Core·tableau.it->read0, r1, r);
+        if(w == w1) break;
+        r++;
+        w++;
+      }while(true);
+
+      Core·tableau.it->write0 = w; // Advance write pointer
+      Core·tableau.it->write_extent -= Core·tableau.it->read_extent;
+      Core·tableau.it->read0 = NULL; // Read buffer exhausted
+      Core·tableau.status = Core·Step·write_available;
+      return NULL;
+    }
+
+    //----------------------------------------
+    // copy_64 buffer fill step
+
+    Core·Step·Fn Core·copy_64;
+    Core·Step·Fn Core·Copy64·leadin;
+    Core·Step·Fn Core·Copy64·bulk;
+    Core·Step·Fn Core·Copy64·tail;
+
+    // Initialize the copy_64 process
+    Local Core·Step·Fn Core·copy_64(){
+
+      // Assign the correct read function based on byte order
+      if(Core·tableau.it->reverse_byte_order)
+        Core·tableau.copy_64.read_fn = Core·read_64_rev;
+      else
+        Core·tableau.copy_64.read_fn = Core·read_64_fwd;
+
+      // Determine aligned 64-bit word boundaries
+      Core·tableau.copy_64.r0_64 = Core·least_full_64(
+        Core·tableau.it->read0, Core·tableau.it->read0 + Core·tableau.it->read_extent
+      );
+      Core·tableau.copy_64.r1_64 = Core·greatest_full_64(
+        Core·tableau.it->read0, Core·tableau.it->read0 + Core·tableau.it->read_extent
+      );
+
+      // Choose the correct function based on alignment
+      if(Core·tableau.copy_64.r0_64 == NULL) return Core·Copy64·tail;
+      if(Core·is_aligned_64(Core·tableau.it->read0)) return Core·Copy64·bulk;
+      return Core·Copy64·leadin;
+    }
+
+    // Lead-in byte copy (until alignment)
+    Local Core·Step·Fn Core·Copy64·leadin(){
+      uint8_t *r = (uint8_t *) Core·tableau.it->read0;
+      uint8_t *w = (uint8_t *) Core·tableau.it->write0;
+      uint8_t *r0_64 = (uint8_t *) Core·tableau.copy_64.r0_64;
+
+      do{
+        *w++ = Core·tableau.copy_8.read_fn(Core·tableau.it->read0, r0_64, r);
+        if(r == r0_64) break;
+        r++;
+      }while(1);
+
+      Core·tableau.it->read0 = r;
+      Core·tableau.it->write0 = w;
+
+      return Core·Copy64·bulk;
+    }
+
+    // Bulk word copy
+    Local Core·Step·Fn Core·Copy64·bulk(){
+      uint64_t *r64 = (uint64_t *) Core·tableau.it->read0;
+      uint64_t *w64 = (uint64_t *) Core·tableau.it->write0;
+      uint64_t *r1_64 = Core·tableau.copy_64.r1_64;
+
+      do{
+        *w64++ = Core·tableau.copy_64.read_fn(
+          Core·tableau.copy_64.r0_64, Core·tableau.copy_64.r1_64, r64
+        );
+        if(r64 == r1_64) break;
+        r64++;
+      }while(1);
+
+      Core·tableau.it->read0 = r64;
+      Core·tableau.it->write0 = w64;
+
+      return Core·Copy64·tail;
+    }
+
+    // Tail byte copy (unaligned trailing bytes)
+    Local Core·Step·Fn Core·Copy64·tail(){
+      uint8_t *r = (uint8_t *) Core·tableau.it->read0;
+      uint8_t *w = (uint8_t *) Core·tableau.it->write0;
+      uint8_t *r1 = (uint8_t *) Core·tableau.copy_64.r1_64;
+
+      do{
+        *w++ = Core·tableau.copy_8.read_fn(Core·tableau.it->read0, r1, r);
+        if(r == r1) break;
+        r++;
+      }while(1);
+
+      Core·tableau.it->read0 = r;
+      Core·tableau.it->write0 = w;
+
+      Core·tableau.status = Core·Step·perfect_fit;
+      return NULL;
     }
 
 
-    /*
-      The copy_kernel function is either copy_by_word64, or copy_byte_by_byte.
-    */
-    Local Core·Status Core·copy_step(
-       Core·It *it
-       ,void *(*copy_kernel)(void * ,void * ,void * ,bool)
-       ,bool reverse
-    ){
-       uint8_t *r = (uint8_t *)it->read0;
-       uint8_t *w = (uint8_t *)it->write0;
+    //----------------------------------------
+    // Forward Declarations
+    Core·Step·Fn Core·write_hex;
+    Core·Step·Fn Core·write_hex_bulk;
+    Core·Step·Fn Core·write_hex_read_surplus;
+    Core·Step·Fn Core·write_hex_write_available;
 
-       extent_t re = it->read_extent;
-       extent_t we = it->write_extent;
+    Core·Step·Fn Core·read_hex;
+    Core·Step·Fn Core·read_hex_bulk;
+    Core·Step·Fn Core·read_hex_read_surplus;
+    Core·Step·Fn Core·read_hex_write_available;
 
-       if(we >= re){
-          copy_kernel(r ,r + re ,w ,reverse);
-          it->read0 += re;
-          it->read_extent = 0;
-          it->write0 += re;
-          it->write_extent -= re;
-          if(we == re) return Core·Step·perfect_fit;
-          return Core·Step·write_available;
-       }
-
-       copy_kernel(r ,r + we ,w ,reverse);
-       it->read0 += we;
-       it->read_extent -= we;
-       it->write_extent = 0;
-       it->write0 += we;
-       return Core·Step·read_surplus;
+    //----------------------------------------
+    // Hex Encoding: Initialize Step
+    Local Core·Step·Fn Core·write_hex(){
+      if(Core·tableau.it->read_extent == (Core·tableau.it->write_extent >> 1)){
+        return Core·write_hex_bulk;
+      }
+      if(Core·tableau.it->read_extent > (Core·tableau.it->write_extent >> 1)){
+        return Core·write_hex_read_surplus;
+      }
+      return Core·write_hex_write_available;
     }
+
+    //----------------------------------------
+    // Hex Encoding: Bulk Processing (Perfect Fit)
+    Local Core·Step·Fn Core·write_hex_bulk(){
+      uint8_t *r = (uint8_t *)Core·tableau.it->read0;
+      uint8_t *r1 = r + Core·tableau.it->read_extent;
+      uint8_t *w = (uint8_t *)Core·tableau.it->write0;
+
+      do {
+        *(uint16_t *)w = Core·tableau.hex.convert.byte_to_hex(*r);
+        if(r == r1) break;
+        r++;
+        w += 2;
+      } while(1);
+
+      Core·tableau.it->read0 = NULL;
+      Core·tableau.it->write0 = NULL;
+      Core·tableau.it->read_extent = 0;
+      Core·tableau.it->write_extent = 0;
+      Core·tableau.status = Core·Step·perfect_fit;
+      return NULL;
+    }
+
+    //----------------------------------------
+    // Hex Encoding: Read Surplus
+    Local Core·Step·Fn Core·write_hex_read_surplus(){
+      uint8_t *r = (uint8_t *)Core·tableau.it->read0;
+      uint8_t *w = (uint8_t *)Core·tableau.it->write0;
+      size_t limit = Core·tableau.it->write_extent >> 1;
+      uint8_t *r1 = r + limit;
+
+      do {
+        *(uint16_t *)w = Core·tableau.hex.convert.byte_to_hex(*r);
+        if(r == r1) break;
+        r++;
+        w += 2;
+      } while(1);
+
+      Core·tableau.it->read0 = r + 1;
+      Core·tableau.it->read_extent -= limit;
+      Core·tableau.it->write0 = NULL;
+      Core·tableau.it->write_extent = 0;
+      Core·tableau.status = Core·Step·read_surplus;
+      return NULL;
+    }
+
+    //----------------------------------------
+    // Hex Encoding: Write Available
+    Local Core·Step·Fn Core·write_hex_write_available(){
+      uint8_t *r = (uint8_t *)Core·tableau.it->read0;
+      uint8_t *w = (uint8_t *)Core·tableau.it->write0;
+      size_t limit = Core·tableau.it->read_extent;
+      uint8_t *r1 = r + limit;
+
+      do {
+        *(uint16_t *)w = Core·tableau.hex.convert.byte_to_hex(*r);
+        if(r == r1) break;
+        r++;
+        w += 2;
+      } while(1);
+
+      Core·tableau.it->read0 = NULL;
+      Core·tableau.it->read_extent = 0;
+      Core·tableau.it->write0 = w + 2;
+      Core·tableau.it->write_extent -= limit << 1;
+      Core·tableau.status = Core·Step·write_available;
+      return NULL;
+    }
+
+    //----------------------------------------
+    // Hex Decoding: Initialize Step
+    Local Core·Step·Fn Core·read_hex(){
+      if((Core·tableau.it->read_extent >> 1) == Core·tableau.it->write_extent){
+        return Core·read_hex_bulk;
+      }
+      if((Core·tableau.it->read_extent >> 1) > Core·tableau.it->write_extent){
+        return Core·read_hex_read_surplus;
+      }
+      return Core·read_hex_write_available;
+    }
+
+    //----------------------------------------
+    // Hex Decoding: Bulk Processing (Perfect Fit)
+    Local Core·Step·Fn Core·read_hex_bulk(){
+      uint8_t *r = (uint8_t *)Core·tableau.it->read0;
+      uint8_t *r1 = r + Core·tableau.it->read_extent;
+      uint8_t *w = (uint8_t *)Core·tableau.it->write0;
+
+      do {
+        *w = Core·tableau.hex.convert.hex_to_byte(*(uint16_t *)r);
+        if(r == r1) break;
+        r += 2;
+        w++;
+      } while(1);
+
+      Core·tableau.it->read0 = NULL;
+      Core·tableau.it->write0 = NULL;
+      Core·tableau.it->read_extent = 0;
+      Core·tableau.it->write_extent = 0;
+      Core·tableau.status = Core·Step·perfect_fit;
+      return NULL;
+    }
+
+    //----------------------------------------
+    // Hex Decoding: Read Surplus
+    Local Core·Step·Fn Core·read_hex_read_surplus(){
+      uint8_t *r = (uint8_t *)Core·tableau.it->read0;
+      uint8_t *w = (uint8_t *)Core·tableau.it->write0;
+      size_t limit = Core·tableau.it->write_extent;
+      uint8_t *r1 = r + (limit << 1);
+
+      do {
+        *w = Core·tableau.hex.convert.hex_to_byte(*(uint16_t *)r);
+        if(r == r1) break;
+        r += 2;
+        w++;
+      } while(1);
+
+      Core·tableau.it->read0 = r + 2;
+      Core·tableau.it->read_extent -= limit << 1;
+      Core·tableau.it->write0 = NULL;
+      Core·tableau.it->write_extent = 0;
+      Core·tableau.status = Core·Step·read_surplus;
+      return NULL;
+    }
+
+    //----------------------------------------
+    // Hex Decoding: Write Available
+    Local Core·Step·Fn Core·read_hex_write_available(){
+      uint8_t *r = (uint8_t *)Core·tableau.it->read0;
+      uint8_t *w = (uint8_t *)Core·tableau.it->write0;
+      size_t limit = Core·tableau.it->read_extent >> 1;
+      uint8_t *r1 = r + (limit << 1);
+
+      do {
+        *w = Core·tableau.hex.convert.hex_to_byte(*(uint16_t *)r);
+        if(r == r1) break;
+        r += 2;
+        w++;
+      } while(1);
+
+      Core·tableau.it->read0 = NULL;
+      Core·tableau.it->read_extent = 0;
+      Core·tableau.it->write0 = w + 1;
+      Core·tableau.it->write_extent -= limit;
+      Core·tableau.status = Core·Step·write_available;
+      return NULL;
+    }
+
 
   #endif // LOCAL
 
