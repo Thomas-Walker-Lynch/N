@@ -55,6 +55,8 @@
     Copy·WFIt·Status Copy·wellformed_it(Copy·it *it ,Copy·WFIt·Mode mode);
   } Copy·M;
 
+  Core·M m; // initialized in the LOCAL implementation, yes in C we can do this.
+
 #endif
 
 //--------------------------------------------------------------------------------
