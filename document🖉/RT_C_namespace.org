@@ -3,17 +3,17 @@
 
 * 1. Namespaces in RT C
 
-C does not provide a built-in mechanism for namespaces, so RT C adopts a *prefix plus scoping operator* convention. The part before the “=·=” (for example, “N32”) is treated as the namespace name, and the “=·=” symbol is a stand-in for an (as yet) unofficial scoping operator.
+C does not provide a built-in mechanism for namespaces, so RT C adopts a *prefix plus scoping operator* convention. The part before the “·” (for example, “N32”) is treated as the namespace name, and the “·” symbol is a stand-in for an (as yet) unofficial scoping operator.
 
-For instance, in “=N32·allocate_array=”:
-- “=N32=” is the namespace prefix.
-- “=·=” (the middle dot) is our ad hoc scoping operator.
+For instance, in “N32·allocate_array=”:
+- “N32” is the namespace prefix.
+- “·” (the middle dot) is our ad hoc scoping operator.
 - “=allocate_array=” is the actual function name.
 
 ** Advantages of the “Project·Name” Convention
 1. **Collision Avoidance**: Prefixing everything with “N32·” (or another module name) ensures identifiers do not collide with those from other libraries or system headers.
 2. **Clarity**: Readers can see at a glance which library an identifier belongs to.
-3. **Easy to Evolve**: If a future version of C introduces formal namespaces, the “=N32=” prefix and “=·=” operator could map directly into that syntax.
+3. **Easy to Evolve**: If a future version of C introduces formal namespaces, the “=N32=” prefix and “·” operator could map directly into that syntax.
 4. **Organized Reusability**: In large codebases with multiple modules, each module has a unique prefix (“N8·”, “N16·”, “N32·”, etc.), making it straightforward to locate definitions and references in a text search.
 
 ** Example Namespace Prefix
