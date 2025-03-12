@@ -22,7 +22,7 @@
 
 #ifndef FACE
 #define Core·IMPLEMENTATION
-#define FACE
+#define FAC
 #endif 
 
 //--------------------------------------------------------------------------------
@@ -35,7 +35,7 @@
   #include <stddef.h>
 
   //----------------------------------------
-  // fundamental
+  // memory
 
     #define extentof(x)(sizeof(x) - 1)
     #define extent_t size_t
@@ -44,11 +44,71 @@
     // given an AU is an 8 bit byte, 4AU is 32 bits, and 8 AU is 64 bits.
     #define AU uint8_t;
 
-    // latent link call convention
+  //----------------------------------------
+  // model
+
+    typedef enum{
+      Core·Status·mu = 0
+      ,Core·Status·good
+      ,Core·Status·bad
+    }Core·Status;
+
+    typedef struct{
+    }Core·Tableau;
+
+    typedef struct{
+      Core·Tableau tableau;
+      unint status;
+    }Core·Tableau·Face;
+
+    typedef struct Core·Action;
     typedef struct Core·Link;
 
-    // as this is a macro the fields are not typed, so no casts are needed
-    #define Core·call(fn ,link) (link->action.##fn##(link->tableau))
+    typedef Core·Link *(*Core·Fn)(Core·Link *);
+
+    typedef struct{
+      Core·Fn good;
+      Core-Fn bad;
+    }Core·Action;
+
+    typedef struct{
+      Core·Tableau *face;
+      Core·Tableau *State;
+      Core·Action *act;
+    }Core·Link;
+
+    // Then define the functions separately
+    Local Core·Link *Core·Action·good_function(Core·Link *lnk){
+      lnk->face->status = Core·Status·good;
+      return NULL;
+    }
+
+    Local void call(Core·Link *lnk){
+      while(lnk) lnk = lnk->act(lnk);
+    }
+
+    Local Core·Link *Core·Action·bad_function(Core·Link *lnk){
+      lnk->face->status = Core·Status·bad;
+      return NULL;
+    }
+
+    // Assign the function pointers to a struct
+    Local Core·Action action = {
+      .good = Core·Action·good_function,
+      .bad = Core·Action·bad_function
+    };
+
+
+    // -----implementation
+
+    typedef struct{
+      Core·Tableau tableau;
+    }Core·Tableau·State;
+
+
+
+  //----------------------------------------
+  // utility
 
     struct{
       void *offset(void *p ,size_t Δ);
@@ -58,32 +118,53 @@
       bool is_aligned_on_8AU(void *p);
       void *floor_within_aligned_8AU(void *p);
       void *ceiling_within_aligned_8AU(void *p);
-    } Core;
+    }Core;
 
   //----------------------------------------
-  // Area
+  // Area model
 
     typedef struct Core·Tape;
 
+    typedef struct{
+      Core·Tableau·Face;
+      Core·Tape *tape;
+      extent_t extent;
+      Core·Link extent_mu;
+      Core·Link extent_next;
+    }Core·Tape·Tableau·Face;
+
     typedef enum{
       Core·Area·Topology·mu
-      ,Core·Area·Topology·nonexistent // pointer to area is NULL
-      ,Core·Area·Topology·empty      // pointer to are is non-null but position pointer is NULL
+      ,Core·Area·Topology·nonexistent // pointer to tape is NULL
+      ,Core·Area·Topology·empty      // tape has no cells
       ,Core·Area·Topology·singleton  // extent is zero
-      ,Core·Area·Topology·segment    // none of the above
-      ,Core·Area·Topology·circle     // could be forced by a special read function
-      ,Core·Area·Topology·cyclic     // cycle does not include leftmost
-      ,Core·Area·Topology·infinite   // could happen for a function abstraction of the interface
+      ,Core·Area·Topology·segment    // finite non-singleton tape
+      ,Core·Area·Topology·circle     // initial location recurs
+      ,Core·Area·Topology·cyclic     // a location recurs
+      ,Core·Area·Topology·infinite   // exists, not empty, no cycle, no rightmost
     }Core·Tape·Topology;
 
     typedef struct{
+      Core·Fn
       Core·Tape·Topology (*topology)(Core·Tape *tape);
-    }Core·Tape·Face;
+      extent_t extent(Core·Area *area); 
+
+    }Core·Tape·Action;
 
     typedef struct Core·Area; // extends Tape
 
     typedef struct{
-      Core·Tape·Face tape;
+      Core·Tape·Tableau·Face tape_tableau;
+      Core·Area *area;
+      void *position_left;
+      void *position_right;
+
+    }Core·Area·Tableau·Face;
+
+
+
+    typedef struct{
+      Core·Tape·Action tape;
 
       void init_pe(Core·Area *area ,void *position ,extent_t extent);
       void init_pp(Core·Area *area ,void *position_left ,void *position_right);
@@ -96,7 +177,6 @@
       AU *position(Core·Area *area);
       AU *position_left(Core·Area *area); // synonym
       AU *position_right(Core·Area *area);
-      extent_t extent(Core·Area *area); 
 
       AU *complement(Core·Area *area ,AU *r);
 
@@ -108,7 +188,7 @@
       bool overlap(Core·Area *a ,Core·Area *b);
       void largest_aligned_64(Core·Area *outer ,Core·Area *inner_64);
 
-    } Core·Area·Face;
+    } Core·Area·Action;
 
 
   //----------------------------------------
@@ -118,11 +198,11 @@
 
     // if tape machine does not support step left, then Status·leftmost will be reported as Status·interim
     typedef enum{
-      Core·TM·Head·Status·mu = 0
+      Core·TM·Head·Status·mu
       ,Core·TM·Head·Status·not_on_tape = 1
-      ,Core·TM·Head·Status·leftmost    = 1 << 1
-      ,Core·TM·Head·Status·interim     = 1 << 2
-      ,Core·TM·Head·Status·rightmost   = 1 << 3
+      ,Core·TM·Head·Status·on_leftmost    = 1 << 1
+      ,Core·TM·Head·Status·in_interim     = 1 << 2
+      ,Core·TM·Head·Status·on_rightmost   = 1 << 3
     }Core·TM·Head·Status;
 
     const uint Core·TM·Head·Status·bad =
@@ -137,12 +217,11 @@
       ;
 
     typedef struct{
-      Core·Tableau tableau;
-      Core·TM *tm;
+      Core·Tableau·Face
       Core·Area·M *a;
-      Core·TM·Head·Status status;
+      Core·TM·Head·Status status; // perhaps integrate this with Core·tableau status
       Core·Tape·Topology topology;
-    }Core·TM_NX·Tableau;
+    }Core·TM_NX·Tableau·Face;
 
     // default Tableau
     Local Core·TM_NX·Tableau Core·TM_NX·t;
