@@ -1,3 +1,39 @@
+
+Local·Topo Area·topo_byte_array(Area *area){
+  if(!area) return Core·Area·Topo·nonexistent;
+  if(!area->position) return Core·Area·Topo·empty;
+  if(area->extent == 0) return Core·Area·Topo·singleton;
+  return Core·Area·Topo·finite;
+}
+
+
+    typedef struct{
+      AU *position;
+      extent_t extent;
+    } Core·Area;
+
+
+
+    typedef struct{
+      Core·Area *area;
+      AU *hd;
+    } Core·TM·Array;
+
+
+    Local Node *Core·step_AU(Node *node){
+      Core·Step·Node *step_node = (Core·Step·Node *)node;
+      step_node->hd = Core·offset(step_node->tm->hd ,1);
+      return node->next;
+    }
+
+    Local Node *Core·step_8AU(Node *node){
+      Core·Step·Node *step_node = (Core·Step·Node *)node;
+      step_node->hd = Core·offset_8AU(step_node->tm->hd ,1);
+      return node->next;
+    }
+
+
+
 -----
     typedef struct{
       Core·Tableau *tableau;

@@ -1,4 +1,4 @@
-#+TITLE: Model and related
+#+TITLE: Model
 #+AUTHOR: Thomas
 #+STARTUP: content
 
@@ -81,6 +81,7 @@ typedef struct{
 The details of the TableauFace type are shown to the user.  The actions are
 declared to be given a TableauFace, so any directly calls will work.  Inside each action the tableau is converted from TableauFace to Tableau.
 
+=> Core uses separate Face and State tableaux
 
 ** Tableau structure
 
@@ -140,6 +141,9 @@ In this approach there is not action_table pointer, though that is not a problem
 
 Such a link could be reduced to two pointers if the single tableau variation is used.
 
+==> Core uses proposal 3
+
+
 * Mixing continuations with fall through execution.
 
 #+BEGIN_SRC c
@@ -163,3 +167,49 @@ Have actions that set status, link to them when status is desired.
 
 Actually we need default continuations anyway. In many cases these could
 be generic. Argument guard continuations could be 'good' or 'bad'. 
+
+=> Core uses option 2
+
+* Continuations and linking
+
+**proposal 1
+
+Put continuations on the interface tableau. The reasoning is that the programmer will want to set them, but actually this is not a general programming task. Rather it occurs up front as part of a 'wiring' phase, and is then typically it is not done again.
+
+Consider this example.
+
+#+BEGIN_SRC c
+    typedef struct{
+      Core·Tape·Tableau·Face tape_tableau;
+      Core·Area *area;
+      void *position_left;
+      void *position_right;
+      AU *pt0;
+      AU *pt1
+      Core·Area *a;
+      Core·Area *b;
+      bool q; // predicate -> q 
+      Core·Link next;
+    }Core·Area·Tableau·Face;
+#+END_SRC
+
+The idea is that there is one interface tableau used for all of the Area·Tableau actions, but it has a link field.  Normally while the linked together functions are running, they can not set the 'next' link, as that information comes from a higher level.  For example, after `encloses_pt_q` runs, it has no idea as to where the programmer wants control to flow next.
+
+**proposal 2
+
+Add a fourth pointer to a link.  This points to the continuations block.
+
+#+BEGIN_SRC c
+    typedef struct{
+      Core·Tableau *face;
+      Core·Tableau *state;
+      Core·ActionTable *action;
+      Core·NextTable *next_table;
+    }Core·Link;
+#+END_SRC
+
+We may then describe the program flow network as a series of next_tables, and then view the program as traversing a graph.
+
+In database representation a set of nodes, and the dual graph is specified as a bridge table. It is more efficient when traversing a graph, to keep make the neighbor list a property of the node. Thus,  "Link"  can be seen as a node with a neighbor list.
+
+=> Core uses option 2

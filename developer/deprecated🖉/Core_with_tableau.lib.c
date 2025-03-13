@@ -35,6 +35,20 @@
   #include <stddef.h>
 
   //----------------------------------------
+  // utility
+
+    struct{
+      void *offset(void *p ,size_t Δ);
+      void *offset_8AU(void *p ,size_t Δ);
+
+      // given an 8AU window aligned on an 8AU boundary
+      bool is_aligned_on_8AU(void *p);
+      void *floor_within_aligned_8AU(void *p);
+      void *ceiling_within_aligned_8AU(void *p);
+    }Core·U;
+    Core·U Core·u;
+
+  //----------------------------------------
   // memory
 
     #define extentof(x)(sizeof(x) - 1)
@@ -48,34 +62,175 @@
   // model
 
     typedef enum{
-       Core·Status·mu = 0
-      ,Core·Status·good
-      ,Core·Status·bad
+      Core·Status·mu = 0
+      ,Core·Status·on_track
+      ,Core·Status·derailed
     }Core·Status;
 
     typedef struct{
-      Core·Status (*good)();
-      Core·Status (*bad)();
+    }Core·Tableau;
 
-      void *(*offset)(void *p ,size_t Δ);
-      void *(*offset_8AU)(void *p ,size_t Δ);
+    typedef struct{
+      Core·Tableau tableau;
+      unint status;
+    }Core·Tableau·Face;
 
-      bool (*is_aligned_on_8AU)(void *p);
-      void *(*floor_within_aligned_8AU)(void *p);
-      void *(*ceiling_within_aligned_8AU)(void *p);
+    typedef struct Core·Link;
 
-    } Core·Action;
-    typedef struct Core·action;
+    typedef struct{
+      Core·ActionTable *action;
+      Core·Tableau *face;
+      Core·Tableau *state;
+      Core·NextTable *next_table;
+    }Core·Link;
+
+    typedef enum {
+      Core·Link·Mode·none = 0
+      ,Core·Link·Mode·action = 1
+      ,Core·Link·Mode·face = 2
+      ,Core·Link·Mode·state = 4
+      ,Core·Link·Mode·next_table = 8
+      ,Core·Link·Mode·bad_mode = 16
+      ,Core·Link·Mode·bad_link = 32
+    }Core·Link·Mode;
+
+    Local uint Core·Link·check(Core·Link *l ,Core·Link·Mode m){
+      Core·Link·Mode error = Core·Link·Mode·none;
+
+      if(m == Core·Link·Mode·none){
+        fprintf(stderr,"Core·Area·Array·read:: given zero mode");
+        error |= Core·Link·Mode·bad_mode;
+      }
+      if(m >= Core·Link·Mode·bad_mode){
+        fprintf(stderr,"Core·Area·Array·read:: illegal check mode");
+        error |= Core·Link·Mode·bad_mode;
+      }
+      if(!l){
+        fprintf(stderr,"Core·Area·Array·read:: given NULL link");
+        error |= Core·Link·Mode·bad_link;
+      }
+
+      if(error) return error;
+
+      if( (m & Core·Link·Mode·action) && !l->action){
+        fprintf(stderr,"Core·Area·Array·read:: given NULL action");
+        error |= Core·Link·Mode·action;
+      }
+      if( (m & Core·Link·Mode·face) && !l->face){
+        fprintf(stderr,"Core·Area·Array·read:: given NULL face");
+        error |= Core·Link·Mode·face;
+      }
+      if( (m & Core·Link·Mode·state) && !l->state){
+        fprintf(stderr,"Core·Area·Array·read:: given NULL state");
+        error |= Core·Link·Mode·state;
+      }
+      if( (m & Core·Link·Mode·next_table) && !l->next_table){
+        fprintf(stderr,"Core·Area·Array·read:: given NULL next_table");
+        error |= Core·Link·Mode·next_table;
+      }
+
+      return error;
+    }
+
+    typedef struct{
+      uint (*check)(Core·Link *l ,Core·Link·Mode m);
+    }Core·Link·ActionTable;
+
+
+    typedef Core·Link *(*Core·Action)(Core·Link *);
+
+    typedef struct{
+      Core·Action on_track;  // -> status
+      Core·Action derailed; // -> status
+    }Core·ActionTable;
+
+    Local Core·Link *Core·Action·on_track(Core·Link *lnk){
+      lnk->face->status = Core·Status·on_track;
+      return NULL;
+    }
+
+    Local Core·Link *Core·Action·derailed(Core·Link *lnk){
+      lnk->face->status = Core·Status·derailed;
+      return NULL;
+    }
+
+    // The most common continuations
+    typedef struct{
+      Core·Link on_track;
+      Core·Link derailed;
+    }Core·NextTable;
+
+
+    Local void initiate(Core·Link *lnk){
+      while(lnk) lnk = lnk->action(lnk);
+    }
+
+    typedef struct Core·State;
+
+    Local void call(
+      Core·Action action 
+      ,Core·Face *face 
+      ,Core·State *state 
+     ){
+      Core·Link link{
+         .action = action
+         ,.face = face
+         ,.state = state
+         ,.next_table = NULL;
+      }        
+      initiate(&link);
+    }
+
+    Local Core·Tableau·Face Core·Tableau·face{
+      .tableau = {
+      }
+      .status = Core·Status·mu
+    }
+
+    Local Core·Link·ActionTable Core·Link·action_table = {
+      ,.check = Core·Link·check
+    };
+
+    Local Core·ActionTable Core·action_table = {
+      .on_track = Core·Action·on_track,
+      ,.derailed = Core·Action·derailed
+      ,.check = Core·Link·check
+    };
+
+    Local Core·NextTable Core·next_table{
+      .on_track = Core·Action·on_track
+      ,.derailed = Core·Action·derailed
+    };
+
+    Local Core·Link Core·link{
+      .action = NULL
+      ,.face = NULL
+      ,.state = NULL
+      ,.next_table = &Core·next_table
+    }
 
   //----------------------------------------
   // Tape model
 
+    typedef struct Core·Tape;
     typedef struct Core·Tape·Address;
     typedef struct Core·Tape·Remote;
-    typedef struct Core·Tape;
+
+    typedef struct{
+      Core·Tableau·Face;
+      Core·Tape *tape;
+      Core·Tape·Address *address;
+      Core·Tape·remote *remote;
+      extent_t extent;
+    }Core·Tape·Tableau·Face;
+
+    typedef Local void (*Core·Tape·copy)(
+      Core·Tape·Address *address 
+      ,Core·Tape·Remote *remote
+    );
 
     typedef enum{
-       Core·Area·Topo·mu
+      Core·Area·Topo·mu
       ,Core·Area·Topo·nonexistent // pointer to tape is NULL
       ,Core·Area·Topo·empty      // tape has no cells
       ,Core·Area·Topo·singleton  // extent is zero
@@ -85,45 +240,52 @@
       ,Core·Area·Topo·infinite   // exists, not empty, no cycle, no rightmost
     }Core·Tape·Topo;
 
+    typedef enum{
+      Core·Status·mu = 0
+      ,Core·Status·on_track
+      ,Core·Status·empty_tape
+      ,Core·Status·empty_tape      
+    }Core·Tape·Extent·Next;
+
     typedef struct{
-      Core·Tape·Topo (*topo)(Core·Tape *tape);
-      extent_t (*extent)(Core·Area *area); 
-      void read(Core·Tape·Address ,Core·Tape·Remote);
-      void write(Core·Tape·Address ,Core·Tape·Remote);
+      Core·Action topo;
+      Core·Action copy; // *address -> *remote
+      Core·Action extent;
     }Core·Tape·ActionTable;
 
   //----------------------------------------
   // Area model
 
-    typedef struct Core·Area;
+    typedef struct Core·Area; // extends Tape
 
     typedef struct{
-      Core·Tape·Action tape;
+      Core·Tape·Tableau·Face tape;
+      Core·Area *area;
+      void *position;
+      void *position_right;
+      AU *pt;
+      AU *pt_complement;
+      Core·Area *a;
+      Core·Area *b;
+      bool q; // predicate -> q 
+    }Core·Area·Tableau·Face;
 
-      void init_pe(Core·Area *area ,void *position ,extent_t extent);
-      void init_pp(Core·Area *area ,void *position_left ,void *position_right);
-      void set_position(Core·Area *area ,AU *new_position);
-      void set_position_left(Core·Area *area ,AU *new_position); // synonym
-      void set_position_right(Core·Area *area ,AU *new_position_right);
-      void set_extent(Core·Area *area ,extent_t extent); 
+    typedef struct{
+      Core·Tape·ActionTable tape;
 
-      // read area properties
-      AU *position(Core·Area *area);
-      AU *position_left(Core·Area *area); // synonym
-      AU *position_right(Core·Area *area);
+      Core·Action position_right; // sets position_right
 
-      AU *complement(Core·Area *area ,AU *r);
+      Core·Action complement; // AU *pt -> AU *pt_complement
 
       // area relationships
-      bool encloses_pt(AU *pt ,Core·Area *area);
-      bool encloses_pt_strictly(AU *pt ,Core·Area *area);
-      bool encloses_area(Core·Area *outer ,Core·Area *inner);
-      bool encloses_area_strictly(Core·Area *outer ,Core·Area *inner);
-      bool overlap(Core·Area *a ,Core·Area *b);
-      void largest_aligned_64(Core·Area *outer ,Core·Area *inner_64);
-
-    } Core·Area·ActionTable;
-
+      Core·Action address_valid;  // a encloses pt
+      Core·Action encloses_pt_strictly_q; // " pt not on a bound
+      Core·Action encloses_area_q;  // a encloses b
+      Core·Action encloses_area_strictly_q; // " no bounds touching
+      Core·Action overlap_q; // a overlaps b
+      // a is an outer byte array, b is an inner aligned word64 array
+      Core·Action largest_aligned_64_q; 
+    } Core·Area·Action;
 
   //----------------------------------------
   // Tape Machine
@@ -132,32 +294,43 @@
 
     // if tape machine does not support step left, then Status·leftmost will be reported as Status·interim
     typedef enum{
-       Core·TM·Head·Status·mu
+      Core·TM·Head·Status·mu
       ,Core·TM·Head·Status·not_on_tape = 1
       ,Core·TM·Head·Status·on_leftmost    = 1 << 1
       ,Core·TM·Head·Status·in_interim     = 1 << 2
       ,Core·TM·Head·Status·on_rightmost   = 1 << 3
     }Core·TM·Head·Status;
 
-    const Core·TM·Head·Status Core·TM·Head·Status·on_track =
+    const uint Core·TM·Head·Status·derailed =
       Core·TM·Head·Status·mu 
       | Core·TM·Head·Status·not_on_tape
       ;
 
-    const Core·TM·Head·Status Core·TM·Head·Status·derailed =
+    const uint Core·TM·Head·Status·can_step =
       Core·TM·Head·Status·leftmost   
       | Core·TM·Head·Status·interim   
-      | Core·TM·Head·Status·rightmost 
       ;
 
     typedef struct{
-      void mount(Core·TM_NX·Tableau *);
-      void rewind(Core·TM_NX·Tableau *);
-      bool can_step(Core·TM_NX·Tableau *);
-      void step(Core·TM_NX·Tableau *);
-      void step_left(Core·TM_NX·Tableau *);
-      void topo(Core·TM_NX·Tableau *);
-      void head_status(Core·TM_NX·Tableau *);
+      Core·Tableau·Face face;
+      Core·Tape *tape;
+      Core·Tape·Topo topo;
+      void *read_pt; // various machines will have different read types
+    }Core·TM_NX·Tableau·Face;
+
+    // default Tableau
+    Local Core·TM_NX·Tableau Core·TM_NX·t;
+
+    typedef struct{
+      Core·Action mount;
+      Core·Action rewind;
+      Core·Action can_step;
+      Core·Action step_right;
+      Core·Action step_left;
+      Core·Action read;  // -> read_pt
+      Core·Action write; // writes data found at read_pt
+      Core·Action status;
+      Core·Action topo;
     } Core·TM_NX·Action;
     // default actions table
     Local Core·TM_NX·Action Core·TM_NX·action;
@@ -170,14 +343,14 @@
   // Map
 
     typedef enum{
-       Core·Map·Status·mu = 0
+      Core·Map·Status·mu = 0
       ,Core·Map·Status·no_tape
       ,Core·Map·Status·not_computable
       ,Core·Map·Status·complete
     } Core·Map·Status;
 
     typedef enum{
-       Core·Map·Completion·mu = 0
+      Core·Map·Completion·mu = 0
       ,Core·Map·Completion·no_tape                
       ,Core·Map·Completion·not_computable         
       ,Core·Map·Completion·failed                 
@@ -189,13 +362,13 @@
     } Core·Map·Completion;
 
     const uint Core·Map·Completion·derailed =
-        Core·Map·Completion·no_tape                
+      Core·Map·Completion·no_tape                
       | Core·Map·Completion·not_computable         
       | Core·Map·Completion·failed
       ;
 
     const uint Core·Map·Completion·on_track =
-        Core·Map·Completion·perfect_fit            
+      Core·Map·Completion·perfect_fit            
       | Core·Map·Completion·read_surplus           
       | Core·Map·Completion·read_surplus_write_gap 
       | Core·Map·Completion·write_available        
@@ -222,17 +395,17 @@
           return;
         }
         uint error = 0;
-        if( t->status & Core·Map·Completion·bad != 0 ){
-          fprintf(stderr, "Core·Map:: prior map completion status is bad.");
+        if( t->status & Core·Map·Completion·derailed != 0 ){
+          fprintf(stderr, "Core·Map:: prior map completion status is derailed.");
         }
         call(status ,t->domain);
-        if(t->domain->tableau->status & Core·TM·Head·Status·good == 0){ 
-          fprintf(stderr, "Core·Map:: domain is not good.");
+        if(t->domain->tableau->status & Core·TM·Head·Status·on_track == 0){ 
+          fprintf(stderr, "Core·Map:: domain is not on_track.");
           error++;
         }
         call(status ,t->range);
-        if(t->range->tableau->status & Core·TM·Head·Status·good == 0){ 
-          fprintf(stderr, "Core·Map:: range is not good.");
+        if(t->range->tableau->status & Core·TM·Head·Status·on_track == 0){ 
+          fprintf(stderr, "Core·Map:: range is not on_track.");
           error++;
         }
         if(error > 0) return;
@@ -241,60 +414,137 @@
 
     }
 
+  //----------------------------------------
+  // Copy
+
+    typedef enum{
+      Core·Copy·Status·mu = 0
+      ,Core·Copy·Status·argument_guard = 1
+      ,Core·Copy·Status·perfect_fit = 2
+      ,Core·Copy·Status·read_surplus = 4
+      ,Core·Copy·Status·read_surplus_write_gap = 8
+      ,Core·Copy·Status·write_available = 16
+      ,Core·Copy·Status·write_gap = 32
+    } Core·Copy·Status;
+
+    typedef struct{
+      Core·TM read;
+      Core·TM write;
+      Core·Function init;
+      Core·Function copy_cell;
+      Core·Function step;
+      Core·Function status;
+    } Core·Copy·Link;
+
+    typedef struct{
+
+      uint8AU_t Area·read_8AU_zero(Core·Area *area ,void *r);
+      uint8AU_t Area·read_8AU_fwd(Core·Area *area ,void *r);
+      uint8AU_t Area·read_8AU_rev(Core·Area *area_8AU ,void *r);
+
+      // hex conversion
+      uint16_t byte_to_hex(uint8_t byte);
+      uint8_t hex_to_byte(uint16_t hex);
+
+      // copy one area to another, possibly with a transformation
+      Map·Status Core·map(Core·Map·Fn fn);
+      Map·Fn Map·AU_by_AU;
+      Map·Fn Map·by_8AU;
+      Map·Fn Map·write_hex;
+      Map·Fn Map·read_hex;
+
+    } Core·MapFn·Face;
+
 
 #endif
 
 //--------------------------------------------------------------------------------
 // Implementation
-
-  typedef AU (*ReadFn8)(Area * ,AU *);
-  typedef uint64_t (*ReadFn64)(Area * ,uint64_t *);
-
-
-Local·Topo Area·topo_byte_array(Area *area){
-  if(!area) return Core·Area·Topo·nonexistent;
-  if(!area->position) return Core·Area·Topo·empty;
-  if(area->extent == 0) return Core·Area·Topo·singleton;
-  return Core·Area·Topo·finite;
-}
-
-
-    typedef struct{
-      AU *position;
-      extent_t extent;
-    } Core·Area;
-
-
-
-    typedef struct{
-      Core·Area *area;
-      AU *hd;
-    } Core·TM·Array;
-
-
-    Local Node *Core·step_AU(Node *node){
-      Core·Step·Node *step_node = (Core·Step·Node *)node;
-      step_node->hd = Core·offset(step_node->tm->hd ,1);
-      return node->next;
-    }
-
-    Local Node *Core·step_8AU(Node *node){
-      Core·Step·Node *step_node = (Core·Step·Node *)node;
-      step_node->hd = Core·offset_8AU(step_node->tm->hd ,1);
-      return node->next;
-    }
-
-
-
-
-
-
 #ifdef Core·IMPLEMENTATION
   // declarations available to all of the IMPLEMENTATION go here
   //
     #ifdef Core·DEBUG
       #include <stdio.h>
     #endif
+
+  //----------------------------------------
+  // model
+
+    typedef struct{
+      Core·Tableau tableau;
+    }Core·Tableau·State;
+
+
+    // some default instances
+
+  //----------------------------------------
+  // Tape model - Array Area
+  //    an array area is represented by `position` and `extent`.
+
+    // identical to Core·Link, used for typing pointers
+    typedef struct{
+      Core·Area·ActionTable *action;
+      Core·Area·Tableau·Face *face;
+      Core·Area·Tableau·State *state;
+      Core·NextTable *next_table;
+    }Core·Area·Array·Link;
+
+    Core·Link *Core·Area·Array·topo(Core·Link *lnk){
+      #ifdef Core·Debug
+        if(!lnk){
+          fprintf(stderr,"Core·Area·Array·topo:: given NULL lnk");
+          return NULL;
+        }
+        if(!lnk->face){
+          fprintf(stderr,"Core·Area·Array·topo:: given NULL face");
+          return NULL;
+        }
+      #endif
+      l = (Core·Area·Array·Link *)lnk;
+      if(l->face->extent == 0) l->face->status = Core·Area·Topo·singleton;
+      l->face->status = Core·Area·Topo·segment;
+      return &l->next_table->on_track;
+    }
+
+    Core·Link *Core·Area·Array·copy(Core·Link *link){
+      #ifdef Core·Debug
+        uint error = Core·Link·check(
+          link
+          ,Core·Link·Mode·action | Core·Link·Mode·face | Core·Link·Mode·next_table
+        );
+        if(error) return &link->next_table->derailed;
+        if(!&link->face->remote) return &link->next_table->derailed;
+        Core·Link link2{
+          .action = Core·Area·address_valid
+          ,.face = link->face
+          ,.state = NULL
+          ,.next_table = {
+            .on_track = NULL
+            .derailed = link->next_table->derailed
+          }
+        }        
+        initiate(link2);
+      #endif
+      l = (Core·Area·Array·Link *)link;
+      return &link->next_table->on_track;
+    }
+
+
+    Local Core·Area·ActionTable Core·Area·Array·action_table = {
+      .tape = {
+        .topo = Core·Area·Array·topo
+        .read
+        .write
+        .extent
+      }
+      .psoition_right
+      .complement
+      .address_valid
+      .encloses_pt_strictly_q
+      .encloses_area_q
+      .encloses_area_strictly_q
+      .overlap_q
+    }
 
     typedef struct{
       AU *position;
