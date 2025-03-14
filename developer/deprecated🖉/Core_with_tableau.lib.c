@@ -467,168 +467,147 @@
       #include <stdio.h>
     #endif
 
-  //----------------------------------------
-  // model
-
-    typedef struct{
-      Core·Tableau tableau;
-    }Core·Tableau·State;
-
-
-    // some default instances
-
-  //----------------------------------------
-  // Tape model - Array Area
-  //    an array area is represented by `position` and `extent`.
-
-    // identical to Core·Link, used for typing pointers
-    typedef struct{
-      Core·Area·ActionTable *action;
-      Core·Area·Tableau·Face *face;
-      Core·Area·Tableau·State *state;
-      Core·NextTable *next_table;
-    }Core·Area·Array·Link;
-
-    Core·Link *Core·Area·Array·topo(Core·Link *lnk){
-      #ifdef Core·Debug
-        if(!lnk){
-          fprintf(stderr,"Core·Area·Array·topo:: given NULL lnk");
-          return NULL;
-        }
-        if(!lnk->face){
-          fprintf(stderr,"Core·Area·Array·topo:: given NULL face");
-          return NULL;
-        }
-      #endif
-      l = (Core·Area·Array·Link *)lnk;
-      if(l->face->extent == 0) l->face->status = Core·Area·Topo·singleton;
-      l->face->status = Core·Area·Topo·segment;
-      return &l->next_table->on_track;
-    }
-
-    Core·Link *Core·Area·Array·copy(Core·Link *link){
-      #ifdef Core·Debug
-        uint error = Core·Link·check(
-          link
-          ,Core·Link·Mode·action | Core·Link·Mode·face | Core·Link·Mode·next_table
-        );
-        if(error) return &link->next_table->derailed;
-        if(!&link->face->remote) return &link->next_table->derailed;
-        Core·Link link2{
-          .action = Core·Area·address_valid
-          ,.face = link->face
-          ,.state = NULL
-          ,.next_table = {
-            .on_track = NULL
-            .derailed = link->next_table->derailed
-          }
-        }        
-        initiate(link2);
-      #endif
-      l = (Core·Area·Array·Link *)link;
-      return &link->next_table->on_track;
-    }
-
-
-    Local Core·Area·ActionTable Core·Area·Array·action_table = {
-      .tape = {
-        .topo = Core·Area·Array·topo
-        .read
-        .write
-        .extent
-      }
-      .psoition_right
-      .complement
-      .address_valid
-      .encloses_pt_strictly_q
-      .encloses_area_q
-      .encloses_area_strictly_q
-      .overlap_q
-    }
-
-    typedef struct{
-      AU *position;
-      extent_t extent;
-    } Core·Area;
-
-    // I removed the unions, as they are debugging hazards, and also might confuse the optimizer
-    typedef struct{
-        struct{
-        } byte_by_byte;
-        struct{
-          Area area_64;
-        } copy_64;
-        struct{
-        } read_hex;
-        struct{
-        } write_hex;
-    } Core·TableauLocal;
-
-  // this part goes into Maplib.a
+  // this part goes into the library
   #ifndef LOCAL
-  #endif 
+  #endif
 
   #ifdef LOCAL
 
-    //----------------------------------------
-    // Position/Pointer/Address whatever you want to call it
+  //----------------------------------------
+  // model
 
-    Local void *Core·offset_8(void *p ,size_t Δ){
+    Core·Status Core·on_track(){ return Core·Status·on_track; }
+    Core·Status Core·derailed(){ return Core·Status·derailed; }
+
+    Local void *Core·offset(void *p ,size_t Δ){
       #ifdef Core·Debug
-      if(!p){
-        fprintf(stderr,"Core·offset_8:: given NULL `p'");
+      if( !p ){
+        fprintf(stderr ,"Core·offset:: given NULL `p'");
         return NULL;
       }
       #endif
-      return (void *)((AU *)p) + Δ;
+      return (void *)( (AU *)p ) + Δ;
     }
 
-    Local void *Core·offset_64(void *p ,size_t Δ){
+    Local void *Core·offset_8AU(void *p ,size_t Δ){
       #ifdef Core·Debug
-      if(!p){
-        fprintf(stderr,"Core·offset_64:: given NULL `p'");
+      if( !p ){
+        fprintf(stderr ,"Core·offset_8AU:: given NULL `p'");
         return NULL;
       }
       #endif
-      return (void *)((uint64_t *)p) + Δ;
+      return (void *)( (uint64_t *)p ) + Δ;
     }
 
-    Local bool Core·is_aligned_on_64(void *p){
+    Local bool Core·is_aligned_on_8AU(void *p){
       #ifdef Core·Debug
-      if(!p){
-        fprintf(stderr,"Core·is_aligned_on_64:: given NULL `p'");
+      if( !p ){
+        fprintf(stderr ,"Core·is_aligned_on_8AU:: given NULL `p'");
         return false;
       }
       #endif
-      return ((uintptr_t)p & 0x7) == 0;
+      return ( (uintptr_t)p & 0x7 ) == 0;
     }
 
     // find the lowest address in an 8 byte aligned window
     // returns the byte pointer to the least address byte in the window
-    Local void *Core·floor_64(void *p){
+    Local void *Core·floor_within_aligned_8AU(void *p){
       #ifdef Core·Debug
-      if(!p){
-        fprintf(stderr,"Core·floor_64:: given NULL `p'");
+      if( !p ){
+        fprintf(stderr ,"Core·floor_8AU:: given NULL `p'" );
         return NULL;
       }
       #endif
-      return (void *)((uintptr_t)p & ~(uintptr_t)0x7);
+      return (void *)( (uintptr_t)p & ~(uintptr_t)0x7 );
     }
 
     // find the largest address in an 8 byte aligned window
     // returns the byte pointer to the greatest address byte in the window
-    Local void *Core·ceiling_64(void *p){
+    Local void *Core·ceiling_within_aligned_8AU(void *p){
       #ifdef Core·Debug
-      if(!p){
-        fprintf(stderr,"Core·ceiling_64:: given NULL `p'");
+      if( !p ){
+        fprintf(stderr ,"Core·ceiling_64:: given NULL `p'" );
         return NULL;
       }
       #endif
-      return (void *)((uintptr_t)p | 0x7);
+      return (void *)( (uintptr_t)p | 0x7 );
+    }
+
+    // Struct instance initialization
+    Core·Action action_struct{
+       .on_track = Core·on_track
+      ,.derailed = Core·derailed
+      ,.offset = Core·offset
+      ,.offset_8AU = Core·offset_8AU
+      ,.is_aligned_on_8AU = Core·is_aligned_on_8AU
+      ,.floor_within_aligned_8AU = Core·floor_within_aligned_8AU
+      ,.ceiling_within_aligned_8AU = Core·ceiling_within_aligned_8AU
+    };
+
+  //----------------------------------------
+  // Tape Machine model, based on an array
+
+    typedef struct{
+      AU *position;
+      extent_t extent;
+    }Core·Tape;
+
+Core·Tape·Topo Core·Tape·Array·topo(Core·Tape *tape){
+  
+}
+
+
+    extent_t extent(Core·Area *area); 
+    void read(Core·Tape·Address ,Core·Tape·Remote);
+    void write(Core·Tape·Address ,Core·Tape·Remote);
+     
+    
+
+
+    //----------------------------------------
+    // Tape Machine Model based on array
+
+    void Core·TM_NX·Array·mount(Core·TM_NX·Array *tm){
+      // Mount the tape machine to its initial state
+    }
+
+    void Core·TM_NX·Array·rewind(Core·TM_NX·Array *tm){
+      // Reset the tape head position
+    }
+
+    bool Core·TM_NX·Array·can_step(Core·TM_NX·Array *tm){
+      // Determine if a step operation is possible
+      return true;
+    }
+
+    void Core·TM_NX·Array·step(Core·TM_NX·Array *tm){
+      // Perform a step operation
+    }
+
+    void Core·TM_NX·Array·step_left(Core·TM_NX·Array *tm){
+      // Perform a step operation to the left
+    }
+
+    void Core·TM_NX·Array·topo(Core·TM_NX·Array *tm){
+      // Handle topological considerations
+    }
+
+    void Core·TM_NX·Array·head_status(Core·TM_NX·Array *tm){
+      // Retrieve the current head status
     }
 
     //----------------------------------------
-    // Area
+    // Initialize Action Table
+    Core·TM_NX·Array·Action Core·TM_NX·Array·action = {
+       .mount = Core·mount
+      ,.rewind = Core·rewind
+      ,.can_step = Core·can_step
+      ,.step = Core·step
+      ,.step_left = Core·step_left
+      ,.topo = Core·topo
+      ,.head_status = Core·head_status
+    };
+
 
     // initialize an area
 

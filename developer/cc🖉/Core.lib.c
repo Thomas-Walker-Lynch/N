@@ -15,7 +15,11 @@
 
    Nodes include neighbor links, that makes traversal more efficient.
 
+   FG FunctionsGiven<type>, e.g. FunctionsGiven<Core·Area>, abbreviate as FG, or fg.
+   Nice abbreviation as f and g are common one letter abreviaions for a functions.
 
+   U - short for Utility
+  
 */
 
 #define Core·DEBUG
@@ -42,20 +46,22 @@
 
     // AU == Addressable Unit
     // given an AU is an 8 bit byte, 4AU is 32 bits, and 8 AU is 64 bits.
-    #define AU uint8_t;
+    #define AU uint8_t
 
   //----------------------------------------
   // model
 
+    // no state, this is merely a namespace
+
     typedef enum{
        Core·Status·mu = 0
-      ,Core·Status·good
-      ,Core·Status·bad
+      ,Core·Status·on_track
+      ,Core·Status·derailed
     }Core·Status;
 
     typedef struct{
-      Core·Status (*good)();
-      Core·Status (*bad)();
+      Core·Status (*on_track)();
+      Core·Status (*derailed)();
 
       void *(*offset)(void *p ,size_t Δ);
       void *(*offset_8AU)(void *p ,size_t Δ);
@@ -64,107 +70,173 @@
       void *(*floor_within_aligned_8AU)(void *p);
       void *(*ceiling_within_aligned_8AU)(void *p);
 
-    } Core·Action;
-    typedef struct Core·action;
+    } Core·U;
 
-  //----------------------------------------
-  // Tape model
-
-    typedef struct Core·Tape·Address;
-    typedef struct Core·Tape·Remote;
-    typedef struct Core·Tape;
-
-    typedef enum{
-       Core·Area·Topo·mu
-      ,Core·Area·Topo·nonexistent // pointer to tape is NULL
-      ,Core·Area·Topo·empty      // tape has no cells
-      ,Core·Area·Topo·singleton  // extent is zero
-      ,Core·Area·Topo·segment    // finite non-singleton tape
-      ,Core·Area·Topo·circle     // initial location recurs
-      ,Core·Area·Topo·cyclic     // a location recurs
-      ,Core·Area·Topo·infinite   // exists, not empty, no cycle, no rightmost
-    }Core·Tape·Topo;
-
-    typedef struct{
-      Core·Tape·Topo (*topo)(Core·Tape *tape);
-      extent_t (*extent)(Core·Area *area); 
-      void read(Core·Tape·Address ,Core·Tape·Remote);
-      void write(Core·Tape·Address ,Core·Tape·Remote);
-    }Core·Tape·ActionTable;
-
-  //----------------------------------------
-  // Area model
-
-    typedef struct Core·Area;
-
-    typedef struct{
-      Core·Tape·Action tape;
-
-      void init_pe(Core·Area *area ,void *position ,extent_t extent);
-      void init_pp(Core·Area *area ,void *position_left ,void *position_right);
-      void set_position(Core·Area *area ,AU *new_position);
-      void set_position_left(Core·Area *area ,AU *new_position); // synonym
-      void set_position_right(Core·Area *area ,AU *new_position_right);
-      void set_extent(Core·Area *area ,extent_t extent); 
-
-      // read area properties
-      AU *position(Core·Area *area);
-      AU *position_left(Core·Area *area); // synonym
-      AU *position_right(Core·Area *area);
-
-      AU *complement(Core·Area *area ,AU *r);
-
-      // area relationships
-      bool encloses_pt(AU *pt ,Core·Area *area);
-      bool encloses_pt_strictly(AU *pt ,Core·Area *area);
-      bool encloses_area(Core·Area *outer ,Core·Area *inner);
-      bool encloses_area_strictly(Core·Area *outer ,Core·Area *inner);
-      bool overlap(Core·Area *a ,Core·Area *b);
-      void largest_aligned_64(Core·Area *outer ,Core·Area *inner_64);
-
-    } Core·Area·ActionTable;
+    Local Core·U Core·u;
 
 
   //----------------------------------------
   // Tape Machine
 
     typedef struct Core·TM_NX;
+    typedef struct Core·TM_NX·Address;
 
-    // if tape machine does not support step left, then Status·leftmost will be reported as Status·interim
     typedef enum{
-       Core·TM·Head·Status·mu
+       Core·Tape·Topo·mu
+      ,Core·Tape·Topo·nonexistent // pointer to tape is NULL
+      ,Core·Tape·Topo·empty      // tape has no cells
+      ,Core·Tape·Topo·singleton  // extent is zero
+      ,Core·Tape·Topo·segment    // finite non-singleton tape
+      ,Core·Tape·Topo·circle     // initial location recurs
+      ,Core·Tape·Topo·tail_cyclic  // other than initial location recurs
+      ,Core·Tape·Topo·infinite   // exists, not empty, no cycle, no rightmost
+    }Core·Tape·Topo;
+
+    // If tape machine does not support step left, then Status·leftmost 
+    // will be reported as Status·interim.
+    typedef enum{
+       Core·TM·Head·Status·mu = 0
       ,Core·TM·Head·Status·not_on_tape = 1
-      ,Core·TM·Head·Status·on_leftmost    = 1 << 1
-      ,Core·TM·Head·Status·in_interim     = 1 << 2
-      ,Core·TM·Head·Status·on_rightmost   = 1 << 3
-    }Core·TM·Head·Status;
-
-    const Core·TM·Head·Status Core·TM·Head·Status·on_track =
-      Core·TM·Head·Status·mu 
-      | Core·TM·Head·Status·not_on_tape
-      ;
-
-    const Core·TM·Head·Status Core·TM·Head·Status·derailed =
-      Core·TM·Head·Status·leftmost   
-      | Core·TM·Head·Status·interim   
-      | Core·TM·Head·Status·rightmost 
-      ;
+      ,Core·TM·Head·Status·origin
+      ,Core·TM·Head·Status·interim 
+      ,Core·TM·Head·Status·rightmost
+    } Core·TM·Head·Status;
 
     typedef struct{
-      void mount(Core·TM_NX·Tableau *);
-      void rewind(Core·TM_NX·Tableau *);
-      bool can_step(Core·TM_NX·Tableau *);
-      void step(Core·TM_NX·Tableau *);
-      void step_left(Core·TM_NX·Tableau *);
-      void topo(Core·TM_NX·Tableau *);
-      void head_status(Core·TM_NX·Tableau *);
-    } Core·TM_NX·Action;
-    // default actions table
-    Local Core·TM_NX·Action Core·TM_NX·action;
 
-    // default link
-    Core·Link Core·TM_NX·link;
+      Core·Status (*mount)(Core·TM_NX *tm);
+      Core·Status (*dismount)(Core·TM_NX *tm);
+      Core·Status (*rewind)(Core·TM_NX *tm);
 
+      Core·Status (*can_step)(Core·TM_NX *tm ,bool *flag);
+      Core·Status (*on_origin)(Core·TM_NX *tm ,bool *flag);
+      Core·Status (*on_rightmost)(Core·TM_NX *tm ,bool *flag);
+
+      Core·Status (*extent)(Core·TM_NX *tm ,extent_t *extent_pt);
+      Core·Status (*can_read)(Core·TM_NX *tm ,bool *flag);
+
+      Core·Status (*step)(Core·TM_NX *tm);
+      Core·Status (*step_left)(Core·TM_NX *tm);
+      Core·Status (*step_right)(Core·TM_NX *tm); // Synonym for step
+      Core·TM·Head·Status (*status)(Core·TM_NX *tm);
+
+      struct {
+        Core·Tape·Topo (*topo)(Core·TM_NX *tm);
+        Core·Status (*extent)(Core·TM_NX *tm ,extent_t *write_pt);
+        Core·Status (*is_origin)(Core·TM_NX *tm ,Core·TM_NX·Address *a ,bool *result);
+        Core·Status (*is_rightmost)(Core·TM_NX *tm ,Core·TM_NX·Address *a ,bool *result);
+        Core·Status (*read)(Core·TM_NX *tm ,Core·TM_NX·Address *a ,Core·Tape·Remote *remote);
+        Core·Status (*write)(Core·TM_NX *tm ,Core·TM_NX·Address *a ,Core·Tape·Remote *remote);
+
+        // Initialize TM area
+        Core·Status (*init_pe)(Core·TM_NX *tm ,void *position ,extent_t extent);
+        Core·Status (*init_pp)(Core·TM_NX *tm ,void *position_left ,void *position_right);
+        Core·Status (*set_position)(Core·TM_NX *tm ,Core·TM_NX·Address *new_position);
+        Core·Status (*set_position_left)(Core·TM_NX *tm ,Core·TM_NX·Address *new_position); // synonym
+        Core·Status (*set_position_right)(Core·TM_NX *tm ,Core·TM_NX·Address *new_position_right);
+        Core·Status (*set_extent)(Core·TM_NX *tm ,extent_t extent); 
+
+        // Read TM properties
+        Core·TM_NX·Address *(*position)(Core·TM_NX *tm);
+        Core·TM_NX·Address *(*position_left)(Core·TM_NX *tm); // synonym
+        Core·TM_NX·Address *(*position_right)(Core·TM_NX *tm);
+
+        Core·TM_NX·Address *(*complement)(Core·TM_NX *tm ,Core·TM_NX·Address *r);
+
+        // TM relationships
+        bool (*encloses_pt)(Core·TM_NX *tm ,Core·TM_NX·Address *pt);
+        bool (*encloses_pt_strictly)(Core·TM_NX *tm ,Core·TM_NX·Address *pt);
+        bool (*encloses_tm)(Core·TM_NX *outer ,Core·TM_NX *inner);
+        bool (*encloses_tm_strictly)(Core·TM_NX *outer ,Core·TM_NX *inner);
+        bool (*overlap)(Core·TM_NX *a ,Core·TM_NX *b);
+        void (*largest_aligned_64)(Core·TM_NX *outer ,Core·TM_NX *inner_64);
+      } area;
+
+    } Core·TM_NX·FG;
+
+  //----------------------------------------
+  // Tape Machine
+
+    typedef struct Core·TM_NX;
+    typedef struct Core·TM_NX·Address;
+
+    typedef enum{
+       Core·Tape·Topo·mu
+      ,Core·Tape·Topo·nonexistent // pointer to tape is NULL
+      ,Core·Tape·Topo·empty      // tape has no cells
+      ,Core·Tape·Topo·singleton  // extent is zero
+      ,Core·Tape·Topo·segment    // finite non-singleton tape
+      ,Core·Tape·Topo·circle     // initial location recurs
+      ,Core·Tape·Topo·tail_cyclic  // other than initial location recurs
+      ,Core·Tape·Topo·infinite   // exists, not empty, no cycle, no rightmost
+    }Core·Tape·Topo;
+
+    // If tape machine does not support step left, then Status·leftmost 
+    // will be reported as Status·interim.
+    typedef enum{
+       Core·TM·Head·Status·mu = 0
+      ,Core·TM·Head·Status·not_on_tape = 1
+      ,Core·TM·Head·Status·origin
+      ,Core·TM·Head·Status·interim 
+      ,Core·TM·Head·Status·rightmost
+    } Core·TM·Head·Status;
+
+    typedef struct{
+
+      Core·Status mount(Core·TM_NX *tm);
+      Core·Status dismount(Core·TM_NX *tm);
+      Core·Status rewind(Core·TM_NX *tm);
+
+      Core·Tape·Extent·Status (*can_step)(Core·TM_NX *tm ,bool *flag);
+      Core·Tape·Extent·Status (*on_origin)(Core·TM_NX *tm ,bool *flag);
+      Core·Tape·Extent·Status (*on_rightmost)(Core·TM_NX *tm ,bool *flag);
+
+      Core·Tape·Extent·Status (*extent)(Core·TM_NX *tm ,extent_t *extent_pt);
+      Core·Status can_read(bool *flag);
+      Core·Status can_step(bool *flag);
+
+      Core·Status step(Core·TM_NX *tm);
+      Core·Status step_left(Core·TM_NX *tm);
+      Core·Status step_right(Core·TM_NX *tm); // Synonym for step
+      Core·TM·Head·Status status(Core·TM_NX *tm);
+
+      struct{
+        Core·Tape·Topo (*topo)(Core·TM_NX *tm);
+        Core·Tape·Extent·Status (*extent)(Core·TM_NX *tm ,extent_t *write_pt);
+        Core·Status (*is_leftmot)(Core·Tape *tape ,Core·Tape·Address *a ,bool *result);
+        Core·Status (*is_rightmost)(Core·Tape *tape ,Core·Tape·Address *a ,bool *result);
+        Core·Status (*read)(Core·TM_NX *tm ,Core·Tape·Address *a ,Core·Tape·Remote *remote);
+        Core·Status (*write)(Core·TM_NX *tm ,Core·Tape·Address *a ,Core·Tape·Remote *remote);
+
+        // initialize tm area
+        Core·Status (*init_pe)(Core·TM_NX *tm ,void *position ,extent_t extent);
+        Core·Status (*init_pp)(Core·TM_NX *tm ,void *position_left ,void *position_right);
+        Core·Status (*set_position)(Core·TM_NX *tm ,Core·TM_NX·Address *new_position);
+        Core·Status (*set_position_left)(Core·TM_NX *tm ,Core·TM_NX·Address *new_position); // synonym
+        Core·Status (*set_position_right)(Core·TM_NX *tm ,Core·TM_NX·Address *new_position_right);
+        Core·Status (*set_extent)(Core·TM_NX *tm ,extent_t extent); 
+
+        // read tm properties
+        Core·TM_NX·Address *(*position)(Core·TM_NX *tm);
+        Core·TM_NX·Address *(*position_left)(Core·TM_NX *tm); // synonym
+        Core·TM_NX·Address *(*position_right)(Core·TM_NX *tm);
+
+        Core·TM_NX·Address *(*complement)(Core·TM_NX *tm ,Core·TM_NX·Address *r);
+
+        // tm relationships
+        bool (*encloses_pt)(Core·TM_NX *tm ,Core·TM_NX·Address *pt);
+        bool (*encloses_pt_strictly)(Core·TM_NX *tm ,Core·TM_NX·Address *pt);
+        bool (*encloses_tm)(Core·TM_NX *outer ,Core·TM_NX *inner);
+        bool (*encloses_tm_strictly)(Core·TM_NX *outer ,Core·TM_NX *inner);
+        bool (*overlap)(Core·TM_NX *a ,Core·TM_NX *b);
+        void (*largest_aligned_64)(Core·TM_NX *outer ,Core·TM_NX *inner_64);
+
+      }area;
+
+    } Core·TM_NX·FG;
+
+    // Default functions given a Tape Machine
+    Local Core·TM_NX·FG Core·TM_NX·fg;
 
   //----------------------------------------
   // Map
@@ -217,25 +289,27 @@
     // true if function enters the map loop, otherwise false.
     void Core·map(Core·Map·Tableau *t){
       #ifdef Core·DEBUG
+      /*
         if(!t){
           fprintf(stderr, "Core·Map·Tableau:: given NULL t");
           return;
         }
         uint error = 0;
-        if( t->status & Core·Map·Completion·bad != 0 ){
-          fprintf(stderr, "Core·Map:: prior map completion status is bad.");
+        if( (t->status & Core·Map·Completion·derailed) != 0 ){
+          fprintf(stderr, "Core·Map:: prior map completion status is derailed.");
         }
         call(status ,t->domain);
-        if(t->domain->tableau->status & Core·TM·Head·Status·good == 0){ 
-          fprintf(stderr, "Core·Map:: domain is not good.");
+        if( (t->domain->tableau->status & Core·TM·Head·Status·on_track) == 0 ){ 
+          fprintf(stderr, "Core·Map:: domain is not on_track.");
           error++;
         }
         call(status ,t->range);
-        if(t->range->tableau->status & Core·TM·Head·Status·good == 0){ 
-          fprintf(stderr, "Core·Map:: range is not good.");
+        if( (t->range->tableau->status & Core·TM·Head·Status·on_track) == 0 ){ 
+          fprintf(stderr, "Core·Map:: range is not on_track.");
           error++;
         }
         if(error > 0) return;
+      */
       #endif
       
 
@@ -247,48 +321,6 @@
 //--------------------------------------------------------------------------------
 // Implementation
 
-  typedef AU (*ReadFn8)(Area * ,AU *);
-  typedef uint64_t (*ReadFn64)(Area * ,uint64_t *);
-
-
-Local·Topo Area·topo_byte_array(Area *area){
-  if(!area) return Core·Area·Topo·nonexistent;
-  if(!area->position) return Core·Area·Topo·empty;
-  if(area->extent == 0) return Core·Area·Topo·singleton;
-  return Core·Area·Topo·finite;
-}
-
-
-    typedef struct{
-      AU *position;
-      extent_t extent;
-    } Core·Area;
-
-
-
-    typedef struct{
-      Core·Area *area;
-      AU *hd;
-    } Core·TM·Array;
-
-
-    Local Node *Core·step_AU(Node *node){
-      Core·Step·Node *step_node = (Core·Step·Node *)node;
-      step_node->hd = Core·offset(step_node->tm->hd ,1);
-      return node->next;
-    }
-
-    Local Node *Core·step_8AU(Node *node){
-      Core·Step·Node *step_node = (Core·Step·Node *)node;
-      step_node->hd = Core·offset_8AU(step_node->tm->hd ,1);
-      return node->next;
-    }
-
-
-
-
-
-
 #ifdef Core·IMPLEMENTATION
   // declarations available to all of the IMPLEMENTATION go here
   //
@@ -296,111 +328,332 @@ Local·Topo Area·topo_byte_array(Area *area){
       #include <stdio.h>
     #endif
 
-    typedef struct{
-      AU *position;
-      extent_t extent;
-    } Core·Area;
-
-    // I removed the unions, as they are debugging hazards, and also might confuse the optimizer
-    typedef struct{
-        struct{
-        } byte_by_byte;
-        struct{
-          Area area_64;
-        } copy_64;
-        struct{
-        } read_hex;
-        struct{
-        } write_hex;
-    } Core·TableauLocal;
-
-  // this part goes into Maplib.a
-  #ifndef LOCAL
-  #endif 
+  // implementation to go into the lib.a file
+  //
+    #ifndef LOCAL
+    #endif 
 
   #ifdef LOCAL
 
-    //----------------------------------------
-    // Position/Pointer/Address whatever you want to call it
+  //----------------------------------------
+  // Utilities
 
-    Local void *Core·offset_8(void *p ,size_t Δ){
+    Core·Status Core·on_track(){ return Core·Status·on_track; }
+    Core·Status Core·derailed(){ return Core·Status·derailed; }
+
+    Local void *Core·offset(void *p ,size_t Δ){
       #ifdef Core·Debug
-      if(!p){
-        fprintf(stderr,"Core·offset_8:: given NULL `p'");
+      if( !p ){
+        fprintf(stderr ,"Core·offset:: given NULL `p'");
         return NULL;
       }
       #endif
-      return (void *)((AU *)p) + Δ;
+      return (void *)( (AU *)p ) + Δ;
     }
 
-    Local void *Core·offset_64(void *p ,size_t Δ){
+    Local void *Core·offset_8AU(void *p ,size_t Δ){
       #ifdef Core·Debug
-      if(!p){
-        fprintf(stderr,"Core·offset_64:: given NULL `p'");
+      if( !p ){
+        fprintf(stderr ,"Core·offset_8AU:: given NULL `p'");
         return NULL;
       }
       #endif
-      return (void *)((uint64_t *)p) + Δ;
+      return (void *)( (uint64_t *)p ) + Δ;
     }
 
-    Local bool Core·is_aligned_on_64(void *p){
+    Local bool Core·is_aligned_on_8AU(void *p){
       #ifdef Core·Debug
-      if(!p){
-        fprintf(stderr,"Core·is_aligned_on_64:: given NULL `p'");
+      if( !p ){
+        fprintf(stderr ,"Core·is_aligned_on_8AU:: given NULL `p'");
         return false;
       }
       #endif
-      return ((uintptr_t)p & 0x7) == 0;
+      return ( (uintptr_t)p & 0x7 ) == 0;
     }
 
     // find the lowest address in an 8 byte aligned window
     // returns the byte pointer to the least address byte in the window
-    Local void *Core·floor_64(void *p){
+    Local void *Core·floor_within_aligned_8AU(void *p){
       #ifdef Core·Debug
-      if(!p){
-        fprintf(stderr,"Core·floor_64:: given NULL `p'");
+      if( !p ){
+        fprintf(stderr ,"Core·floor_8AU:: given NULL `p'" );
         return NULL;
       }
       #endif
-      return (void *)((uintptr_t)p & ~(uintptr_t)0x7);
+      return (void *)( (uintptr_t)p & ~(uintptr_t)0x7 );
     }
 
     // find the largest address in an 8 byte aligned window
     // returns the byte pointer to the greatest address byte in the window
-    Local void *Core·ceiling_64(void *p){
+    Local void *Core·ceiling_within_aligned_8AU(void *p){
       #ifdef Core·Debug
-      if(!p){
-        fprintf(stderr,"Core·ceiling_64:: given NULL `p'");
+      if( !p ){
+        fprintf(stderr ,"Core·ceiling_64:: given NULL `p'" );
         return NULL;
       }
       #endif
-      return (void *)((uintptr_t)p | 0x7);
+      return (void *)( (uintptr_t)p | 0x7 );
     }
+
+    // Struct instance initialization
+    Core·U = Core·u = {
+       .on_track = Core·on_track
+      ,.derailed = Core·derailed
+      ,.offset = Core·offset
+      ,.offset_8AU = Core·offset_8AU
+      ,.is_aligned_on_8AU = Core·is_aligned_on_8AU
+      ,.floor_within_aligned_8AU = Core·floor_within_aligned_8AU
+      ,.ceiling_within_aligned_8AU = Core·ceiling_within_aligned_8AU
+    };
+
+  //----------------------------------------
+  // Tape model, default implementation based on an array
+
+    typedef struct{
+      void *address;
+    }Core·Tape·Address;
+    Local Core·Tape·Address Core·Tape·address = {
+      .address = NULL
+    }
+
+    typedef struct{
+      void *address;
+    }Core·Tape·Remote;
+    Local Core·Tape·Remote Core·Tape·remote = {
+      .address = NULL
+    }
+
+    typedef struct{
+      AU *position;
+      extent_t extent;
+    }Core·Tape;
+
+    Local Core·Tape·Topo Core·Tape·topo(Core·Tape *tape){
+      if(!tape) return Core·Area·Topo·nonexistent;
+      if(!tape->position) return Core·Area·Topo·empty;
+      if(!tape->extent) return Core·Area·Topo·singleton;
+      return Core·Area·Topo·segment;
+    }
+
+    Local Core·Status Core·Tape·extent(Core·Tape *tape ,extent_t *write_pt){
+      #ifdef Core·Debug
+        uint error = 0;
+        if(!tape){
+          fprintf(stderr,"Core·Tape·extent:: given NULL tape");
+          error++;
+        }else if(!tape->position){
+          fprintf(stderr,"Core·Tape·extent:: extent requested for a marked as empty tape");
+          error++;
+        }
+        if(!write_pt){
+          fprintf(stderr,"Core·Tape·extent:: given NULL write_pt");
+          error++;
+        }
+        if(error) return Core·Status·derailed;
+      #endif
+      return tape->extent;
+    }    
+
+    Local bool Core·Area·action.encloses_pt(Core·Area *area ,AU *pt);
+
+    // a must be on tape
+    Local Core·Status Core·Tape·is_leftmost(
+      Core·Tape *tape ,Core·Tape·Address *a ,bool *result
+    ){
+      #ifdef Core·Debug
+        uint error = 0;
+        if(!tape){
+          fprintf(stderr,"Core·Tape·is_leftmost:: given NULL tape");
+          error++;
+        }else if(!tape->position){
+          fprintf(stderr,"Core·Tape·is_leftmost:: leftmost requested of empty tape");
+          error++;
+        }
+        if(!result){
+          fprintf(stderr,"Core·Tape·is_leftmost:: NULL result pointer");
+          error++;
+        }
+        // making this a warning, but by spec it must be true
+        if(!a){
+          fprintf(stderr,"Core·Tape·is_leftmost:: given NULL address");
+        }else if( !Core·Area·action.encloses_pt((Core·Area *)tape ,a->address) ){
+          fprintf(stderr,"Core·Tape·is_leftmost:: address is outside tape bounds");
+        }
+        if(error) return Core·Status·derailed;
+      #endif
+        result = tape->position == a;
+        return Core·Status·on_track;
+    }    
+
+    Local Core·Status Core·Tape·is_rightmost(
+      Core·Tape *tape ,Core·Tape·Address *a ,bool *result
+    ){
+      #ifdef Core·Debug
+        uint error = 0;
+        if(!tape){
+          fprintf(stderr,"Core·Tape·is_rightmost:: given NULL tape");
+          error++;
+        }else if(!tape->position){
+          fprintf(stderr,"Core·Tape·is_rightmost:: rightmost requested of empty tape");
+          error++;
+        }
+        if(!result){
+          fprintf(stderr,"Core·Tape·is_rightmost:: NULL result pointer");
+          error++;
+        }
+        // making this a warning, but by spec it must be true
+        if(!a){
+          fprintf(stderr,"Core·Tape·is_rightmost:: given NULL address");
+        }else if( !Core·Area·action.encloses_pt((Core·Area *)tape ,a->address) ){
+          fprintf(stderr,"Core·Tape·is_rightmost:: address is outside tape bounds");
+        }
+        if(error) return Core·Status·derailed;
+      #endif
+        result = tape->position == tape->position + tape->extent;
+        return Core·Status·on_track;
+    }    
+
+    Local Core·Status Core·Tape·read(
+      Core·Tape *tape ,Core·Tape·Address *a ,Core·Tape·Remote *remote
+    ){
+      #ifdef Core·Debug
+        uint error = 0;
+        if(!tape){
+          fprintf(stderr,"Core·Tape·read:: given NULL tape");
+          error++;
+        }else if(!tape->position){
+          fprintf(stderr,"Core·Tape·read:: read requested for a marked as empty tape");
+          error++;
+        }
+        if(!a){
+          fprintf(stderr,"Core·Tape·read:: given NULL address");
+          error++;
+        }else if( !Core·Area·action.encloses_pt((Core·Area *)tape ,a->address) ){
+          fprintf(stderr,"Core·Tape·read:: address is outside tape bounds");
+          error++;
+        }
+        if(!remote){
+          fprintf(stderr,"Core·Tape·read:: given NULL remote");
+          error++;
+        }
+        if(error) return Core·Status·derailed;
+      #endif
+      *(AU *)remote->address = *(AU *)a->address;
+      return Core·Status·on_track;
+    }
+
+    Local Core·Status Core·Tape·write(
+      Core·Tape *tape ,Core·Tape·Address *a ,Core·Tape·Remote *r
+    ){
+      #ifdef Core·Debug
+        uint error = 0;
+        if(!tape){
+          fprintf(stderr,"Core·Tape·write:: given NULL tape");
+          error++;
+        }else if(!tape->position){
+          fprintf(stderr,
+            "Core·Tape·write:: write requested for a marked as empty tape"
+          );
+          error++;
+        }
+        if(!a){
+          fprintf(stderr,"Core·Tape·write:: given NULL address");
+          error++;
+        }else if( !Core·Area·action.encloses_pt((Core·Area *)tape ,a->address) ){
+          fprintf(stderr,"Core·Tape·write:: address is outside tape bounds");
+          error++;
+        }
+        if(!r){
+          fprintf(stderr,"Core·Tape·write:: given NULL remote");
+          error++;
+        }
+        if(error) return Core·Status·derailed;
+      #endif
+      *(AU *)a->address = *(AU *)r->address;
+      return Core·Status·on_track;
+    }
+
+    Local Core·Tape·FG Core·Tape·fg = {
+       .topo = Core·Tape·topo
+      ,.extent = Core·Tape·extent
+      ,.is_leftmost = is_leftmost
+      ,.is_rightmost = is_rightmost
+      ,.read = Core·Tape·read
+      ,.write = Core·Tape·write
+    };
 
     //----------------------------------------
-    // Area
+    // Area Model Implementation
 
-    // initialize an area
+    // Area to Tape Wrappers
 
-    Local void Core·Area·set_position(Core·Area *area ,void *new_position){
+    Local Core·Tape·Topo Core·Area·topo(Core·Area *area){
+      return Core·Tape·fg.topo((Core·Tape *)area);
+    }
+
+    Local Core·Status Core·Area·extent(Core·Area *area, extent_t *write_pt){
+      return Core·Tape·fg.extent((Core·Tape *)area, write_pt);
+    }
+
+    Local void Core·Area·read(Core·Area *area, Core·Tape·Address *a, Core·Tape·Remote *r){
+      Core·Tape·fg.read((Core·Tape *)area, a, r);
+    }
+
+    Local void Core·Area·write(Core·Area *area, Core·Tape·Address *a, Core·Tape·Remote *r){
+      Core·Tape·fg.write((Core·Tape *)area, a, r);
+    }
+
+    // initialization
+
+    Local Core·Status Core·Area·set_position(Core·Area *area ,AU *new_position){
+      #ifdef Core·Debug
+      if(!area){
+        fprintf(stderr, "Core·Area·set_position:: given NULL area");
+        return Core·Status·derailed;
+      }
+      #endif
       area->position = new_position;
-    }
-    Local extent_t Core·Area·set_extent(Core·Area *area ,exent_t extent){
-      return area->extent = extent;
-    }
-    Local void Core·Area·set_position_right(Core·Area *area ,void *new_position_right){
-      Core·Area·set_extent(new_position_right - area->position);
-    }
-    Local void Core·Area·init_pe(Core·Area *area ,AU *position ,extent_t extent){
-      Core·Area·set_position(position);
-      Core·Area·set_extent(extent);
-    }
-    Local void Core·Area·init_pp(Core·Area *area ,void *position_left ,void *position_right){
-      Core·Area·set_position_left(position_left);
-      Core·Area·set_position_right(position_right);
+      return Core·Status·on_track;
     }
 
-    // read area properties
+    Local Core·Status Core·Area·set_extent(Core·Area *area ,extent_t extent){
+      #ifdef Core·Debug
+      if(!area){
+        fprintf(stderr, "Core·Area·set_extent:: given NULL area");
+        return Core·Status·derailed;
+      }
+      #endif
+      area->extent = extent;
+      return Core·Status·on_track;
+    }
+
+    Local Core·Status Core·Area·set_position_right(Core·Area *area ,AU *new_position_right){
+      #ifdef Core·Debug
+      if(!area){
+        fprintf(stderr, "Core·Area·set_position_right:: given NULL area");
+        return Core·Status·derailed;
+      }
+      if(!area->position){
+        fprintf(stderr, "Core·Area·set_position_right:: NULL position_left");
+        return Core·Status·derailed;
+      }
+      #endif
+      return Core·Area·set_extent(area, new_position_right - area->position);
+    }
+
+    Local Core·Status Core·Area·init_pe(Core·Area *area ,AU *position ,extent_t extent){
+      Core·Status s1 = Core·Area·set_position(area, position);
+      Core·Status s2 = Core·Area·set_extent(area, extent);
+      return (s1 == Core·Status·derailed || s2 == Core·Status·derailed) ? Core·Status·derailed : Core·Status·on_track;
+    }
+
+    Local Core·Status Core·Area·init_pp(Core·Area *area ,AU *position_left ,AU *position_right){
+      Core·Status s1 = Core·Area·set_position(area, position_left);
+      Core·Status s2 = Core·Area·set_position_right(area, position_right);
+      return (s1 == Core·Status·derailed || s2 == Core·Status·derailed) ? Core·Status·derailed : Core·Status·on_track;
+    }
+
+    // Read Properties
 
     Local bool Core·Area·empty(Core·Area *area){
       #ifdef Core·Debug
@@ -412,162 +665,526 @@ Local·Topo Area·topo_byte_array(Area *area){
       return area->position == NULL;
     }
 
-    // Requesting a NULL position is a logical error, because a NULL position
-    // means the Area is empty and has no position. Instead, use the `empty`
-    // predicate.
-    Local AU *Core·Area·position(Core·Area *area){
+    Local Core·Status Core·Area·position(Core·Area *area ,AU **out_position){
       #ifdef Core·Debug
       if(!area){
         fprintf(stderr,"Core·Area·position:: given NULL area");
-        return NULL;
-      }
-      if(!area->position){
-        fprintf(stderr,"Core·Area·position:: request for position when it is NULL");
+        *out_position = NULL;
+        return Core·Status·derailed;
       }
       #endif
-      return area->position;
+      *out_position = area->position;
+      return Core·Status·on_track;
     }
 
-
-    Local AU *Core·Area·position_right(Core·Area *area){
+    Local Core·Status Core·Area·position_right(Core·Area *area ,AU **out_position_right){
       #ifdef Core·Debug
       if(!area){
         fprintf(stderr,"Core·Area·position_right:: given NULL area");
-        return NULL;
+        *out_position_right = NULL;
+        return Core·Status·derailed;
+      }
+      if(!area->position){
+        fprintf(stderr,"Core·Area·position_right:: request for right position when left is NULL");
+        *out_position_right = NULL;
+        return Core·Status·derailed;
       }
       #endif
-      return area->position + area->extent;
+      *out_position_right = area->position + area->extent;
+      return Core·Status·on_track;
     }
-    Local extent_t Core·Area·extent(Core·Area *area){
+
+    Local Core·Status Core·Area·extent(Core·Area *area ,extent_t *out_extent){
       #ifdef Core·Debug
       if(!area){
         fprintf(stderr,"Core·Area·extent:: given NULL area");
-        return 0;
+        *out_extent = 0;
+        return Core·Status·derailed;
       }
       #endif
-      return area->extent;
+      *out_extent = area->extent;
+      return Core·Status·on_track;
     }
-    Local AU Core·Area·length_Kung(Core·Area *area){
-      if(!Core·Area·position_left(area)) return 0;
-      if(Core·Area·extent(area) >= 2) return 3;
-      return Core·Area·extent(area) + 1;
+
+    Local Core·Status Core·Area·complement(Core·Area *area ,AU *r ,AU **out_complement){
+      #ifdef Core·Debug
+      if(!area){
+        fprintf(stderr,"Core·Area·complement:: given NULL area");
+        *out_complement = NULL;
+        return Core·Status·derailed;
+      }
+      if(!r){
+        fprintf(stderr,"Core·Area·complement:: given NULL reference");
+        *out_complement = NULL;
+        return Core·Status·derailed;
+      }
+      #endif
+      *out_complement = area->position + (area->position + area->extent - r);
+      return Core·Status·on_track;
     }
+
+    // Relationships
 
     Local bool Core·Area·encloses_pt(Core·Area *area ,AU *pt){
       return 
-        (pt >= Core·Area·position_left(area)) 
+        (pt >= Core·Area·position(area)) 
         && (pt <= Core·Area·position_right(area));
     }
+
     Local bool Core·Area·encloses_pt_strictly(Core·Area *area ,AU *pt){
       return 
-        (pt > Core·Area·position_left(area)) 
+        (pt > Core·Area·position(area)) 
         && (pt < Core·Area·position_right(area));
     }
+
     Local bool Core·Area·encloses_area(Core·Area *outer ,Core·Area *inner){
       return 
-        (Core·Area·position_left(inner) >= Core·Area·position_left(outer)) 
+        (Core·Area·position(inner) >= Core·Area·position(outer)) 
         && (Core·Area·position_right(inner) <= Core·Area·position_right(outer));
     }
+
     Local bool Core·Area·encloses_area_strictly(Core·Area *outer ,Core·Area *inner){
       return 
-        (Core·Area·position_left(inner) > Core·Area·position_left(outer)) 
+        (Core·Area·position(inner) > Core·Area·position(outer)) 
         && (Core·Area·position_right(inner) < Core·Area·position_right(outer));
     }
 
-    // Possible cases of overlap ,including just touching
-    // 1. interval 0 to the right of interval 1 ,just touching p00 == p11
-    // 2. interval 0 to the left of interval 1 ,just touching p01 == p10
-    // 3. interval 0 wholly contained in interval 1
-    // 4. interval 0 wholly contains interval 1
     Local bool Core·Area·overlap(Core·Area *area0 ,Core·Area *area1){
       return 
-        Core·Area·position_right(area0) >= Core·Area·position_left(area1)
-        && Core·Area·position_left(area0) <= Core·Area·position_right(area1);
+        Core·Area·position_right(area0) >= Core·Area·position(area1)
+        && Core·Area·position(area0) <= Core·Area·position_right(area1);
     }
 
-     // find the largest contained interval aligned on 64 bit boundaries
-    static void Core·Area·largest_aligned_64(Core·Area *outer ,Core·Area *inner_64){
-      uintptr_t p0 = (uintptr_t)Core·Area·position_left(outer);
+    // Aligned Containment
+
+    Local Core·Status Core·Area·largest_aligned_64(Core·Area *outer ,Core·Area *inner_64){
+      #ifdef Core·Debug
+      if(!outer || !inner_64){
+        fprintf(stderr, "Core·Area·largest_aligned_64:: given NULL area(s)");
+        return Core·Status·derailed;
+      }
+      #endif
+
+      uintptr_t p0 = (uintptr_t)Core·Area·position(outer);
       uintptr_t p1 = (uintptr_t)Core·Area·position_right(outer);
 
       AU *p0_64 = (AU *)( (p0 + 0x7) & ~(uintptr_t)0x7 );
       AU *p1_64 = (AU *)( (p1 - 0x7) & ~(uintptr_t)0x7 );
 
       if(p1_64 < p0_64){
-        Core·Area·set_position(inner_64 ,NULL);
+        return Core·Area·set_position(inner_64 ,NULL);
       }else{
-        Core·Area·init_pp(inner_64 ,p0_64 ,p1_64);
+        return Core·Area·init_pp(inner_64 ,p0_64 ,p1_64);
       }
     }
 
-    // complement against the extent of the area (reverse direction)
-    // works for byte pointer
-    // works for aligned word pointer
-    Local AU *Core·Area·complement(Core·Area *area ,AU *r){
-      return Core·Area·position_left(area) + (Core·Area·position_right(area) - r);
+    // Functions given an Area Argument
+    Local Core·Area·FG Core·Area·fg = {
+      // Given Area functions in parallel to the given Tape functions.
+      ,.topo = Core·Area·topo
+      ,.extent = Core·Area·extent
+      ,.read = Core·Area·read
+      ,.write = Core·Area·write
+
+      // Given Area specific methods
+      ,.init_pe = Core·Area·init_pe
+      ,.init_pp = Core·Area·init_pp
+      ,.set_position = Core·Area·set_position
+      ,.set_position_left = Core·Area·set_position
+      ,.set_position_right = Core·Area·set_position_right
+      ,.set_extent = Core·Area·set_extent
+      ,.position = Core·Area·position
+      ,.position_left = Core·Area·position // Synonym
+      ,.position_right = Core·Area·position_right
+      ,.complement = Core·Area·complement
+      ,.encloses_pt = Core·Area·encloses_pt
+      ,.encloses_pt_strictly = Core·Area·encloses_pt_strictly
+      ,.encloses_area = Core·Area·encloses_area
+      ,.encloses_area_strictly = Core·Area·encloses_area_strictly
+      ,.overlap = Core·Area·overlap
+      ,.largest_aligned_64 = Core·Area·largest_aligned_64
+    };
+
+  //----------------------------------------
+  // Tape Machine Implementation
+
+  typedef struct {
+    Core·Tape *tape;
+    Core·Tape·Address *hd;
+  } Core·TM_NX;
+
+  // Returns the current head status.
+  Local Core·TM·Head·Status Core·TM_NX·status(Core·TM_NX *tm){
+    if(!tm || !tm->tape) return Core·TM·Head·Status·not_on_tape;
+
+    bool is_at_edge;
+
+    if(
+      Core·Tape·fg.is_leftmost(tm->tape ,tm->hd ,&is_at_edge) 
+      == 
+      Core·Status·derailed
+    )
+      return Core·TM·Head·Status·not_on_tape;
+    if(is_at_edge) return Core·TM·Head·Status·leftmost;
+
+    if(
+      Core·Tape·fg.is_rightmost(tm->tape ,tm->hd ,&is_at_edge) 
+      == 
+      Core·Status·derailed
+    )
+      return Core·TM·Head·Status·not_on_tape;
+    if(is_at_edge) return Core·TM·Head·Status·rightmost;
+
+    return Core·TM·Head·Status·interim;
+  }
+
+  // Mounts a tape onto the tape machine.
+  Local Core·Status Core·TM_NX·mount(Core·TM_NX *tm ,Core·Tape *tape){
+    #ifdef Core·DEBUG
+      if(!tm){
+        fprintf(stderr, "Core·TM_NX·mount:: given NULL tm\n");
+        return Core·Status·derailed;
+      }
+      if(!tape){
+        fprintf(stderr, "Core·TM_NX·mount:: given NULL tape\n");
+        return Core·Status·derailed;
+      }
+    #endif
+    tm->tape = tape;
+    tm->hd = (AU *)Core·Tape·fg.extent(tape ,NULL);
+    return Core·Status·on_track;
+  }
+
+  // Returns the associated tape.
+  Local Core·Status Core·TM_NX·tape(Core·TM_NX *tm ,Core·Tape **out_tape){
+    #ifdef Core·DEBUG
+      if(!tm){
+        fprintf(stderr, "Core·TM_NX·tape:: given NULL tm\n");
+        return Core·Status·derailed;
+      }
+    #endif
+    *out_tape = tm->tape;
+    return Core·Status·on_track;
+  }
+
+  // Resets the tape head to the starting position.
+  Local Core·Status Core·TM_NX·rewind(Core·TM_NX *tm){
+    #ifdef Core·DEBUG
+      if(!tm){
+        fprintf(stderr, "Core·TM_NX·rewind:: given NULL tm\n");
+        return Core·Status·derailed;
+      }
+      if(!tm->tape){
+        fprintf(stderr, "Core·TM_NX·rewind:: tape is not mounted\n");
+        return Core·Status·derailed;
+      }
+    #endif
+    tm->hd = Core·Tape·fg.position(tm->tape ,NULL);
+    return Core·Status·on_track;
+  }
+
+  // Checks if tape can be read.
+  Local Core·Status Core·TM_NX·can_read(bool *result){
+    *result = (Core·Tape·Topo·can_read & Core·Tape·fg.topo(tm->tape)) != 0;
+    return Core·Status·on_track;
+  }
+
+  // Moves the tape head one step to the right.
+  Local Core·Status Core·TM_NX·step(Core·TM_NX *tm){
+    #ifdef Core·DEBUG
+      if(!tm){
+        fprintf(stderr, "Core·TM_NX·step:: given NULL tm\n");
+        return Core·Status·derailed;
+      }
+      if(!tm->tape){
+        fprintf(stderr, "Core·TM_NX·step:: tape is not mounted\n");
+        return Core·Status·derailed;
+      }
+      if(!Core·TM_NX·can_step(tm)){
+        fprintf(stderr, "Core·TM_NX·step:: stepping not possible\n");
+        return Core·Status·derailed;
+      }
+    #endif
+
+    tm->hd++;
+    return Core·Status·on_track;
+  }
+
+  // Moves the tape head one step to the left.
+  Local Core·Status Core·TM_NX·step_left(Core·TM_NX *tm){
+    #ifdef Core·DEBUG
+      if(!tm){
+        fprintf(stderr, "Core·TM_NX·step_left:: given NULL tm\n");
+        return Core·Status·derailed;
+      }
+      if(!tm->tape){
+        fprintf(stderr, "Core·TM_NX·step_left:: tape is not mounted\n");
+        return Core·Status·derailed;
+      }
+      if(!Core·TM_NX·can_step_left(tm)){
+        fprintf(stderr, "Core·TM_NX·step_left:: stepping left not possible\n");
+        return Core·Status·derailed;
+      }
+    #endif
+
+    tm->hd--;
+    return Core·Status·on_track;
+  }
+
+  // Determines if stepping right is possible.
+  Local bool Core·TM_NX·can_step(Core·TM_NX *tm){
+    return tm->hd < (AU *)Core·Tape·fg.extent(tm->tape ,NULL);
+  }
+
+  // Determines if stepping left is possible.
+  Local bool Core·TM_NX·can_step_left(Core·TM_NX *tm){
+    return tm->hd > (AU *)Core·Tape·fg.extent(tm->tape ,NULL);
+  }
+
+  // Moves the head to the given position if within bounds.
+  Local Core·Status Core·TM_NX·cue(Core·TM_NX *tm ,AU *put){
+    #ifdef Core·DEBUG
+      if(!tm){
+        fprintf(stderr, "Core·TM_NX·cue:: given NULL tm\n");
+        return Core·Status·derailed;
+      }
+      if(!tm->tape){
+        fprintf(stderr, "Core·TM_NX·cue:: tape is not mounted\n");
+        return Core·Status·derailed;
+      }
+      if(put < (AU *)Core·Tape·fg.extent(tm->tape ,NULL) 
+      || put > (AU *)Core·Tape·fg.extent(tm->tape ,NULL)){
+        fprintf(stderr, "Core·TM_NX·cue:: given position is out of bounds\n");
+        return Core·Status·derailed;
+      }
+    #endif
+
+    tm->hd = put;
+    return Core·Status·on_track;
+  }
+
+Local Core·TapeMachine·FG Core·TapeMachine·fg = {
+    .mount = Core·TapeMachine·mount,
+    .dismount = Core·TapeMachine·dismount,
+    .rewind = Core·TapeMachine·rewind,
+    .step = Core·TapeMachine·step,
+    .step_left = Core·TapeMachine·step_left,
+    .step_right = Core·TapeMachine·step_right,
+    .can_step = Core·TapeMachine·can_step,
+    .can_step_left = Core·TapeMachine·can_step_left,
+    .fast_forward = Core·TapeMachine·fast_forward,
+    .cue = Core·TapeMachine·cue,
+    .status = Core·TapeMachine·status,
+
+    .area = {
+        .topo = Core·TapeMachine·topo,
+        .extent = Core·TapeMachine·extent,
+        .set_position = Core·TapeMachine·set_position,
+        .set_extent = Core·TapeMachine·set_extent,
+        .position = Core·TapeMachine·position,
+        .position_right = Core·TapeMachine·position_right,
+        .complement = Core·TapeMachine·complement,
+        .encloses_pt = Core·TapeMachine·encloses_pt,
+        .encloses_area = Core·TapeMachine·encloses_area,
+        .overlap = Core·TapeMachine·overlap,
+        .largest_aligned_64 = Core·TapeMachine·largest_aligned_64
     }
+};
+
+
+  // Initialize the function table
+  Local Core·TM_NX·FG Core·TM_NX·fg = {
+     .mount = Core·TM_NX·mount
+    ,.tape = Core·TM_NX·tape
+    ,.rewind = Core·TM_NX·rewind
+    ,.can_read = Core·TM_NX·can_read
+    ,.step = Core·TM_NX·step
+    ,.step_left = Core·TM_NX·step_left
+    ,.step_right = Core·TM_NX·step
+    ,.status = Core·TM_NX·status
+  };
 
     //----------------------------------------
-    // read functions
+    // Tape Machine xx
 
-    // consider instead using `copy_zero`
-    Local AU Core·Area·read_8_zero(Core·Area *area ,void *r){
-      return 0;
+    typedef struct {
+      Core·Tape *tape;
+      AU *hd;
+    } Core·TM_NX;
+
+    // Returns the current head status.
+    Local Core·TM·Head·Status Core·TM_NX·status(Core·TM_NX *tm){
+      if(!tm) return Core·TM·Head·Status·mu;
+
+      bool q;
+
+      if(
+        Core·Tape·is_lefttmost(tm->hd ,&q) == Core·Status·derailed
+      )
+        return Core·TM·Head·Status·not_on_tape;
+      if(q) return Core·TM·Head·Status·leftmost;
+
+      if(
+        Core·Tape·is_lefttmost(tm->hd ,&q) == Core·Status·derailed
+      )
+        return Core·TM·Head·Status·not_on_tape;
+      if(q) return Core·TM·Head·Status·rightmost;
+
+      return Core·TM·Head·Status·interim;
     }
-    Local uint64_t Core·Area·read_64_zero(Core·Area *area ,void *r){
-      return 0;
-    }
 
-    Local AU Core·Area·read_8_fwd(){
-      Core·Area a = Core·tf.read;
-      AU **r = &Core·tf.read_pt;
-
-      #ifdef Core·Debug
-        if(!a || !*r){
-          fprintf(stderr ,"Core·Area·read_8_fwd:: read read_pt: %p %p\n" ,a ,*r); 
-          return Core·Map·Read·Status·argument_guard;
+    // Mounts a tape onto the tape machine.
+    Local void Core·TM_NX·mount(Core·TM_NX *tm ,Core·Tape *tape){
+      #ifdef Core·DEBUG
+        if(!tm){
+          fprintf(stderr, "Core·TM_NX·mount:: given NULL tm\n");
+          return;
         }
-        if( !Core·Area·enclose_pt(area ,r) ){
-          fprintf(stderr,"Core·Area·read_8_fwd:: out of interval read\n");
+        if(!tape){
+          fprintf(stderr, "Core·TM_NX·mount:: given NULL tape\n");
+          return;
         }
       #endif
-      return *(AU *)r;
+      tm->tape = tape;
+      tm->hd = tape->position; // Initialize head to leftmost position
     }
 
-    Local AU Core·Area·read_8_fwd(Core·Area *area ,void *r){
-      #ifdef Core·Debug
-      if(!area || !r){
-        fprintf(stderr,"Core·Area·read_8_fwd:: area r: %p %p\n" ,area ,r);
-        return 0;
+  // Returns the associated tape.
+  Local Core·Tape *Core·TM_NX·tape(Core·TM_NX *tm){
+    #ifdef Core·DEBUG
+      if(!tm){
+        fprintf(stderr, "Core·TM_NX·tape:: given NULL tm\n");
+        return NULL;
       }
-      if( !Core·Area·enclose_pt(area ,r) ){
-        fprintf(stderr,"Core·Area·read_8_fwd:: out of interval read\n");
-      }
-      #endif
-      return *(AU *)r;
-    }
+    #endif
+    return tm->tape;
+  }
 
-    // Given a pointer to the least address byte of a uint64_t, return the value
-    Local uint64_t Core·Area·read_64_fwd(Core·Area *area ,void *r){
-      #ifdef Core·Debug
-      if(!area || !r){
-        fprintf(stderr,"Core·Area·read_8_fwd:: area r: %p %p\n" ,area ,r);
-        return 0;
+  // Resets the tape head to the starting position.
+  Local void Core·TM_NX·rewind(Core·TM_NX *tm){
+    #ifdef Core·DEBUG
+      if(!tm){
+        fprintf(stderr, "Core·TM_NX·rewind:: given NULL tm\n");
+        return;
       }
-      if(!Core·Area·enclose_pt(area ,r) ){
-        fprintf(stderr,"Core·Area·read_8_fwd:: out of interval read\n");
+      if(!tm->tape){
+        fprintf(stderr, "Core·TM_NX·rewind:: tape is not mounted\n");
+        return;
       }
-      #endif
-      return *(uint64_t *)r;
-    }
+    #endif
+    tm->hd = tm->tape->position;
+  }
 
-    Local AU Core·Area·read_8_rev(Core·Area *area ,AU *r){
-      return *(Core·complement(area ,r));
-    }
+  // Moves the tape head one step to the right.
+  Local void Core·TM_NX·step(Core·TM_NX *tm){
+    #ifdef Core·DEBUG
+      if(!tm){
+        fprintf(stderr, "Core·TM_NX·step:: given NULL tm\n");
+        return;
+      }
+      if(!tm->tape){
+        fprintf(stderr, "Core·TM_NX·step:: tape is not mounted\n");
+        return;
+      }
+      if(!Core·TM_NX·can_step(tm)){
+        fprintf(stderr, "Core·TM_NX·step:: stepping not possible\n");
+        return;
+      }
+    #endif
 
-    Local uint64_t Core·Area·read_64_rev(Core·Area *area_64 ,AU *r){
-      return __builtin_bswap64( *(uint64_t *)Core·floor_64(Core·complement(area_64 ,r)) );
-    }
+    tm->hd++;
+
+  }
+
+  // Moves the tape head one step to the left.
+  Local void Core·TM_NX·step_left(Core·TM_NX *tm){
+    #ifdef Core·DEBUG
+      if(!tm){
+        fprintf(stderr, "Core·TM_NX·step_left:: given NULL tm\n");
+        return;
+      }
+      if(!tm->tape){
+        fprintf(stderr, "Core·TM_NX·step_left:: tape is not mounted\n");
+        return;
+      }
+      if(!Core·TM_NX·can_step_left(tm)){
+        fprintf(stderr, "Core·TM_NX·step_left:: stepping left not possible\n");
+        return;
+      }
+    #endif
+
+    tm->hd--;
+  }
+
+  // Determines if stepping right is possible.
+  Local bool Core·TM_NX·can_step(Core·TM_NX *tm){
+    #ifdef Core·DEBUG
+      if(!tm){
+        fprintf(stderr, "Core·TM_NX··can_step:: given NULL tm\n");
+        return;
+      }
+    #endif
+    return tm->hd <= Core·Tape·position_right(tm->tape);
+  }
+
+  // Determines if stepping left is possible.
+  Local bool Core·TM_NX·can_step_left(Core·TM_NX *tm){
+    if(!tm || !tm->tape) return false;
+    return tm->hd > tm->tape->position;
+  }
+
+  // Fast forward to the rightmost position.
+  Local void Core·TM_NX·fast_forward(Core·TM_NX *tm){
+    #ifdef Core·DEBUG
+      if(!tm){
+        fprintf(stderr, "Core·TM_NX·fast_forward:: given NULL tm\n");
+        return;
+      }
+      if(!tm->tape){
+        fprintf(stderr, "Core·TM_NX·fast_forward:: tape is not mounted\n");
+        return;
+      }
+    #endif
+
+    tm->hd = tm->tape->position + tm->tape->extent - 1;
+  }
+
+  // Moves the head to the given position if within bounds.
+  Local void Core·TM_NX·cue(Core·TM_NX *tm ,AU *put){
+    #ifdef Core·DEBUG
+      if(!tm){
+        fprintf(stderr, "Core·TM_NX·cue:: given NULL tm\n");
+        return;
+      }
+      if(!tm->tape){
+        fprintf(stderr, "Core·TM_NX·cue:: tape is not mounted\n");
+        return;
+      }
+      if(put < tm->tape->position || put > (tm->tape->position + tm->tape->extent - 1)){
+        fprintf(stderr, "Core·TM_NX·cue:: given position is out of bounds\n");
+        return;
+      }
+    #endif
+
+    tm->hd = put;
+  }
+
+  // Initialize the function table
+  Local Core·TM_NX·FG Core·TM_NX·fg = {
+     .mount = Core·TM_NX·mount
+    ,.tape = Core·TM_NX·tape
+    ,.rewind = Core·TM_NX·rewind
+    ,.step = Core·TM_NX·step
+    ,.step_left = Core·TM_NX·step
+    ,.step_right = Core·TM_NX·step_right
+    ,.can_step = Core·TM_NX·can_step
+    ,.can_step_left = Core·TM_NX·can_step_left
+    ,.can_step_right = Core·TM_NX·can_step
+    ,.fast_forward = Core·TM_NX·fast_forward
+    ,.cue = Core·TM_NX·cue
+    ,.status = Core·TM_NX·status
+  };
+
 
     //----------------------------------------
     // Map
