@@ -1,4 +1,380 @@
   //----------------------------------------
+  // TM_NX array
+
+    Local Core·TM_NX_Array·Topo Core·TM_NX·topo(Core·TM_NX *tape){
+      if(!tape) return Core·Area·Topo·nonexistent;
+      if(!tape->position) return Core·Area·Topo·empty;
+      if(!tape->extent) return Core·Area·Topo·singleton;
+      return Core·Area·Topo·segment;
+    }
+
+    Local Core·Status Core·TM_NX_Array·extent(Core·TM_NX *tape ,extent_t *write_pt){
+      #ifdef Core·Debug
+        uint error = 0;
+        if(!tape){
+          fprintf(stderr,"Core·TM_NX·extent:: given NULL tape");
+          error++;
+        }else if(!tape->position){
+          fprintf(stderr,"Core·TM_NX·extent:: extent requested for a marked as empty tape");
+          error++;
+        }
+        if(!write_pt){
+          fprintf(stderr,"Core·TM_NX·extent:: given NULL write_pt");
+          error++;
+        }
+        if(error) return Core·Status·derailed;
+      #endif
+      return tape->extent;    Local Core·TM_NX·FG Core·TM_NX·fg = {
+
+    }    
+
+    Local bool Core·TM_MX_Array·encloses_pt(Core·Area *area ,AU *pt);
+
+    // a must be on tape
+    Local Core·Status Core·TM_NX·is_leftmost(
+      Core·TM_NX *tape ,Core·TM_NX·Address *a ,bool *result
+    ){
+      #ifdef Core·Debug
+        uint error = 0;
+        if(!tape){
+          fprintf(stderr,"Core·TM_NX·is_leftmost:: given NULL tape");
+          error++;
+        }else if(!tape->position){
+          fprintf(stderr,"Core·TM_NX·is_leftmost:: leftmost requested of empty tape");
+          error++;
+        }
+        if(!result){
+          fprintf(stderr,"Core·TM_NX·is_leftmost:: NULL result pointer");
+          error++;
+        }
+        // making this a warning, but by spec it must be true
+        if(!a){
+          fprintf(stderr,"Core·TM_NX·is_leftmost:: given NULL address");
+        }else if( !Core·TM_MX_Array·encloses_pt((Core·Area *)tape ,a->address) ){
+          fprintf(stderr,"Core·TM_NX·is_leftmost:: address is outside tape bounds");
+        }
+        if(error) return Core·Status·derailed;
+      #endif
+        result = tape->position == a;
+        return Core·Status·on_track;
+    }    
+
+    Local Core·Status Core·TM_NX·is_rightmost(
+      Core·TM_NX *tape ,Core·TM_NX·Address *a ,bool *result
+    ){
+      #ifdef Core·Debug
+        uint error = 0;
+        if(!tape){
+          fprintf(stderr,"Core·TM_NX·is_rightmost:: given NULL tape");
+          error++;
+        }else if(!tape->position){
+          fprintf(stderr,"Core·TM_NX·is_rightmost:: rightmost requested of empty tape");
+          error++;
+        }
+        if(!result){
+          fprintf(stderr,"Core·TM_NX·is_rightmost:: NULL result pointer");
+          error++;
+        }
+        // making this a warning, but by spec it must be true
+        if(!a){
+          fprintf(stderr,"Core·TM_NX·is_rightmost:: given NULL address");
+        }else if( !Core·TM_MX_Array·encloses_pt((Core·Area *)tape ,a->address) ){
+          fprintf(stderr,"Core·TM_NX·is_rightmost:: address is outside tape bounds");
+        }
+        if(error) return Core·Status·derailed;
+      #endif
+        result = tape->position == tape->position + tape->extent;
+        return Core·Status·on_track;
+    }    
+
+    Local Core·Status Core·TM_NX·read(
+      Core·TM_NX *tape ,Core·TM_NX·Address *a ,Core·TM_NX·Remote *remote
+    ){
+      #ifdef Core·Debug
+        uint error = 0;
+        if(!tape){
+          fprintf(stderr,"Core·TM_NX·read:: given NULL tape");
+          error++;
+        }else if(!tape->position){
+          fprintf(stderr,"Core·TM_NX·read:: read requested for a marked as empty tape");
+          error++;
+        }
+        if(!a){
+          fprintf(stderr,"Core·TM_NX·read:: given NULL address");
+          error++;
+        }else if( !Core·TM_MX_Array·encloses_pt((Core·Area *)tape ,a->address) ){
+          fprintf(stderr,"Core·TM_NX·read:: address is outside tape bounds");
+          error++;
+        }
+        if(!remote){
+          fprintf(stderr,"Core·TM_NX·read:: given NULL remote");
+          error++;
+        }
+        if(error) return Core·Status·derailed;
+      #endif
+      *(AU *)remote->address = *(AU *)a->address;
+      return Core·Status·on_track;
+    }
+
+    Local Core·Status Core·TM_NX·write(
+      Core·TM_NX *tape ,Core·TM_NX·Address *a ,Core·TM_NX·Remote *r
+    ){
+      #ifdef Core·Debug
+        uint error = 0;
+        if(!tape){
+          fprintf(stderr,"Core·TM_NX·write:: given NULL tape");
+          error++;
+        }else if(!tape->position){
+          fprintf(stderr,
+            "Core·TM_NX·write:: write requested for a marked as empty tape"
+          );
+          error++;
+        }
+        if(!a){
+          fprintf(stderr,"Core·TM_NX·write:: given NULL address");
+          error++;
+        }else if( !Core·TM_MX_Array·encloses_pt((Core·Area *)tape ,a->address) ){
+          fprintf(stderr,"Core·TM_NX·write:: address is outside tape bounds");
+          error++;
+        }
+        if(!r){
+          fprintf(stderr,"Core·TM_NX·write:: given NULL remote");
+          error++;
+        }
+        if(error) return Core·Status·derailed;
+      #endif
+      *(AU *)a->address = *(AU *)r->address;
+      return Core·Status·on_track;
+    }
+
+    // area functions
+
+    Local Core·Status Core·Area·set_position(Core·Area *area ,AU *new_position){
+      #ifdef Core·Debug
+      if(!area){
+        fprintf(stderr, "Core·Area·set_position:: given NULL area");
+        return Core·Status·derailed;
+      }
+      #endif
+      area->position = new_position;
+      return Core·Status·on_track;
+    }
+
+    Local Core·Status Core·Area·set_extent(Core·Area *area ,extent_t extent){
+      #ifdef Core·Debug
+      if(!area){
+        fprintf(stderr, "Core·Area·set_extent:: given NULL area");
+        return Core·Status·derailed;
+      }
+      #endif
+      area->extent = extent;
+      return Core·Status·on_track;
+    }
+
+    Local Core·Status Core·Area·set_position_right(Core·Area *area ,AU *new_position_right){
+      #ifdef Core·Debug
+      if(!area){
+        fprintf(stderr, "Core·Area·set_position_right:: given NULL area");
+        return Core·Status·derailed;
+      }
+      if(!area->position){
+        fprintf(stderr, "Core·Area·set_position_right:: NULL position_left");
+        return Core·Status·derailed;
+      }
+      #endif
+      return Core·Area·set_extent(area, new_position_right - area->position);
+    }
+
+    Local Core·Status Core·Area·init_pe(Core·Area *area ,AU *position ,extent_t extent){
+      Core·Status s1 = Core·Area·set_position(area, position);
+      Core·Status s2 = Core·Area·set_extent(area, extent);
+      return (s1 == Core·Status·derailed || s2 == Core·Status·derailed) ? Core·Status·derailed : Core·Status·on_track;
+    }
+
+    Local Core·Status Core·Area·init_pp(Core·Area *area ,AU *position_left ,AU *position_right){
+      Core·Status s1 = Core·Area·set_position(area, position_left);
+      Core·Status s2 = Core·Area·set_position_right(area, position_right);
+      return (s1 == Core·Status·derailed || s2 == Core·Status·derailed) ? Core·Status·derailed : Core·Status·on_track;
+    }
+
+    // Read Properties
+
+    Local bool Core·Area·empty(Core·Area *area){
+      #ifdef Core·Debug
+      if(!area){
+        fprintf(stderr,"Core·Area·empty:: given NULL area");
+        return true;
+      }
+      #endif
+      return area->position == NULL;
+    }
+
+    Local Core·Status Core·Area·position(Core·Area *area ,AU **out_position){
+      #ifdef Core·Debug
+      if(!area){
+        fprintf(stderr,"Core·Area·position:: given NULL area");
+        *out_position = NULL;
+        return Core·Status·derailed;
+      }
+      #endif
+      *out_position = area->position;
+      return Core·Status·on_track;
+    }
+
+    Local Core·Status Core·Area·position_right(Core·Area *area ,AU **out_position_right){
+      #ifdef Core·Debug
+      if(!area){
+        fprintf(stderr,"Core·Area·position_right:: given NULL area");
+        *out_position_right = NULL;
+        return Core·Status·derailed;
+      }
+      if(!area->position){
+        fprintf(stderr,"Core·Area·position_right:: request for right position when left is NULL");
+        *out_position_right = NULL;
+        return Core·Status·derailed;
+      }
+      #endif
+      *out_position_right = area->position + area->extent;
+      return Core·Status·on_track;
+    }
+
+    Local Core·Status Core·Area·extent(Core·Area *area ,extent_t *out_extent){
+      #ifdef Core·Debug
+      if(!area){
+        fprintf(stderr,"Core·Area·extent:: given NULL area");
+        *out_extent = 0;
+        return Core·Status·derailed;
+      }
+      #endif
+      *out_extent = area->extent;
+      return Core·Status·on_track;
+    }
+
+    Local Core·Status Core·Area·complement(Core·Area *area ,AU *r ,AU **out_complement){
+      #ifdef Core·Debug
+      if(!area){
+        fprintf(stderr,"Core·Area·complement:: given NULL area");
+        *out_complement = NULL;
+        return Core·Status·derailed;
+      }
+      if(!r){
+        fprintf(stderr,"Core·Area·complement:: given NULL reference");
+        *out_complement = NULL;
+        return Core·Status·derailed;
+      }
+      #endif
+      *out_complement = area->position + (area->position + area->extent - r);
+      return Core·Status·on_track;
+    }
+
+    // Relationships
+
+    Local bool Core·Area·encloses_pt(Core·Area *area ,AU *pt){
+      return 
+        (pt >= Core·Area·position(area)) 
+        && (pt <= Core·Area·position_right(area));
+    }
+
+    Local bool Core·Area·encloses_pt_strictly(Core·Area *area ,AU *pt){
+      return 
+        (pt > Core·Area·position(area)) 
+        && (pt < Core·Area·position_right(area));
+    }
+
+    Local bool Core·Area·encloses_area(Core·Area *outer ,Core·Area *inner){
+      return 
+        (Core·Area·position(inner) >= Core·Area·position(outer)) 
+        && (Core·Area·position_right(inner) <= Core·Area·position_right(outer));
+    }
+
+    Local bool Core·Area·encloses_area_strictly(Core·Area *outer ,Core·Area *inner){
+      return 
+        (Core·Area·position(inner) > Core·Area·position(outer)) 
+        && (Core·Area·position_right(inner) < Core·Area·position_right(outer));
+    }
+
+    Local bool Core·Area·overlap(Core·Area *area0 ,Core·Area *area1){
+      return 
+        Core·Area·position_right(area0) >= Core·Area·position(area1)
+        && Core·Area·position(area0) <= Core·Area·position_right(area1);
+    }
+
+    // Aligned Containment
+
+    Local Core·Status Core·Area·largest_aligned_64(Core·Area *outer ,Core·Area *inner_64){
+      #ifdef Core·Debug
+      if(!outer || !inner_64){
+        fprintf(stderr, "Core·Area·largest_aligned_64:: given NULL area(s)");
+        return Core·Status·derailed;
+      }
+      #endif
+
+      uintptr_t p0 = (uintptr_t)Core·Area·position(outer);
+      uintptr_t p1 = (uintptr_t)Core·Area·position_right(outer);
+
+      AU *p0_64 = (AU *)( (p0 + 0x7) & ~(uintptr_t)0x7 );
+      AU *p1_64 = (AU *)( (p1 - 0x7) & ~(uintptr_t)0x7 );
+
+      if(p1_64 < p0_64){
+        return Core·Area·set_position(inner_64 ,NULL);
+      }else{
+        return Core·Area·init_pp(inner_64 ,p0_64 ,p1_64);
+      }
+    }
+
+    // functions given a TM_NX argument
+
+    Local Core·TM_NX·FG Core·TM_NX_Array·fg = {
+       .mount = Core·TM_NX·mount
+      ,.dismount = Core·TM_NX·dismount
+      ,.rewind = Core·TM_NX·rewind
+
+      ,.can_step = Core·TM_NX·can_step
+      ,.on_origin = Core·TM_NX·on_origin
+      ,.on_rightmost = Core·TM_NX·on_rightmost
+
+      ,.extent = Core·TM_NX·extent
+      ,.can_read = Core·TM_NX·can_read
+
+      ,.step = Core·TM_NX·step
+      ,.step_left = Core·TM_NX·step_left
+      ,.step_right = Core·TM_NX·step_right
+      ,.status = Core·TM_NX·status
+
+      ,.area {
+         .topo = Core·TM_NX·topo
+        ,.extent = Core·TM_NX·extent
+        ,.is_origin = Core·TM_NX·is_origin
+        ,.is_rightmost = Core·TM_NX·is_rightmost
+        ,.read = Core·TM_NX·read
+        ,.write = Core·TM_NX·write
+
+        ,.init_pe = Core·TM_NX·init_pe
+        ,.init_pp = Core·TM_NX·init_pp
+        ,.set_position = Core·TM_NX·set_position
+        ,.set_position_left = Core·TM_NX·set_position
+        ,.set_position_right = Core·TM_NX·set_position_right
+        ,.set_extent = Core·TM_NX·set_extent
+
+        ,.position = Core·TM_NX·position
+        ,.position_left = Core·TM_NX·position // synonym
+        ,.position_right = Core·TM_NX·position_right
+
+        ,.complement = Core·TM_NX·complement
+
+        ,.encloses_pt = Core·TM_NX·encloses_pt
+        ,.encloses_pt_strictly = Core·TM_NX·encloses_pt_strictly
+        ,.encloses_tm = Core·TM_NX·encloses_tm
+        ,.encloses_tm_strictly = Core·TM_NX·encloses_tm_strictly
+        ,.overlap = Core·TM_NX·overlap
+        ,.largest_aligned_64 = Core·TM_NX·largest_aligned_64
+       };
+
+    };
+
+
+================================================================================
+  //----------------------------------------
   // Tape model
 
     typedef struct Core·Tape·Address;
