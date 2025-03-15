@@ -41,123 +41,69 @@
   //----------------------------------------
   // memory
 
-    #define extentof(x)(sizeof(x) - 1)
-    #define extent_t size_t
-
     // AU == Addressable Unit
     // given an AU is an 8 bit byte, 4AU is 32 bits, and 8 AU is 64 bits.
+    // uint8_t is the current industry de-facto standard
     #define AU uint8_t
 
-  //----------------------------------------
-  // argument guard
-
-
-typedef void (*Flag·Function)(uint8_t *flag ,uint err);
-
-void Core·Flag·count(uint8_t *flag ,uint err){
-  if(err >= 0xFF){*flag = 0xFF; return;}
-  //*flag + err > 0xFF
-  if(*flag > 0xFF - err){flag = 0xFF;  return;}
-  (*flag) += err;
-}
-
-void Core·Flag·collect(uint8_t *flag ,uint err){
-  (*flag) |= err;
-}
-
-typedef struct {
-  Flag·Function flag_function;
-  uint8_t flag;
-} Core·Guard;
-
-typedef struct {
-  void (*init)(Core·Guard *chk ,Core·Flag·Function *af);
-  void (*reset)(Core·Guard *chk);
-  void (*check)(Core·Guard *chk ,unint err ,bool condition ,const char *message);
-} Core·Guard·FG;
-
-// a default guard
-Local Core·Guard·FG Core·Guard·fg = {
-  .init =
-  ,.reset =
-  ,.check = 
-}
-
-typedef void (*Flag·Function)(uint8_t *flag ,uint err);
-
-void Core·Flag·count(uint8_t *flag ,uint err){
-  if( err >= 0xFF ){ *flag = 0xFF; return;}
-
-  //*flag + err > 0xFF
-  if( *flag > 0xFF - err ){ *flag = 0xFF; return;}
-
-  (*flag) += err;
-}
-
-void Core·Flag·collect(uint8_t *flag ,uint err){
-  (*flag) |= err;
-}
-
-typedef struct {
-  Flag·Function flag_function;
-  uint8_t flag;
-} Core·Guard;
-
-typedef struct {
-  void (*init)(Core·Guard *chk ,Flag·Function af);
-  void (*reset)(Core·Guard *chk);
-  void (*check)(
-     Core·Guard *chk
-    ,uint err
-    ,bool condition
-    ,const char *message
-  );
-} Core·Guard·FG;
-
-// Default guard function table
-Local Core·Guard·FG Core·Guard·fg = {
-   .init = Core·Guard·init
-  ,.reset = Core·Guard·reset
-  ,.check = Core·Guard·check
-};
-
-// Implementation
-
-void Core·Guard·init(Core·Guard *chk ,Flag·Function af){
-  if( !chk ) return;
-  chk->flag_function = af;
-  chk->flag = 0;
-}
-
-void Core·Guard·reset(Core·Guard *chk){
-  if( !chk ) return;
-  chk->flag = 0;
-}
-
-void Core·Guard·check(
-   Core·Guard *chk
-  ,uint err
-  ,bool condition
-  ,const char *message
-){
-  if( !chk || !chk->flag_function ) return;
-  if( condition ) return;
-  fprintf(stderr ,"%s\n" ,message);
-  chk->flag_function(&chk->flag ,err);
-}
-
-
-
-  //----------------------------------------
-  // functions
-
-    // no state, this is merely a namespace
+    // sizeof, and thus extent_t are measures of AU
+    #define extentof(x)(sizeof(x) - 1)
+    #define extent_t size_t
 
     typedef enum{
        Core·Status·mu = 0
       ,Core·Status·on_track
       ,Core·Status·derailed
     }Core·Status;
+
+  //----------------------------------------
+  // argument guard
+
+    typedef void (*Flag·Function)(uint8_t *flag ,uint err);
+
+    void Core·Flag·count(uint8_t *flag ,uint err){
+      if(err >= 0xFF){ *flag = 0xFF; return;}
+
+      //*flag + err > 0xFF
+      if(*flag > 0xFF - err){ *flag = 0xFF; return;}
+
+      (*flag) += err;
+    }
+
+    void Core·Flag·collect(uint8_t *flag ,uint err){
+      (*flag) |= err;
+    }
+
+    typedef struct {
+      char *name;
+      Flag·Function flag_function;
+      uint8_t flag;
+    } Core·Guard;
+
+    typedef struct {
+      void (*init)(Core·Guard *chk ,const char *name ,Flag·Function af);
+      void (*reset)(Core·Guard *chk);
+      void (*check)(
+         Core·Guard *chk
+        ,uint err
+        ,bool condition
+        ,char *message
+      );
+    } Core·Guard·FG;
+
+    // Default guard function table
+    // initialized in the implementation section below
+    Local Core·Guard·FG Core·Guard·fg;
+
+    #define Core·Guard·if_return(chk) if( chk.flag ) return Core·Status·derailed;
+    #define Core·Guard·return(chk)\
+      if( chk.flag ) return Core·Status·derailed;\
+      else return Core·Status·on_track;
+
+  //----------------------------------------
+  // functions
+
+    // no state, this is merely a namespace
 
     typedef struct{
       Core·Status (*on_track)();
@@ -182,25 +128,35 @@ void Core·Guard·check(
     typedef struct Core·TM_NX·Remote;
 
     typedef enum{
-       Core·Tape·Topo·mu
-      ,Core·Tape·Topo·nonexistent // pointer to tape is NULL
-      ,Core·Tape·Topo·empty      // tape has no cells
-      ,Core·Tape·Topo·singleton  // extent is zero
-      ,Core·Tape·Topo·segment    // finite non-singleton tape
-      ,Core·Tape·Topo·circle     // initial location recurs
-      ,Core·Tape·Topo·tail_cyclic  // other than initial location recurs
-      ,Core·Tape·Topo·infinite   // exists, not empty, no cycle, no rightmost
+       Core·Tape·Topo·mu = 0 
+      ,Core·Tape·Topo·nonexistent = 1 
+      ,Core·Tape·Topo·empty       = 1 << 1
+      ,Core·Tape·Topo·singleton   = 1 << 2
+      ,Core·Tape·Topo·segment     = 1 << 3
+      ,Core·Tape·Topo·circle      = 1 << 4
+      ,Core·Tape·Topo·tail_cyclic = 1 << 5
+      ,Core·Tape·Topo·infinite    = 1 << 6
     }Core·Tape·Topo;
+
+    const Core·Tape·Topo Core·Tape·Topo·finite_nz = 
+      Core·Tape·Topo·singleton | Core·Tape·Topo·segment
+      ;
 
     // If tape machine does not support step left, then Status·leftmost 
     // will be reported as Status·interim.
     typedef enum{
        Core·TM·Head·Status·mu = 0
       ,Core·TM·Head·Status·not_on_tape = 1
-      ,Core·TM·Head·Status·origin
-      ,Core·TM·Head·Status·interim 
-      ,Core·TM·Head·Status·rightmost
+      ,Core·TM·Head·Status·origin    = 1 << 1
+      ,Core·TM·Head·Status·interim   = 1 << 2
+      ,Core·TM·Head·Status·rightmost = 1 << 3
     } Core·TM·Head·Status;
+
+    const Core·TM·Head·Status Core·TM·Head·Status·on_tape = 
+      Core·TM·Head·Status·origin
+      | Core·TM·Head·Status·interim
+      | Core·TM·Head·Status·rightmost
+      ;
 
     typedef struct{
 
@@ -209,7 +165,6 @@ void Core·Guard·check(
       Core·TM·Head·Status (*dismount)(Core·TM_NX *tm);
 
       Core·TM·Head·Status (*status)(Core·TM_NX *tm);
-      Core·Status (*can_step)(Core·TM_NX *tm ,bool *flag);
       Core·Status (*can_read)(Core·TM_NX *tm ,bool *flag);
 
       Core·Status (*on_origin)(Core·TM_NX *tm ,bool *flag);
@@ -217,12 +172,12 @@ void Core·Guard·check(
       Core·Status (*on_rightmost)(Core·TM_NX *tm ,bool *flag);
 
       Core·Status (*read)(
-        Core·TM_NX *tm 
+         Core·TM_NX *tm 
         ,Core·TM_NX·Address *a 
         ,Core·Tape·Remote *remote
       );
       Core·Status (*write)(
-        Core·TM_NX *tm 
+         Core·TM_NX *tm 
         ,Core·TM_NX·Address *a 
         ,Core·Tape·Remote *remote
       );
@@ -237,11 +192,6 @@ void Core·Guard·check(
         Core·Status (*extent)(Core·TM_NX *tm ,extent_t *extent_pt);
 
         // Initialize TM area
-        Core·Status (*set_position)(Core·TM_NX *tm ,Core·TM_NX·Address *new_position);
-        Core·Status (*set_position_left)(Core·TM_NX *tm ,Core·TM_NX·Address *new_position); // synonym
-        Core·Status (*set_position_right)(Core·TM_NX *tm ,Core·TM_NX·Address *new_position_right);
-        Core·Status (*set_extent)(Core·TM_NX *tm ,extent_t extent); 
-
         Core·Status (*mount_pe)(Core·TM_NX *tm ,void *position ,extent_t extent);
         Core·Status (*mount_pp)(Core·TM_NX *tm ,void *position_left ,void *position_right);
         Core·Status (*dismount)(Core·TM_NX *tm);
@@ -362,15 +312,53 @@ void Core·Guard·check(
 
   #ifdef LOCAL
 
+
   //----------------------------------------
-  // Utilities
+  // argument guard
+  //----------------------------------------
+
+
+    Local void Core·Guard·init(Core·Guard *chk ,Flag·Function af){
+      if( !chk ) return;
+      chk->flag_function = af;
+      chk->flag = 0;
+    }
+
+    Local void Core·Guard·reset(Core·Guard *chk){
+      if( !chk ) return;
+      chk->flag = 0;
+    }
+
+    Local void Core·Guard·check(
+       Core·Guard *chk
+      ,uint err
+      ,bool condition
+      ,const char *message
+    ){
+      if( !chk || !chk->flag_function ) return;
+      if( condition ) return;
+      fprintf(stderr ,"%s\n" ,message);
+      chk->flag_function(&chk->flag ,err);
+    }
+
+    Local Core·Guard·FG Core·Guard·fg = {
+       .init = Core·Guard·init
+      ,.reset = Core·Guard·reset
+      ,.check = Core·Guard·check
+    };
+
+
+  //----------------------------------------
+  // Functions
+  //----------------------------------------
+
 
     Core·Status Core·on_track(){ return Core·Status·on_track; }
     Core·Status Core·derailed(){ return Core·Status·derailed; }
 
     Local void *Core·offset(void *p ,size_t Δ){
       #ifdef Core·Debug
-      if( !p ){
+      if(!p){
         fprintf(stderr ,"Core·offset:: given NULL `p'");
         return NULL;
       }
@@ -380,7 +368,7 @@ void Core·Guard·check(
 
     Local void *Core·offset_8AU(void *p ,size_t Δ){
       #ifdef Core·Debug
-      if( !p ){
+      if(!p){
         fprintf(stderr ,"Core·offset_8AU:: given NULL `p'");
         return NULL;
       }
@@ -390,7 +378,7 @@ void Core·Guard·check(
 
     Local bool Core·is_aligned_on_8AU(void *p){
       #ifdef Core·Debug
-      if( !p ){
+      if(!p){
         fprintf(stderr ,"Core·is_aligned_on_8AU:: given NULL `p'");
         return false;
       }
@@ -402,7 +390,7 @@ void Core·Guard·check(
     // returns the byte pointer to the least address byte in the window
     Local void *Core·floor_within_aligned_8AU(void *p){
       #ifdef Core·Debug
-      if( !p ){
+      if(!p){
         fprintf(stderr ,"Core·floor_8AU:: given NULL `p'" );
         return NULL;
       }
@@ -414,7 +402,7 @@ void Core·Guard·check(
     // returns the byte pointer to the greatest address byte in the window
     Local void *Core·ceiling_within_aligned_8AU(void *p){
       #ifdef Core·Debug
-      if( !p ){
+      if(!p){
         fprintf(stderr ,"Core·ceiling_64:: given NULL `p'" );
         return NULL;
       }
@@ -435,10 +423,14 @@ void Core·Guard·check(
 
   //----------------------------------------
   // TM_NX 
+  //----------------------------------------
+
+  // The TM_NX has no destructive operations, so the tape will never get longer or shorter. Calls to 'mount_pe'  or 'mount_pp' are initialization operations.
+  // hd == 0 is used to signal that the tape is unmounted or empty.
 
     typedef union{
       struct{
-        void *address;
+        AU *address;
       }array;
     }Core·TM_MX·Address;
 
@@ -453,82 +445,261 @@ void Core·Guard·check(
         extent_t extent;
         uint64_t *hd;
       }array8AU;
-    }Core·TM_MX;
+    }Core·TM_NX;
 
-    //----------------------------------------
-    // TM_NX_Array: Array-Based Implementation
+  //----------------------------------------
+  // TM_NX_Array: Array-Based Implementation
+  //----------------------------------------
+
+    // common error messages
+    const char *Core·TM_NX_Array·Msg·tm = "given NULL tm";
+    const char *Core·TM_NX_Array·Msg·flag = "given NULL flag pointer";
+    const char *Core·TM_NX_Array·Msg·address = "given NULL address";
+    const char *Core·TM_NX_Array·Msg·address_on_tape =
+      "given address is not on the  tape"
+      ;
+    const char *Core·TM_NX_Array·Msg·extent = "given NULL extent pointer";
+
+    // Area functions within Core·TM_NX_Array
+
+    Local Core·Tape·Topo Core·TM_NX_Array·topo(Core·TM_NX *tm){
+      if(!tm) return Core·Tape·Topo·nonexistent;
+      if(!tm->position) return Core·Tape·Topo·empty;
+      if(!tm->extent ) return Core·Tape·Topo·singleton;
+      return Core·Tape·Topo·segment;
+    }
+
+    Local Core·Status Core·TM_NX_Array·extent(Core·TM_NX *tm ,extent_t *extent){
+      Core·Tape·Topo t = Core·TM_NX_Array·topo(tm) & Core·Tape·Topo·finite_nz;
+      #ifdef Core·Debug
+        Core·Guard chk;
+        Core·Guard·fg.init(&chk ,"Core·TM_NX_Array·extent" ,Core·Flag·count);
+        Core·Guard·fg.check(
+          &chk ,0 ,t 
+          ,"Tape does not exist or topology does not have an extent."
+        );
+      #endif
+      if(!t) return Core·Status·derailed;
+      *extent = tm->extent;
+      return Core·Status·on_track;
+    }
+
+    Local Core·Status Core·Area·mount_pe(
+      Core·TM_NX *tm ,Core·TM_NX·Address *position ,extent_t extent
+    ){
+      #ifdef Core·Debug
+        Core·Guard chk;
+        Core·Guard·fg.init(&chk ,"Core·TM_NX_Array·mount_pp" ,Core·Flag·count);
+        Core·Guard·fg.check(&chk ,1 ,tm ,Core·TM_NX_Array·Msg·tm);
+        Core·Guard·fg.check(&chk ,1 ,position ,"given NULL position");
+        Core·Guard·if_return(chk);
+      #endif
+      area->array.position = position->array.address;
+      area->array.extent = extent;
+      return Core·Status·on_track;
+    }
+
+    Local Core·Status Core·Area·mount_pp(
+      Core·TM_NX *tm ,Core·TM_NX·Address *position_left ,Core·TM_NX·Address *position_right
+    ){
+      #ifdef Core·Debug
+        Core·Guard chk;
+        Core·Guard·fg.init(&chk ,"Core·TM_NX_Array·mount_pp" ,Core·Flag·count);
+        Core·Guard·fg.check(&chk ,1 ,tm ,Core·TM_NX_Array·Msg·tm);
+        Core·Guard·fg.check(&chk ,1 ,position_left ,"given NULL position_left");
+        Core·Guard·fg.check(&chk ,1 ,position_right ,"given NULL position_right");
+        Core·Guard·if_return(chk);
+      #endif
+      tm->array.position = position_left->array.address;
+      tm->array.extent = 
+          (extent_t)((uintptr_t)position_right->array.address
+        - (uintptr_t)position_left->array.address)
+        ;
+
+      return Core·Status·on_track;
+    }
+
+    bool Core·TM_NX_Array·encloses_pt(Core·TM_NX *tm ,Core·TM_NX·Address *a){
+      #ifdef Core·Debug
+        Core·Guard chk;
+        Core·Guard·fg.init(&chk ,"Core·TM_NX_Array·encloses_pt" ,Core·Flag·count);
+        Core·Guard·fg.check(&chk ,1 ,tm ,Core·TM_NX_Array·Msg·tm);
+        Core·Guard·fg.check(&chk ,1 ,pt ,"given NULL pt");
+        Core·Guard·if_return(chk);
+      #endif
+
+      return 
+           (a->array.address >= tm->position) 
+        && (a->array.address <= tm->position + tm->extent)
+        ;
+    }
+
+    Local bool Core·TM_NX_Array·encloses_pt_strictly(Core·TM_NX *tm ,Core·TM_NX·Address *a){
+      #ifdef Core·Debug
+        Core·Guard chk;
+        Core·Guard·fg.init(&chk ,"Core·TM_NX_Array·encloses_pt_strictly" ,Core·Flag·count);
+        Core·Guard·fg.check(&chk ,1 ,tm ,Core·TM_NX_Array·Msg·tm);
+        Core·Guard·fg.check(&chk ,1 ,a ,Core·TM_NX_Array·Msg·address);
+        Core·Guard·if_return(chk);
+      #endif
+
+      return (a->array.address > tm->array.position) 
+          && (a->array.address < tm->array.position + tm->array.extent);
+    }
+
+    Local bool Core·TM_NX_Array·encloses_tm(Core·TM_NX *outer ,Core·TM_NX *inner){
+      #ifdef Core·Debug
+        Core·Guard chk;
+        Core·Guard·fg.init(&chk ,"Core·TM_NX_Array·encloses_tm" ,Core·Flag·count);
+        Core·Guard·fg.check(&chk ,1 ,outer ,"given NULL outer TM");
+        Core·Guard·fg.check(&chk ,1 ,inner ,"given NULL inner TM");
+        Core·Guard·if_return(chk);
+      #endif
+
+      return (inner->array.position >= outer->array.position) 
+          && (inner->array.position + inner->array.extent <= outer->array.position + outer->array.extent);
+    }
+
+    Local bool Core·TM_NX_Array·encloses_tm_strictly(Core·TM_NX *outer ,Core·TM_NX *inner){
+      #ifdef Core·Debug
+        Core·Guard chk;
+        Core·Guard·fg.init(&chk ,"Core·TM_NX_Array·encloses_tm_strictly" ,Core·Flag·count);
+        Core·Guard·fg.check(&chk ,1 ,outer ,"given NULL outer TM");
+        Core·Guard·fg.check(&chk ,1 ,inner ,"given NULL inner TM");
+        Core·Guard·if_return(chk);
+      #endif
+
+      return (inner->array.position > outer->array.position) 
+          && (inner->array.position + inner->array.extent < outer->array.position + outer->array.extent);
+    }
+
+    Local bool Core·TM_NX_Array·overlap(Core·TM_NX *a ,Core·TM_NX *b){
+      #ifdef Core·Debug
+        Core·Guard chk;
+        Core·Guard·fg.init(&chk ,"Core·TM_NX_Array·overlap" ,Core·Flag·count);
+        Core·Guard·fg.check(&chk ,1 ,a ,"given NULL TM A");
+        Core·Guard·fg.check(&chk ,1 ,b ,"given NULL TM B");
+        Core·Guard·if_return(chk);
+      #endif
+
+      return (a->array.position < b->array.position + b->array.extent) 
+          && (b->array.position < a->array.position + a->array.extent);
+    }
+
+    Local Core·Status Core·TM_NX_Array·largest_aligned_64(
+      Core·TM_NX *outer ,Core·TM_NX *inner_64
+    ){
+      #ifdef Core·Debug
+        Core·Guard chk;
+        Core·Guard·fg.init(&chk ,"Core·TM_NX_Array·largest_aligned_64" ,Core·Flag·count);
+        Core·Guard·fg.check(&chk ,1 ,outer ,"given NULL outer TM");
+        Core·Guard·fg.check(&chk ,1 ,inner_64 ,"given NULL inner TM");
+        Core·Guard·if_return(chk);
+      #endif
+
+      uintptr_t p0 = (uintptr_t)outer->array.position;
+      uintptr_t p1 = (uintptr_t)outer->array.position + outer->array.extent;
+
+      AU *p0_64 = (AU *)( (p0 + 0x7) & ~(uintptr_t)0x7 );
+      AU *p1_64 = (AU *)( (p1 - 0x7) & ~(uintptr_t)0x7 );
+
+      if(p1_64 < p0_64){
+        inner_64->array.position = NULL;
+        inner_64->array.extent = 0;
+        return Core·Status·on_track;
+      }else{
+        inner_64->array.position = p0_64;
+        inner_64->array.extent = (extent_t)(p1_64 - p0_64);
+        return Core·Status·on_track;
+      }
+    }
+
+
+
+    //-----------------------------------
+    // base Tape Machine operations
 
     Core·TM·Head·Status *Core·TM_NX_Array·mount(Core·TM_NX *tm){
+      #ifdef Core·Debug
+        Core·Guard chk;
+        Core·Guard·fg.init(&chk ,"Core·TM_NX_Array·mount" ,Core·Flag·count);
+        Core·Guard·fg.check(&chk ,1 ,tm ,Core·TM_NX_Array·Msg·tm);
+        Core·Guard·if_return(chk);
+      #endif
+
+      // Implementation-specific mounting logic
+      tm->hd = tm->position;
+      return &tm->status;
     }
+
     Core·TM·Head·Status *Core·TM_NX_Array·dismount(Core·TM_NX *tm){
+      #ifdef Core·Debug
+        Core·Guard chk;
+        Core·Guard·fg.init(&chk ,"Core·TM_NX_Array·dismount" ,Core·Flag·count);
+        Core·Guard·fg.check(&chk ,1 ,tm ,Core·TM_NX_Array·Msg·tm);
+        Core·Guard·if_return(chk);
+      #endif
+
+      // Reset head position upon dismount
+      tm->hd = NULL;
+      return &tm->status;
     }
 
     Core·TM·Head·Status Core·TM_NX_Array·status(Core·TM_NX *tm){
-    }
-    Local Core·Status Core·TM_NX_Array·can_step(Core·TM_NX *tm ,bool *){
-    }
-    Local Core·Status Core·TM_NX_Array·can_read(Core·TM_NX *tm ,bool *){
+      if(!tm) return Core·TM·Head·Status·mu;
+      if(tm->hd == NULL) return Core·TM·Head·Status·not_on_tape;
+      if(tm->hd == tm->position) return Core·TM·Head·Status·origin;
+      if( tm->hd == (tm->position + tm->extent - 1) ) 
+        return Core·TM·Head·Status·rightmost;
+      return Core·TM·Head·Status·interim;
     }
 
-    bool Core·TM_NX_Array·encloses_pt(Core·TM_NX *tm ,Core·TM_NX·Address *pt);
+    Local Core·Status Core·TM_NX_Array·can_read(Core·TM_NX *tm ,bool *flag){
+      *flag = tm && tm->hd != NULL;
+      return Core·Status·on_track;
+    }
 
     Local Core·Status Core·TM_NX_Array·on_origin(
-      Core·TM_NX *tm ,Core·TM_NX·Address *a ,bool *flag
+      Core·TM_NX *tm ,bool *flag
     ){
       #ifdef Core·Debug
-        uint error = 0;
-        if( !tm ){
-          fprintf(stderr,"Core·TM_NX_Array·is_origin:: given NULL tm");
-          error++;
-        }else if( !tm->address ){
-          fprintf(stderr,"Core·TM_NX_Array·is_origin:: origin requested for empty tape");
-          error++;
-        }
-        if( !flag ){
-          fprintf(stderr,"Core·TM_NX_Array·is_origin:: NULL flag pointer");
-          error++;
-        }
-        if( !a ){
-          fprintf(stderr,"Core·TM_NX_Array·is_origin:: given NULL address");
-        }else if( !Core·TM_NX_Array·area.encloses_pt(tm ,a) ){
-          fprintf(stderr,"Core·TM_NX_Array·is_origin:: address is outside tape bounds");
-        }
-        if( error ) return Core·Status·derailed;
+        Core·Guard chk; 
+        Core·Guard·fg.init(&chk ,"Core·TM_NX_Array·on_origin" ,Core·Flag·count);
+        Core·Guard·fg.check(&chk ,1 ,tm ,Core·TM_NX_Array·Msg·tm);
+        Core·Guard·fg.check(&chk ,1 ,flag ,Core·TM_NX_Array·Msg·flag);
+        Core·Guard·if_return(chk);
       #endif
-      *flag = ( tm->address == a );
+
+      *flag = (tm->hd == tm->position);
       return Core·Status·on_track;
     }
 
     Local Core·Status Core·TM_NX_Array·on_rightmost(
-      Core·TM_NX *tm ,Core·TM_NX·Address *a ,bool *result
+      Core·TM_NX *tm ,bool *flag
     ){
       #ifdef Core·Debug
-        uint error = 0;
-        if( !tm ){
-          fprintf(stderr,"Core·TM_NX_Array·is_rightmost:: given NULL tm");
-          error++;
-        }else if( !tm->address ){
-          fprintf(stderr,"Core·TM_NX_Array·is_rightmost:: rightmost requested for empty tape");
-          error++;
-        }
-        if( !result ){
-          fprintf(stderr,"Core·TM_NX_Array·is_rightmost:: NULL result pointer");
-          error++;
-        }
-        if( !a ){
-          fprintf(stderr,"Core·TM_NX_Array·is_rightmost:: given NULL address");
-        }else if( !Core·TM_NX_Array·area.encloses_pt(tm ,a) ){
-          fprintf(stderr,"Core·TM_NX_Array·is_rightmost:: address is outside tape bounds");
-        }
-        if( error ) return Core·Status·derailed;
+        Core·Guard chk; 
+        Core·Guard·fg.init(&chk ,"Core·TM_NX_Array·on_rightmost" ,Core·Flag·count);
+        Core·Guard·fg.check(&chk ,1 ,tm ,Core·TM_NX_Array·Msg·tm);
+        Core·Guard·fg.check(&chk ,1 ,flag ,Core·TM_NX_Array·Msg·flag);
+        Core·Guard·if_return(chk);
       #endif
-      *result = ( tm->address == ( tm->address + tm->extent ) );
+
+      *flag = tm->hd == (tm->address + tm->extent)
       return Core·Status·on_track;
     }
 
     Local Core·Status Core·TM_NX_Array·read(
       Core·TM_NX *tm ,Core·TM_NX·Address *a ,Core·Tape·Remote *remote
     ){
+      #ifdef Core·Debug
+        Core·Guard chk; 
+        Core·Guard·fg.init(&chk ,"Core·TM_NX_Array·on_rightmost" ,Core·Flag·count);
+        Core·Guard·fg.check(&chk ,1 ,tm ,Core·TM_NX_Array·Msg·tm);
+        Core·Guard·fg.check(&chk ,1 ,flag ,Core·TM_NX_Array·Msg·flag);
+        Core·Guard·if_return(chk);
+      #endif
+
       #ifdef Core·Debug
         uint error = 0;
         if( !tm ){
@@ -607,106 +778,6 @@ void Core·Guard·check(
     // step_right is a synonym for step
 
 
-    // Area functions within Core·TM_NX_Array
-
-    Local Core·Tape·Topo Core·TM_NX_Array·topo(Core·TM_NX *tm){
-      if( !tm ) return Core·Tape·Topo·nonexistent;
-      if( !tm->address ) return Core·Tape·Topo·empty;
-      if( !tm->extent ) return Core·Tape·Topo·singleton;
-      return Core·Tape·Topo·segment;
-    }
-
-    Local Core·Status Core·TM_NX_Array·extent(Core·TM_NX *tm ,extent_t *extent_pt){
-      #ifdef Core·Debug
-        uint error = 0;
-        if( !tm ){
-          fprintf(stderr,"Core·TM_NX_Array·extent:: given NULL tm");
-          error++;
-        }else if( !tm->address ){
-          fprintf(stderr,"Core·TM_NX_Array·extent:: extent requested for empty tape");
-          error++;
-        }
-        if( !write_pt ){
-          fprintf(stderr,"Core·TM_NX_Array·extent:: given NULL write_pt");
-          error++;
-        }
-        if( error ) return Core·Status·derailed;
-      #endif
-      *write_pt = tm->extent;
-      return Core·Status·on_track;
-    }
-
-    Local Core·Status Core·TM_NX_Array·set_position(
-      Core·TM_NX *tm ,Core·TM_NX·Address *new_position
-    ){
-      #ifdef Core·Debug
-        if( !tm ){
-          fprintf(stderr, "Core·TM_NX_Array·set_position:: given NULL tape machine");
-          return Core·Status·derailed;
-        }
-      #endif
-      tm->array.hd = new_position->array.address;
-      return Core·Status·on_track;
-    }
-
-    // set_position_left is a synonym for set_position
-
-    Local Core·Status Core·TM_NX_Array·set_position_right(
-      Core·TM_NX *tm ,Core·TM_NX·Address *new_position_right
-    ){
-      #ifdef Core·Debug
-        if( !tm ){
-          fprintf(stderr, "Core·TM_NX_Array·set_position_right:: given NULL tape machine");
-          return Core·Status·derailed;
-        }
-        if( !tm->array.position ){
-          fprintf(stderr, "Core·TM_NX_Array·set_position_right:: NULL position_left");
-          return Core·Status·derailed;
-        }
-      #endif
-      return Core·TM_NX_Array·set_extent(
-        tm ,(extent_t)( (uintptr_t)new_position_right->array.address - (uintptr_t)tm->array.position )
-      );
-    }
-
-    Local Core·Status Core·Area·mount_pe(
-      Core·Area *area ,AU *position ,extent_t extent
-    ){
-      Core·Status s1 = Core·Area·set_position(area, position);
-      Core·Status s2 = Core·Area·set_extent(area, extent);
-      return (s1 == Core·Status·derailed || s2 == Core·Status·derailed) ? Core·Status·derailed : Core·Status·on_track;
-    }
-    Local Core·Status Core·Area·mount_pp(
-      Core·Area *area ,AU *position_left ,AU *position_right
-    ){
-      Core·Status s1 = Core·Area·set_position(area, position_left);
-      Core·Status s2 = Core·Area·set_position_right(area, position_right);
-      return (s1 == Core·Status·derailed || s2 == Core·Status·derailed) ? Core·Status·derailed : Core·Status·on_track;
-    }
-
-
-
-
-    Local Core·Status Core·TM_NX_Array·set_extent(
-      Core·TM_NX *tm ,extent_t extent
-    ){
-      #ifdef Core·Debug
-        if( !tm ){
-          fprintf(stderr, "Core·TM_NX_Array·set_extent:: given NULL tape machine");
-          return Core·Status·derailed;
-        }
-      #endif
-      tm->array.extent = extent;
-      return Core·Status·on_track;
-    }
-
-    Local Core·Status Core·TM_NX_Array·init_pp(
-      Core·TM_NX *tm ,void *position_left ,void *position_right
-    ){
-      Core·Status s1 = Core·TM_NX_Array·set_position(tm, (Core·TM_NX·Address *)&(Core·TM_NX·Address){ .array.address = position_left });
-      Core·Status s2 = Core·TM_NX_Array·set_position_right(tm, (Core·TM_NX·Address *)&(Core·TM_NX·Address){ .array.address = position_right });
-      return ( s1 == Core·Status·derailed || s2 == Core·Status·derailed ) ? Core·Status·derailed : Core·Status·on_track;
-    }
 
 
     
