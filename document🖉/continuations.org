@@ -1,0 +1,16 @@
+#+TITLE: Reflections On Continuations
+#+AUTHOR: Thomas
+#+STARTUP: content
+
+There are two things going on:
+
+- The function executes code against data. When doing so it happens upon some characteristics of the computation.  These often include the results from argument guards, and reports of end cases. The function the reports back information that could potentially be used to
+  affect control flow.
+
+- The control flow is a related, but separate question. There is an overall scheme of control flow that involves branching, where some of these branches depend on the evaluation of data. 
+
+- So the question is then is it of value to pass into a function a list of, 'if you see X then call Y' ?  Where every possible X is represented in the list. Does this not conflate control flow with computation?  
+
+  What if the X are not independent?  Then the priority logic either requires a rendezvous with functions that have arguments, or be embedded in the called function with continuations, but said function knows nothing of the caller's priorities.
+
+  If many continuations rendezvous so decisions can be made, how is that more efficient than the caller examining a returned status code, and make decision.  Is this not a better location for the decision code, as the caller is setting the control flow?

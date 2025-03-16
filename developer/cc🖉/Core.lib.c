@@ -15,7 +15,7 @@
 
    Nodes include neighbor links, that makes traversal more efficient.
 
-   FG FunctionsGiven<type>, e.g. FunctionsGiven<Core·Area>, abbreviate as FG, or fg.
+   FG FunctionsGiven<type>, e.g. FunctionsGiven<Core·TM_NX_Array>, abbreviate as FG, or fg.
    Nice abbreviation as f and g are common one letter abreviaions for a functions.
 
    U - short for Utility
@@ -39,7 +39,7 @@
   #include <stddef.h>
 
   //----------------------------------------
-  // memory
+  // memory interface
 
     // AU == Addressable Unit
     // given an AU is an 8 bit byte, 4AU is 32 bits, and 8 AU is 64 bits.
@@ -57,7 +57,7 @@
     }Core·Status;
 
   //----------------------------------------
-  // argument guard
+  // argument guard interface
 
     typedef void (*Flag·Function)(uint8_t *flag ,uint err);
 
@@ -100,8 +100,16 @@
       if( chk.flag ) return Core·Status·derailed;\
       else return Core·Status·on_track;
 
+    #define Core·Guard·init_count(chk) \
+      Core·Guard chk; \
+      Core·Guard·fg.init(&chk ,__func__ ,Core·Flag·count);
+
+    #define Core·Guard·init_collect(chk) \
+      Core·Guard chk; \
+      Core·Guard·fg.init(&chk ,__func__ ,Core·Flag·collect);
+
   //----------------------------------------
-  // functions
+  // functions interface
 
     // no state, this is merely a namespace
 
@@ -121,12 +129,15 @@
     Local Core·F Core·f;
 
   //----------------------------------------
-  // Tape Machine
+  // Tape Machine interface
 
     typedef struct Core·TM_NX;
     typedef struct Core·TM_NX·Address;
     typedef struct Core·TM_NX·Remote;
 
+    /*
+      For an Array machine tape, a mounted tape will be singleton or segment.
+    */
     typedef enum{
        Core·Tape·Topo·mu = 0 
       ,Core·Tape·Topo·nonexistent = 1 
@@ -161,25 +172,19 @@
     typedef struct{
 
       // these are for types that need initialization and cleanup
-      Core·TM·Head·Status (*mount)(Core·TM_NX *tm);
-      Core·TM·Head·Status (*dismount)(Core·TM_NX *tm);
+      Core·Status (*mount)(Core·TM_NX *tm);
+      Core·Status (*dismount)(Core·TM_NX *tm);
 
-      Core·TM·Head·Status (*status)(Core·TM_NX *tm);
+      Core·Status (*status)(Core·TM_NX *tm ,Core·TM·Head·Status *status);
       Core·Status (*can_read)(Core·TM_NX *tm ,bool *flag);
-
       Core·Status (*on_origin)(Core·TM_NX *tm ,bool *flag);
-      // only for bounded tapes
       Core·Status (*on_rightmost)(Core·TM_NX *tm ,bool *flag);
 
       Core·Status (*read)(
-         Core·TM_NX *tm 
-        ,Core·TM_NX·Address *a 
-        ,Core·Tape·Remote *remote
+        Core·TM_NX *tm ,Core·TM_NX·Address *a ,TM_MX·Remote *remote
       );
       Core·Status (*write)(
-         Core·TM_NX *tm 
-        ,Core·TM_NX·Address *a 
-        ,Core·Tape·Remote *remote
+        Core·TM_NX *tm ,Core·TM_NX·Address *a ,TM_MX·Remote *remote
       );
 
       Core·Status (*rewind)(Core·TM_NX *tm);
@@ -188,35 +193,46 @@
       Core·Status (*step_right)(Core·TM_NX *tm); // Synonym for step
 
       struct {
-        Core·Tape·Topo (*topo)(Core·TM_NX *tm);
+        Core·Status (*topo)(Core·TM_NX *tm ,Core·Tape·Topo *topo);
         Core·Status (*extent)(Core·TM_NX *tm ,extent_t *extent_pt);
 
-        // Initialize TM area
-        Core·Status (*mount_pe)(Core·TM_NX *tm ,void *position ,extent_t extent);
-        Core·Status (*mount_pp)(Core·TM_NX *tm ,void *position_left ,void *position_right);
-        Core·Status (*dismount)(Core·TM_NX *tm);
+        // Initialize tm
+        Core·Status (*mount_pe)(
+           Core·TM_NX *tm 
+          ,Core·TM_NX·Address *position 
+          ,extent_t extent
+        );
+        Core·Status (*mount_pp)(
+           Core·TM_NX *tm 
+          ,Core·TM_NX·Address *position_left 
+          ,Core·TM_NX·Address *position_right
+        );
 
-        // Read TM properties
-        Core·TM_NX·Address *(*position)(Core·TM_NX *tm);
-        Core·TM_NX·Address *(*position_left)(Core·TM_NX *tm); // synonym
-        Core·TM_NX·Address *(*position_right)(Core·TM_NX *tm);
+        // initializes inner_64
+        Core·Status (*largest_aligned_64)(Core·TM_NX *outer ,Core·TM_NX *inner_64);
 
-        Core·TM_NX·Address *(*complement)(Core·TM_NX *tm ,Core·TM_NX·Address *r);
-
-        // TM relationships
-        bool (*encloses_pt)(Core·TM_NX *tm ,Core·TM_NX·Address *pt);
-        bool (*encloses_pt_strictly)(Core·TM_NX *tm ,Core·TM_NX·Address *pt);
-        bool (*encloses_tm)(Core·TM_NX *outer ,Core·TM_NX *inner);
-        bool (*encloses_tm_strictly)(Core·TM_NX *outer ,Core·TM_NX *inner);
-        bool (*overlap)(Core·TM_NX *a ,Core·TM_NX *b);
-        void (*largest_aligned_64)(Core·TM_NX *outer ,Core·TM_NX *inner_64);
+        Core·Status (*encloses_pt)(
+          Core·TM_NX *tm ,Core·TM_NX·Address *pt ,bool *result
+        );
+        Core·Status (*encloses_pt_strictly)(
+          Core·TM_NX *tm ,Core·TM_NX·Address *pt ,bool *result
+        );
+        Core·Status (*encloses_tm)(
+          Core·TM_NX *outer ,Core·TM_NX *inner ,bool *flag
+        );
+        Core·Status (*encloses_tm_strictly)(
+          Core·TM_NX *outer ,Core·TM_NX *inner ,bool *flag
+        );
+        Core·Status (*overlap)(
+          Core·TM_NX *a ,Core·TM_NX *b ,bool *result
+        );
       } area;
 
     } Core·TM_NX·FG;
 
 
   //----------------------------------------
-  // Map
+  // Map interface
 
     typedef enum{
        Core·Map·Status·mu = 0
@@ -425,14 +441,31 @@
   // TM_NX 
   //----------------------------------------
 
-  // The TM_NX has no destructive operations, so the tape will never get longer or shorter. Calls to 'mount_pe'  or 'mount_pp' are initialization operations.
-  // hd == 0 is used to signal that the tape is unmounted or empty.
+  /*
+  TM_NX_Array are initialized with calls to 'mount_pe' or 'mount_pp'.  These both bind the machine to a tape, and mount the tape. Hence, there is no such thing as an initialized TM_NX_Array which is not bound to a tape. (It is possible to dismount the tm->hd, then remount tm->hd, but the tape remains bound through that process.)
+
+  The tm->position variable can not be used to reliably check if a tape machine has been bound to a tape, because after initialization it will have a value, and before initialization,
+  God only knows what value it will carry, and he doesn't tell anyone but the most devout.
+
+  Because the TM_NX has no destructive operations, Once it is initialized the tape will never get longer or shorter. With TM_MX_Array it is not possible to mount an empty tape, because the minimum value of extent is zero.
+
+  It is an error to re-initialize the machine while it is being used, unfortunately this is a contract with the user, as we have no means in C bind the allocation and initialization steps. Of course using an uninitialized TM_NX_Array will lead to unpredictable behavior.
+  
+  TM_NX.array.position == NULL means the machine has not been bound to a tape.
+  TM_NX.array.hd == NULL means the tape is currently not mounted.
+  */
 
     typedef union{
       struct{
         AU *address;
       }array;
     }Core·TM_MX·Address;
+
+    typedef union{
+      struct{
+        AU *address;
+      }array;
+    }Core·TM_MX·Remote;
 
     typedef union{
       struct{
@@ -447,6 +480,7 @@
       }array8AU;
     }Core·TM_NX;
 
+
   //----------------------------------------
   // TM_NX_Array: Array-Based Implementation
   //----------------------------------------
@@ -454,146 +488,108 @@
     // common error messages
     const char *Core·TM_NX_Array·Msg·tm = "given NULL tm";
     const char *Core·TM_NX_Array·Msg·flag = "given NULL flag pointer";
-    const char *Core·TM_NX_Array·Msg·address = "given NULL address";
+    const char *Core·TM_NX_Array·Msg·address = 
+      "given NULL address pointer, or address struct holds NULL address"
+      ;
     const char *Core·TM_NX_Array·Msg·address_on_tape =
-      "given address is not on the  tape"
+      "given address is not on the tape"
       ;
     const char *Core·TM_NX_Array·Msg·extent = "given NULL extent pointer";
+    const char *Core·TM_NX_Array·Msg·position = "Null position. This is only possible when the tape machine has not been initialized.";
 
+    //-----------------------------------
     // Area functions within Core·TM_NX_Array
 
-    Local Core·Tape·Topo Core·TM_NX_Array·topo(Core·TM_NX *tm){
-      if(!tm) return Core·Tape·Topo·nonexistent;
-      if(!tm->position) return Core·Tape·Topo·empty;
-      if(!tm->extent ) return Core·Tape·Topo·singleton;
-      return Core·Tape·Topo·segment;
+    Core·Status Core·TM_NX_Array·topo(Core·TM_NX *tm ,Core·Tape·Topo *topo){
+      #ifdef Core·Debug
+        Core·Guard·init_count(chk);
+        Core·Guard·fg.check(&chk ,1 ,tm ,Core·TM_NX_Array·Msg·tm);
+        Core·Guard·fg.check(&chk ,1 ,topo ,"topo ptr is NULL, so nowhere to put result");
+        Core·Guard·if_return(chk);
+      #endif
+        if(tm->extent == 0){
+          *topo = Core·Tape·Topo·singleton; 
+        }else{
+          *topo = Core·Tape·Topo·segment;
+        }
+        return Core·Status·on_track;
     }
 
     Local Core·Status Core·TM_NX_Array·extent(Core·TM_NX *tm ,extent_t *extent){
-      Core·Tape·Topo t = Core·TM_NX_Array·topo(tm) & Core·Tape·Topo·finite_nz;
+      Core·Tape·Topo topo;
+      Core·Status status = Core·TM_NX_Array·topo(tm ,&topo);
+      boolean good_topo = 
+        (status == Core·Status·on_track) && (topo & Core·Tape·Topo·finite_nz)
+        ;
+
       #ifdef Core·Debug
-        Core·Guard chk;
-        Core·Guard·fg.init(&chk ,"Core·TM_NX_Array·extent" ,Core·Flag·count);
+        Core·Guard·init_count(chk);
+        Core·Guard·fg.check(&chk ,1 ,tm ,Core·TM_NX_Array·Msg·tm);
+        Core·Guard·fg.check(&chk ,1 ,extent ,Core·TM_NX_Array·Msg·extent);
         Core·Guard·fg.check(
-          &chk ,0 ,t 
+          &chk ,0 ,good_topo
           ,"Tape does not exist or topology does not have an extent."
         );
+        Core·Guard·if_return(chk);
       #endif
-      if(!t) return Core·Status·derailed;
-      *extent = tm->extent;
+
+      if(!good_topo) return Core·Status·derailed;
+      *extent = tm->array.extent;
       return Core·Status·on_track;
     }
 
-    Local Core·Status Core·Area·mount_pe(
+    Local Core·Status Core·TM_NX_Array·mount_pe(
       Core·TM_NX *tm ,Core·TM_NX·Address *position ,extent_t extent
     ){
       #ifdef Core·Debug
-        Core·Guard chk;
-        Core·Guard·fg.init(&chk ,"Core·TM_NX_Array·mount_pp" ,Core·Flag·count);
+        Core·Guard·init_count(chk);
         Core·Guard·fg.check(&chk ,1 ,tm ,Core·TM_NX_Array·Msg·tm);
         Core·Guard·fg.check(&chk ,1 ,position ,"given NULL position");
         Core·Guard·if_return(chk);
       #endif
-      area->array.position = position->array.address;
-      area->array.extent = extent;
+      tm->array.position = position->array.address;
+      tm->array.extent = extent;
       return Core·Status·on_track;
     }
 
-    Local Core·Status Core·Area·mount_pp(
+    Local Core·Status Core·TM_NX_Array·mount_pp(
       Core·TM_NX *tm ,Core·TM_NX·Address *position_left ,Core·TM_NX·Address *position_right
     ){
       #ifdef Core·Debug
-        Core·Guard chk;
-        Core·Guard·fg.init(&chk ,"Core·TM_NX_Array·mount_pp" ,Core·Flag·count);
+        Core·Guard·init_count(chk);
         Core·Guard·fg.check(&chk ,1 ,tm ,Core·TM_NX_Array·Msg·tm);
-        Core·Guard·fg.check(&chk ,1 ,position_left ,"given NULL position_left");
-        Core·Guard·fg.check(&chk ,1 ,position_right ,"given NULL position_right");
-        Core·Guard·if_return(chk);
-      #endif
-      tm->array.position = position_left->array.address;
-      tm->array.extent = 
-          (extent_t)((uintptr_t)position_right->array.address
-        - (uintptr_t)position_left->array.address)
-        ;
-
-      return Core·Status·on_track;
-    }
-
-    bool Core·TM_NX_Array·encloses_pt(Core·TM_NX *tm ,Core·TM_NX·Address *a){
-      #ifdef Core·Debug
-        Core·Guard chk;
-        Core·Guard·fg.init(&chk ,"Core·TM_NX_Array·encloses_pt" ,Core·Flag·count);
-        Core·Guard·fg.check(&chk ,1 ,tm ,Core·TM_NX_Array·Msg·tm);
-        Core·Guard·fg.check(&chk ,1 ,pt ,"given NULL pt");
+        bool good_address = position_left && position_left->address;
+        Core·Guard·fg.check(&chk ,1 ,good_address ,Core·TM_NX_Array·Msg·address);
+        good_address = position_right && position_right->address;
+        Core·Guard·fg.check(&chk ,1 ,good_address ,Core·TM_NX_Array·Msg·address);
+        if(position_left && position_right){
+          Core·Guard·fg.check(
+            &chk ,1 ,position_right->array.address >= position_left->array.address
+            ,"position_right < position_left"
+          );
+        }
         Core·Guard·if_return(chk);
       #endif
 
-      return 
-           (a->array.address >= tm->position) 
-        && (a->array.address <= tm->position + tm->extent)
-        ;
-    }
+      extent_t computed_extent = 
+          (extent_t)(
+            (uintptr_t)position_right->array.address - (uintptr_t)position_left->array.address
+          );
 
-    Local bool Core·TM_NX_Array·encloses_pt_strictly(Core·TM_NX *tm ,Core·TM_NX·Address *a){
-      #ifdef Core·Debug
-        Core·Guard chk;
-        Core·Guard·fg.init(&chk ,"Core·TM_NX_Array·encloses_pt_strictly" ,Core·Flag·count);
-        Core·Guard·fg.check(&chk ,1 ,tm ,Core·TM_NX_Array·Msg·tm);
-        Core·Guard·fg.check(&chk ,1 ,a ,Core·TM_NX_Array·Msg·address);
-        Core·Guard·if_return(chk);
-      #endif
-
-      return (a->array.address > tm->array.position) 
-          && (a->array.address < tm->array.position + tm->array.extent);
-    }
-
-    Local bool Core·TM_NX_Array·encloses_tm(Core·TM_NX *outer ,Core·TM_NX *inner){
-      #ifdef Core·Debug
-        Core·Guard chk;
-        Core·Guard·fg.init(&chk ,"Core·TM_NX_Array·encloses_tm" ,Core·Flag·count);
-        Core·Guard·fg.check(&chk ,1 ,outer ,"given NULL outer TM");
-        Core·Guard·fg.check(&chk ,1 ,inner ,"given NULL inner TM");
-        Core·Guard·if_return(chk);
-      #endif
-
-      return (inner->array.position >= outer->array.position) 
-          && (inner->array.position + inner->array.extent <= outer->array.position + outer->array.extent);
-    }
-
-    Local bool Core·TM_NX_Array·encloses_tm_strictly(Core·TM_NX *outer ,Core·TM_NX *inner){
-      #ifdef Core·Debug
-        Core·Guard chk;
-        Core·Guard·fg.init(&chk ,"Core·TM_NX_Array·encloses_tm_strictly" ,Core·Flag·count);
-        Core·Guard·fg.check(&chk ,1 ,outer ,"given NULL outer TM");
-        Core·Guard·fg.check(&chk ,1 ,inner ,"given NULL inner TM");
-        Core·Guard·if_return(chk);
-      #endif
-
-      return (inner->array.position > outer->array.position) 
-          && (inner->array.position + inner->array.extent < outer->array.position + outer->array.extent);
-    }
-
-    Local bool Core·TM_NX_Array·overlap(Core·TM_NX *a ,Core·TM_NX *b){
-      #ifdef Core·Debug
-        Core·Guard chk;
-        Core·Guard·fg.init(&chk ,"Core·TM_NX_Array·overlap" ,Core·Flag·count);
-        Core·Guard·fg.check(&chk ,1 ,a ,"given NULL TM A");
-        Core·Guard·fg.check(&chk ,1 ,b ,"given NULL TM B");
-        Core·Guard·if_return(chk);
-      #endif
-
-      return (a->array.position < b->array.position + b->array.extent) 
-          && (b->array.position < a->array.position + a->array.extent);
+      return Core·TM_NX_Array·mount_pe(tm ,position_left ,computed_extent);
     }
 
     Local Core·Status Core·TM_NX_Array·largest_aligned_64(
       Core·TM_NX *outer ,Core·TM_NX *inner_64
     ){
       #ifdef Core·Debug
-        Core·Guard chk;
-        Core·Guard·fg.init(&chk ,"Core·TM_NX_Array·largest_aligned_64" ,Core·Flag·count);
+        Core·Guard·init_count(chk);
         Core·Guard·fg.check(&chk ,1 ,outer ,"given NULL outer TM");
+        if(outer){
+          Core·Guard·fg.check(&chk ,1 ,outer->array.position ,"NULL outer->array.position");
+        }
         Core·Guard·fg.check(&chk ,1 ,inner_64 ,"given NULL inner TM");
+        Core·Guard·fg.check(&chk ,1 ,outer->array.position ,"outer TM has NULL position");
         Core·Guard·if_return(chk);
       #endif
 
@@ -606,56 +602,189 @@
       if(p1_64 < p0_64){
         inner_64->array.position = NULL;
         inner_64->array.extent = 0;
-        return Core·Status·on_track;
-      }else{
-        inner_64->array.position = p0_64;
-        inner_64->array.extent = (extent_t)(p1_64 - p0_64);
-        return Core·Status·on_track;
+        return Core·Status·derailed;
       }
+
+      inner_64->array.position = p0_64;
+      inner_64->array.extent = (extent_t)(p1_64 - p0_64);
+      return Core·Status·on_track;
     }
 
+
+    Local Core·Status Core·TM_NX_Array·encloses_pt(
+      Core·TM_NX *tm ,Core·TM_NX·Address *a ,bool *result
+    ){
+      #ifdef Core·Debug
+        Core·Guard·init_count(chk);
+        Core·Guard·fg.check(&chk ,1 ,tm ,Core·TM_NX_Array·Msg·tm);
+        bool good_address = a && a->address;
+        Core·Guard·fg.check(&chk ,1 ,good_address ,Core·TM_NX_Array·Msg·address);
+        Core·Guard·fg.check(&chk ,1 ,result ,"given NULL result pointer");
+        Core·Guard·if_return(chk);
+      #endif
+
+      *result = 
+           (a->array.address >= tm->array.position) 
+        && (a->array.address <= tm->array.position + tm->array.extent);
+
+      return Core·Status·on_track;
+    }
+
+    Local Core·Status Core·TM_NX_Array·encloses_pt_strictly(
+      Core·TM_NX *tm ,Core·TM_NX·Address *a ,bool *result
+    ){
+      #ifdef Core·Debug
+        Core·Guard·init_count(chk);
+        Core·Guard·fg.check(&chk ,1 ,tm ,Core·TM_NX_Array·Msg·tm);
+        bool good_address = a && a->address;
+        Core·Guard·fg.check(&chk ,1 ,good_address ,Core·TM_NX_Array·Msg·address);
+        Core·Guard·fg.check(&chk ,1 ,result ,"given NULL result pointer");
+        Core·Guard·if_return(chk);
+      #endif
+
+      *result = 
+           (a->array.address > tm->array.position) 
+        && (a->array.address < tm->array.position + tm->array.extent);
+
+      return Core·Status·on_track;
+    }
+
+    Local Core·Status Core·TM_NX_Array·encloses_tm(
+      Core·TM_NX *outer ,Core·TM_NX *inner ,bool *flag
+    ){
+      #ifdef Core·Debug
+        Core·Guard·init_count(chk);
+        Core·Guard·fg.check(&chk ,1 ,outer ,"given NULL outer TM");
+        if(outer){
+          Core·Guard·fg.check(&chk ,1 ,outer->array.position ,"NULL outer->array.position");
+        }
+        Core·Guard·fg.check(&chk ,1 ,inner ,"given NULL inner TM");
+        if(inner){
+          Core·Guard·fg.check(&chk ,1 ,inner->array.position ,"NULL inner->array.position");
+        }
+        Core·Guard·fg.check(&chk ,1 ,flag ,"given NULL flag pointer");
+        Core·Guard·if_return(chk);
+      #endif
+
+      *flag =
+           (inner->array.position >= outer->array.position) 
+        && (inner->array.position + inner->array.extent <= outer->array.position + outer->array.extent);
+
+      return Core·Status·on_track;
+    }
+
+    Local Core·Status Core·TM_NX_Array·encloses_tm_strictly(
+      Core·TM_NX *outer ,Core·TM_NX *inner ,bool *flag
+    ){
+      #ifdef Core·Debug
+        Core·Guard·init_count(chk);
+        Core·Guard·fg.check(&chk ,1 ,outer ,"given NULL outer TM");
+        if(outer){
+          Core·Guard·fg.check(&chk ,1 ,outer->array.position ,"NULL outer->array.position");
+        }
+        Core·Guard·fg.check(&chk ,1 ,inner ,"given NULL inner TM");
+        if(inner){
+          Core·Guard·fg.check(&chk ,1 ,inner->array.position ,"NULL inner->array.position");
+        }
+        Core·Guard·fg.check(&chk ,1 ,flag ,"given NULL flag pointer");
+        Core·Guard·if_return(chk);
+      #endif
+
+      *flag =
+           (inner->array.position > outer->array.position) 
+        && (inner->array.position + inner->array.extent < outer->array.position + outer->array.extent);
+
+      return Core·Status·on_track;
+    }
+
+    Local Core·Status Core·TM_NX_Array·overlap(
+      Core·TM_NX *a ,Core·TM_NX *b ,bool *result
+    ){
+      #ifdef Core·Debug
+        Core·Guard·init_count(chk);
+        Core·Guard·fg.check(&chk ,1 ,a ,"given NULL TM A");
+        if(a){
+          Core·Guard·fg.check(&chk ,1 ,a->array.position ,"NULL a->array.position");
+        }
+        Core·Guard·fg.check(&chk ,1 ,b ,"given NULL TM B");
+        if(b){
+          Core·Guard·fg.check(&chk ,1 ,b->array.position ,"NULL b->array.position");
+        }
+        Core·Guard·fg.check(&chk ,1 ,result ,"given NULL result pointer");
+        Core·Guard·if_return(chk);
+      #endif
+
+      *result =
+           (a->array.position < b->array.position + b->array.extent) 
+        && (b->array.position < a->array.position + a->array.extent);
+
+      return Core·Status·on_track;
+    }
 
 
     //-----------------------------------
     // base Tape Machine operations
 
-    Core·TM·Head·Status *Core·TM_NX_Array·mount(Core·TM_NX *tm){
+    Local Core·Status Core·TM_NX_Array·mount(Core·TM_NX *tm){
       #ifdef Core·Debug
-        Core·Guard chk;
-        Core·Guard·fg.init(&chk ,"Core·TM_NX_Array·mount" ,Core·Flag·count);
+        Core·Guard·init_count(chk);
         Core·Guard·fg.check(&chk ,1 ,tm ,Core·TM_NX_Array·Msg·tm);
+        Core·Guard·fg.check(&chk ,1 ,tm->array.position ,Core·TM_NX_Array·Msg·position);
         Core·Guard·if_return(chk);
       #endif
 
-      // Implementation-specific mounting logic
-      tm->hd = tm->position;
-      return &tm->status;
+      tm->array.hd = tm->array.position;
+      return Core·Status·on_track;
     }
 
-    Core·TM·Head·Status *Core·TM_NX_Array·dismount(Core·TM_NX *tm){
+    Local Core·Status Core·TM_NX_Array·dismount(Core·TM_NX *tm){
       #ifdef Core·Debug
-        Core·Guard chk;
-        Core·Guard·fg.init(&chk ,"Core·TM_NX_Array·dismount" ,Core·Flag·count);
+        Core·Guard·init_count(chk);
         Core·Guard·fg.check(&chk ,1 ,tm ,Core·TM_NX_Array·Msg·tm);
         Core·Guard·if_return(chk);
       #endif
 
       // Reset head position upon dismount
-      tm->hd = NULL;
-      return &tm->status;
+      tm->array.hd = NULL;
+      return Core·Status·on_track;
     }
 
-    Core·TM·Head·Status Core·TM_NX_Array·status(Core·TM_NX *tm){
-      if(!tm) return Core·TM·Head·Status·mu;
-      if(tm->hd == NULL) return Core·TM·Head·Status·not_on_tape;
-      if(tm->hd == tm->position) return Core·TM·Head·Status·origin;
-      if( tm->hd == (tm->position + tm->extent - 1) ) 
-        return Core·TM·Head·Status·rightmost;
-      return Core·TM·Head·Status·interim;
+    Local Core·Status Core·TM_NX_Array·status(
+      Core·TM_NX *tm ,Core·TM·Head·Status *status
+    ){
+      #ifdef Core·Debug
+        Core·Guard·init_count(chk);
+        Core·Guard·fg.check(&chk ,1 ,tm ,Core·TM_NX_Array·Msg·tm);
+        Core·Guard·fg.check(&chk ,1 ,status ,"given NULL status pointer");
+        Core·Guard·if_return(chk);
+      #endif
+
+      if(tm->array.hd == NULL){
+        *status = Core·TM·Head·Status·not_on_tape;
+      }else if(tm->array.hd == tm->array.position){
+        *status = Core·TM·Head·Status·origin;
+      }else if(tm->array.hd == tm->array.position + tm->array.extent){
+        *status = Core·TM·Head·Status·rightmost;
+      }else{
+        *status = Core·TM·Head·Status·interim;
+      }
+
+      return Core·Status·on_track;
     }
 
     Local Core·Status Core·TM_NX_Array·can_read(Core·TM_NX *tm ,bool *flag){
-      *flag = tm && tm->hd != NULL;
+      #ifdef Core·Debug
+        Core·Guard·init_count(chk);
+        Core·Guard·fg.check(&chk ,1 ,tm ,Core·TM_NX_Array·Msg·tm);
+        if(tm){
+          // All initialized TM_NX_Array have an initialized position
+          // Maybe this catches that the machine is uninitialized?
+          Core·Guard·fg.check(&chk ,1 ,tm->array.position ,Core·TM_NX_Array·Msg·position);
+        }      
+        Core·Guard·fg.check(&chk ,1 ,flag ,Core·TM_NX_Array·Msg·flag);
+        Core·Guard·if_return(chk);
+      #endif
+      *flag = tm && tm->array.hd != NULL;
       return Core·Status·on_track;
     }
 
@@ -663,14 +792,14 @@
       Core·TM_NX *tm ,bool *flag
     ){
       #ifdef Core·Debug
-        Core·Guard chk; 
-        Core·Guard·fg.init(&chk ,"Core·TM_NX_Array·on_origin" ,Core·Flag·count);
+        Core·Guard·init_count(chk);
         Core·Guard·fg.check(&chk ,1 ,tm ,Core·TM_NX_Array·Msg·tm);
+        Core·Guard·fg.check(&chk ,1 ,tm && tm->array.position ,Core·TM_NX_Array·Msg·position);
         Core·Guard·fg.check(&chk ,1 ,flag ,Core·TM_NX_Array·Msg·flag);
         Core·Guard·if_return(chk);
       #endif
 
-      *flag = (tm->hd == tm->position);
+      *flag = (tm->array.hd == tm->array.position);
       return Core·Status·on_track;
     }
 
@@ -678,155 +807,142 @@
       Core·TM_NX *tm ,bool *flag
     ){
       #ifdef Core·Debug
-        Core·Guard chk; 
-        Core·Guard·fg.init(&chk ,"Core·TM_NX_Array·on_rightmost" ,Core·Flag·count);
+        Core·Guard·init_count(chk);
         Core·Guard·fg.check(&chk ,1 ,tm ,Core·TM_NX_Array·Msg·tm);
         Core·Guard·fg.check(&chk ,1 ,flag ,Core·TM_NX_Array·Msg·flag);
+        Core·Guard·fg.check(&chk ,1 ,tm && tm->array.position ,Core·TM_NX_Array·Msg·position);
         Core·Guard·if_return(chk);
       #endif
 
-      *flag = tm->hd == (tm->address + tm->extent)
+      *flag = tm->array.hd == (tm->array.position + tm->array.extent);
       return Core·Status·on_track;
     }
 
     Local Core·Status Core·TM_NX_Array·read(
-      Core·TM_NX *tm ,Core·TM_NX·Address *a ,Core·Tape·Remote *remote
+      Core·TM_NX *tm ,Core·TM_NX·Address *a ,TM_MX·Remote *r
     ){
       #ifdef Core·Debug
-        Core·Guard chk; 
-        Core·Guard·fg.init(&chk ,"Core·TM_NX_Array·on_rightmost" ,Core·Flag·count);
+        Core·Guard·init_count(chk);
         Core·Guard·fg.check(&chk ,1 ,tm ,Core·TM_NX_Array·Msg·tm);
-        Core·Guard·fg.check(&chk ,1 ,flag ,Core·TM_NX_Array·Msg·flag);
+        Core·Guard·fg.check(&chk ,1 ,a ,Core·TM_NX_Array·Msg·address);
+        Core·Guard·fg.check(&chk ,1 ,r ,Core·TM_NX_Array·Msg·address);
+        if(tm && a){
+          Core·Guard·fg.check(
+            &chk ,1 ,Core·TM_NX_Array·area.encloses_pt(tm ,a) 
+            ,"Given address is outside tape bounds"
+          );
+        }
         Core·Guard·if_return(chk);
       #endif
 
-      #ifdef Core·Debug
-        uint error = 0;
-        if( !tm ){
-          fprintf(stderr,"Core·TM_NX_Array·read:: given NULL tm");
-          error++;
-        }else if( !tm->address ){
-          fprintf(stderr,"Core·TM_NX_Array·read:: read requested for empty tape");
-          error++;
-        }
-        if( !a ){
-          fprintf(stderr,"Core·TM_NX_Array·read:: given NULL address");
-          error++;
-        }else if( !Core·TM_NX_Array·area.encloses_pt(tm ,a) ){
-          fprintf(stderr,"Core·TM_NX_Array·read:: address is outside tape bounds");
-          error++;
-        }
-        if( !remote ){
-          fprintf(stderr,"Core·TM_NX_Array·read:: given NULL remote");
-          error++;
-        }
-        if( error ) return Core·Status·derailed;
-      #endif
-      *(AU *)remote->address = *(AU *)a->address;
+      *(r->address) = *(a->address);
       return Core·Status·on_track;
     }
 
     Local Core·Status Core·TM_NX_Array·write(
-      Core·TM_NX *tm ,Core·TM_NX·Address *a ,Core·Tape·Remote *r
+      Core·TM_NX *tm ,Core·TM_NX·Address *a ,TM_MX·Remote *r
     ){
       #ifdef Core·Debug
-        uint error = 0;
-        if( !tm ){
-          fprintf(stderr,"Core·TM_NX_Array·write:: given NULL tm");
-          error++;
-        }else if( !tm->address ){
-          fprintf(stderr,"Core·TM_NX_Array·write:: write requested for empty tape");
-          error++;
+        Core·Guard·init_count(chk);
+        Core·Guard·fg.check(&chk ,1 ,tm ,Core·TM_NX_Array·Msg·tm);
+        Core·Guard·fg.check(&chk ,1 ,a ,Core·TM_NX_Array·Msg·address);
+        Core·Guard·fg.check(&chk ,1 ,r ,Core·TM_NX_Array·Msg·address);
+        if(tm && a){
+          Core·Guard·fg.check(
+            &chk ,1 ,Core·TM_NX_Array·area.encloses_pt(tm ,a) 
+            ,"Given address is outside tape bounds"
+          );
         }
-        if( !a ){
-          fprintf(stderr,"Core·TM_NX_Array·write:: given NULL address");
-          error++;
-        }else if( !Core·TM_NX_Array·area.encloses_pt(tm ,a) ){
-          fprintf(stderr,"Core·TM_NX_Array·write:: address is outside tape bounds");
-          error++;
-        }
-        if( !r ){
-          fprintf(stderr,"Core·TM_NX_Array·write:: given NULL remote");
-          error++;
-        }
-        if( error ) return Core·Status·derailed;
+        Core·Guard·if_return(chk);
       #endif
-      *(AU *)a->address = *(AU *)r->address;
+
+      *(a->address) = *(r->address);
       return Core·Status·on_track;
     }
 
     Local Core·Status Core·TM_NX_Array·rewind(Core·TM_NX *tm){
       #ifdef Core·Debug
-        uint error = 0;
-        if( !tm ){
-          fprintf(stderr,"Core·TM_NX_Array·rewind:: given NULL tm");
-          error++;
-        }else if( !tm->array->position ){
-          fprintf(stderr,"Core·TM_NX_Array·rewind:: no tape");
-          error++;
+        Core·Guard·init_count(chk);
+        Core·Guard·fg.check(&chk ,1 ,tm ,Core·TM_NX_Array·Msg·tm);
+        if(tm){
+          Core·Guard·fg.check(&chk ,1 ,tm->array.position ,Core·TM_NX_Array·Msg·position);
         }
-        if( error ) return Core·Status·derailed;
+        Core·Guard·if_return(chk);
       #endif
-      tm->array->hd = tm->array->position;
+      tm->array.hd = tm->array.position;
       return Core·Status·on_track;
     }
 
     Core·Status Core·TM_NX_Array·step(Core·TM_NX *tm){
+      #ifdef Core·Debug
+        Core·Guard·init_count(chk);
+        Core·Guard·fg.check(&chk ,1 ,tm ,Core·TM_NX_Array·Msg·tm);
+        Core·Guard·fg.check(&chk ,1 ,tm->array.position ,"step requested on unbound machine");
+        Core·Guard·fg.check(&chk ,1 ,tm->array.hd ,"step requested but tape not mounted");
+        Core·Guard·if_return(chk);
+      #endif
+      if( tm->array.hd < tm->array.position + tm->array.extent ){
+        tm->array.hd++;
+        return Core·Status·on_track;
+      }
+      return Core·Status·derailed; // Stepping beyond tape bounds
     }
+
     Core·Status Core·TM_NX_Array·step_left(Core·TM_NX *tm){
+      #ifdef Core·Debug
+        Core·Guard·init_count(chk);
+        Core·Guard·fg.check(&chk ,1 ,tm ,Core·TM_NX_Array·Msg·tm);
+        Core·Guard·fg.check(&chk ,1 ,tm->array.position 
+          ,"step_left requested on unbound machine"
+        );
+        Core·Guard·fg.check(&chk ,1 ,tm->array.hd 
+          ,"step_left requested with no mounted head"
+        );
+        Core·Guard·if_return(chk);
+      #endif
+      if( tm->array.hd > tm->array.position ){
+        tm->array.hd--;
+        return Core·Status·on_track;
+      }
+      return Core·Status·derailed; // Stepping beyond left boundary
     }
+
     // step_right is a synonym for step
 
 
-
-
-    
-
     //----------------------------------------
-    // FG Table Initialization for Array Implementation
+    // Initialization for Core·TM_NX_Array·fg
 
     Local Core·TM_NX·FG Core·TM_NX_Array·fg = {
        .mount = Core·TM_NX_Array·mount
       ,.dismount = Core·TM_NX_Array·dismount
-      ,.rewind = Core·TM_NX_Array·rewind
 
-      ,.can_step = Core·TM_NX_Array·can_step
+      ,.status = Core·TM_NX_Array·status
+      ,.can_read = Core·TM_NX_Array·can_read
       ,.on_origin = Core·TM_NX_Array·on_origin
       ,.on_rightmost = Core·TM_NX_Array·on_rightmost
 
-      ,.extent = Core·TM_NX_Array·extent
-      ,.can_read = Core·TM_NX_Array·can_read
+      ,.read = Core·TM_NX_Array·read
+      ,.write = Core·TM_NX_Array·write
 
+      ,.rewind = Core·TM_NX_Array·rewind
       ,.step = Core·TM_NX_Array·step
       ,.step_left = Core·TM_NX_Array·step_left
-      ,.step_right = Core·TM_NX_Array·step_right
-      ,.status = Core·TM_NX_Array·status
+      ,.step_right = Core·TM_NX_Array·step_right // Synonym for step
 
-      ,.area {
+      ,.area = {
          .topo = Core·TM_NX_Array·topo
         ,.extent = Core·TM_NX_Array·extent
-        ,.is_origin = Core·TM_NX_Array·is_origin
-        ,.is_rightmost = Core·TM_NX_Array·is_rightmost
-        ,.read = Core·TM_NX_Array·read
-        ,.write = Core·TM_NX_Array·write
 
-        ,.init_pe = Core·TM_NX_Array·init_pe
-        ,.init_pp = Core·TM_NX_Array·init_pp
-        ,.set_position = Core·TM_NX_Array·set_position
-        ,.set_position_left = Core·TM_NX_Array·set_position
-        ,.set_position_right = Core·TM_NX_Array·set_position_right
-        ,.set_extent = Core·TM_NX_Array·set_extent
-
-        ,.position = Core·TM_NX_Array·position
-        ,.position_left = Core·TM_NX_Array·position // synonym
-        ,.position_right = Core·TM_NX_Array·position_right
-
-        ,.complement = Core·TM_NX_Array·complement
+        ,.mount_pe = Core·TM_NX_Array·mount_pe
+        ,.mount_pp = Core·TM_NX_Array·mount_pp
+        ,.largest_aligned_64 = Core·TM_NX_Array·largest_aligned_64
 
         ,.encloses_pt = Core·TM_NX_Array·encloses_pt
+        ,.encloses_pt_strictly = Core·TM_NX_Array·encloses_pt_strictly
         ,.encloses_tm = Core·TM_NX_Array·encloses_tm
+        ,.encloses_tm_strictly = Core·TM_NX_Array·encloses_tm_strictly
         ,.overlap = Core·TM_NX_Array·overlap
-        ,.largest_aligned_64 = Core·TM_NX_Array·largest_aligned_64
       }
     };
 
@@ -864,10 +980,10 @@
     Core·Map·Fn Core·Map·Map·ByteByByte·write_available;
 
     Local Core·Map·Fn Core·Map·AU_by_AU(){
-      if(Core·Area·extent(Core·tf.copy.read) == Core·Area·extent(Core·tf.copy.write))
+      if(Core·TM_NX_Array·extent(Core·tf.copy.read) == Core·TM_NX_Array·extent(Core·tf.copy.write))
         return Core·Map·ByteByByte·perfect_fit;
 
-      if(Core·Area·extent(Core·tf.copy.read) > Core·Area·extent(Core·tf.copy.write))
+      if(Core·TM_NX_Array·extent(Core·tf.copy.read) > Core·TM_NX_Array·extent(Core·tf.copy.write))
         return Core·Map·ByteByByte·read_surplus;
 
       return Core·Map·ByteByByte·write_available;
@@ -875,7 +991,7 @@
 
     Local Core·Map·Fn Core·Map·ByteByByte·perfect_fit(){
       AU **r = &Core·tf.copy.read_pt;
-      AU *r1 = Core·Area·position_right(Core·tf.copy.read);
+      AU *r1 = Core·TM_NX_Array·position_right(Core·tf.copy.read);
       AU **w = &Core·tf.copy.write_pt;
 
       do{
@@ -891,9 +1007,9 @@
 
     Local Core·Map·Fn Core·Map·ByteByByte·read_surplus(){
       AU **r = &Core·tf.copy.read_pt;
-      AU *r1 = Core·Area·position_right(Core·tf.copy.read);
+      AU *r1 = Core·TM_NX_Array·position_right(Core·tf.copy.read);
       AU **w = &Core·tf.copy.write_pt;
-      AU *w1 = Core·Area·position_right(Core·tf.copy.write);
+      AU *w1 = Core·TM_NX_Array·position_right(Core·tf.copy.write);
 
       do{
         **w = Core·tf.copy.read_fn_8(Core·tf.copy.read ,*r);
@@ -908,7 +1024,7 @@
 
     Local Core·Map·Fn Core·Map·ByteByByte·write_avalable(){
       AU **r = &Core·tf.copy.read_pt;
-      AU *r1 = Core·Area·position_right(Core·tf.copy.read);
+      AU *r1 = Core·TM_NX_Array·position_right(Core·tf.copy.read);
       AU **w = &Core·tf.copy.write_pt;
 
       do{
@@ -934,18 +1050,18 @@
     // Initialize the copy_64 process
     Local Core·Map·Fn Core·Map·by_8AU(){
       // Determine the largest 64-bit aligned region within the read area
-      Core·Area·largest_aligned_64(Core·tf.copy.read ,&Core·tl.copy_64.area_64);
+      Core·TM_NX_Array·largest_aligned_64(Core·tf.copy.read ,&Core·tl.copy_64.area_64);
 
       // Choose the correct function based on alignment
-      if(Core·Area·empty(&Core·tl.copy_64.area_64)) return Core·Map·ByWord64·tail;
-      if(Core·is_aligned_on_64(Core·Area·position(Core·tf.copy.read))) return Core·Map·ByWord64·bulk;
+      if(Core·TM_NX_Array·empty(&Core·tl.copy_64.area_64)) return Core·Map·ByWord64·tail;
+      if(Core·is_aligned_on_64(Core·TM_NX_Array·position(Core·tf.copy.read))) return Core·Map·ByWord64·bulk;
       return Core·Map·ByWord64·leadin;
     }
 
     // Lead-in byte copy (until alignment)
     Local Core·Map·Fn Core·Map·ByWord64·leadin(){
       AU **r = &Core·tf.copy.read_pt;
-      AU *r0_64 = Core·Area·position(&Core·tl.copy_64.area_64);
+      AU *r0_64 = Core·TM_NX_Array·position(&Core·tl.copy_64.area_64);
       AU **w = &Core·tf.copy.write_pt;
 
       do{
@@ -962,7 +1078,7 @@
     Local Core·Map·Fn Core·Map·ByWord64·bulk(){
       uint64_t **r = (uint64_t **)&Core·tf.copy.read_pt;
       uint64_t **w = (uint64_t **)&Core·tf.copy.write_pt;
-      uint64_t *r1_64 = Core·Area·position_right(&Core·tl.copy_64.area_64);
+      uint64_t *r1_64 = Core·TM_NX_Array·position_right(&Core·tl.copy_64.area_64);
 
       do{
         **w = Core·tf.copy.read_fn_64(Core·tf.copy.read ,r1_64 ,*r);
@@ -977,7 +1093,7 @@
     // Tail byte copy (unaligned trailing bytes)
     Local Core·Map·Fn Core·Map·ByWord64·tail(){
       AU **r = &Core·tf.copy.read_pt;
-      AU *r1 = Core·Area·position_right(&Core·tl.copy_64.area_64);
+      AU *r1 = Core·TM_NX_Array·position_right(&Core·tl.copy_64.area_64);
       AU **w = &Core·tf.copy.write_pt;
 
       do{
@@ -1009,10 +1125,10 @@
 
     // Hex Encoding: Initialize Map
     Local Core·Map·Fn Core·Map·write_hex(){
-      if(Core·Area·extent(Core·tf.copy.read) == (Core·Area·extent(Core·tf.copy.write) >> 1)){
+      if(Core·TM_NX_Array·extent(Core·tf.copy.read) == (Core·TM_NX_Array·extent(Core·tf.copy.write) >> 1)){
         return Core·Map·WriteHex·perfect_fit;
       }
-      if(Core·Area·extent(Core·tf.copy.read) > (Core·Area·extent(Core·tf.copy.write) >> 1)){
+      if(Core·TM_NX_Array·extent(Core·tf.copy.read) > (Core·TM_NX_Array·extent(Core·tf.copy.write) >> 1)){
         return Core·Map·WriteHex·read_surplus;
       }
       return Core·Map·WriteHex·write_available;
@@ -1020,7 +1136,7 @@
 
     Local Core·Map·Fn Core·Map·WriteHex·perfect_fit(){
       AU **r = &Core·tf.copy.read_pt;
-      AU *r1 = Core·Area·position_right(Core·tf.copy.read);
+      AU *r1 = Core·TM_NX_Array·position_right(Core·tf.copy.read);
       AU **w = &Core·tf.copy.write_pt;
 
       do {
@@ -1037,7 +1153,7 @@
     // Hex Encoding: Read Surplus
     Local Core·Map·Fn Core·Map·WriteHex·read_surplus(){
       AU **r = &Core·tf.copy.read_pt;
-      AU *r1 = Core·Area·position_right(Core·tf.copy.write);
+      AU *r1 = Core·TM_NX_Array·position_right(Core·tf.copy.write);
       AU **w = &Core·tf.copy.write_pt;
 
       do {
@@ -1054,9 +1170,9 @@
     // Hex Encoding: Write Available
     Local Core·Map·Fn Core·Map·WriteHex·write_available(){
       AU **r = &Core·tf.copy.read_pt;
-      AU *r1 = Core·Area·position_right(Core·tf.copy.read);
+      AU *r1 = Core·TM_NX_Array·position_right(Core·tf.copy.read);
       AU **w = &Core·tf.copy.write_pt;
-      AU *w1 = Core·Area·position_right(Core·tf.copy.write);
+      AU *w1 = Core·TM_NX_Array·position_right(Core·tf.copy.write);
 
       do {
         *(uint16_t *)*w = Core·write_hex.byte_to_hex(**r);
@@ -1097,10 +1213,10 @@
     Core·Map·Fn Core·Map·ReadHex·write_available;
 
     Local Core·Map·Fn Core·Map·read_hex(){
-      if((Core·Area·extent(Core·tf.copy.read) >> 1) == Core·Area·extent(Core·tf.copy.write)){
+      if((Core·TM_NX_Array·extent(Core·tf.copy.read) >> 1) == Core·TM_NX_Array·extent(Core·tf.copy.write)){
         return Core·Map·ReadHex·perfect_fit;
       }
-      if((Core·Area·extent(Core·tf.copy.read) >> 1) > Core·Area·extent(Core·tf.copy.write)){
+      if((Core·TM_NX_Array·extent(Core·tf.copy.read) >> 1) > Core·TM_NX_Array·extent(Core·tf.copy.write)){
         return Core·Map·ReadHex·read_surplus;
       }
       return Core·Map·ReadHex·write_available;
@@ -1108,7 +1224,7 @@
 
     Local Core·Map·Fn Core·Map·ReadHex·perfect_fit(){
       AU **r = &Core·tf.copy.read_pt;
-      AU *r1 = Core·Area·position_right(Core·tf.copy.read);
+      AU *r1 = Core·TM_NX_Array·position_right(Core·tf.copy.read);
       AU **w = &Core·tf.copy.write_pt;
 
       do {
@@ -1124,7 +1240,7 @@
 
     Local Core·Map·Fn Core·Map·ReadHex·read_surplus(){
       AU **r = &Core·tf.copy.read_pt;
-      AU *r1 = Core·Area·position_right(Core·tf.copy.write);
+      AU *r1 = Core·TM_NX_Array·position_right(Core·tf.copy.write);
       AU **w = &Core·tf.copy.write_pt;
 
       do {
@@ -1140,9 +1256,9 @@
 
     Local Core·Map·Fn Core·Map·ReadHex·write_available(){
       AU **r = &Core·tf.copy.read_pt;
-      AU *r1 = Core·Area·position_right(Core·tf.copy.read);
+      AU *r1 = Core·TM_NX_Array·position_right(Core·tf.copy.read);
       AU **w = &Core·tf.copy.write_pt;
-      AU *w1 = Core·Area·position_right(Core·tf.copy.write);
+      AU *w1 = Core·TM_NX_Array·position_right(Core·tf.copy.write);
 
       do {
         **w = Core·tf.read_hex.hex_to_byte(*(uint16_t *)*r);
@@ -1164,10 +1280,10 @@
     Core·Map·Fn Core·Map·ReadHex·write_available;
 
     Local Core·Map·Fn Core·Map·read_hex(){
-      if((Core·Area·extent(Core·tf.copy.read) >> 1) == Core·Area·extent(Core·tf.copy.write)){
+      if((Core·TM_NX_Array·extent(Core·tf.copy.read) >> 1) == Core·TM_NX_Array·extent(Core·tf.copy.write)){
         return Core·Map·ReadHex·perfect_fit;
       }
-      if((Core·Area·extent(Core·tf.copy.read) >> 1) > Core·Area·extent(Core·tf.copy.write)){
+      if((Core·TM_NX_Array·extent(Core·tf.copy.read) >> 1) > Core·TM_NX_Array·extent(Core·tf.copy.write)){
         return Core·Map·ReadHex·read_surplus;
       }
       return Core·Map·ReadHex·write_available;
@@ -1175,7 +1291,7 @@
 
     Local Core·Map·Fn Core·Map·ReadHex·perfect_fit(){
       AU **r = &Core·tf.copy.read_pt;
-      AU *r1 = Core·Area·position_right(Core·tf.copy.read);
+      AU *r1 = Core·TM_NX_Array·position_right(Core·tf.copy.read);
       AU **w = &Core·tf.copy.write_pt;
 
       do {
@@ -1191,7 +1307,7 @@
 
     Local Core·Map·Fn Core·Map·ReadHex·read_surplus(){
       AU **r = &Core·tf.copy.read_pt;
-      AU *r1 = Core·Area·position_right(Core·tf.copy.write);
+      AU *r1 = Core·TM_NX_Array·position_right(Core·tf.copy.write);
       AU **w = &Core·tf.copy.write_pt;
 
       do {
@@ -1207,9 +1323,9 @@
 
     Local Core·Map·Fn Core·Map·ReadHex·write_available(){
       AU **r = &Core·tf.copy.read_pt;
-      AU *r1 = Core·Area·position_right(Core·tf.copy.read);
+      AU *r1 = Core·TM_NX_Array·position_right(Core·tf.copy.read);
       AU **w = &Core·tf.copy.write_pt;
-      AU *w1 = Core·Area·position_right(Core·tf.copy.write);
+      AU *w1 = Core·TM_NX_Array·position_right(Core·tf.copy.write);
 
       do {
         **w = Core·hex_to_byte(*(uint16_t *)*r);
@@ -1232,8 +1348,8 @@
        .copy = {
           .read = NULL
           ,.write = NULL
-          ,.read_fn_8 = Core·Area·read_8_fwd
-          ,.read_fn_64 = Core·Area·read_64_fwd
+          ,.read_fn_8 = Core·TM_NX_Array·read_8_fwd
+          ,.read_fn_64 = Core·TM_NX_Array·read_64_fwd
           ,.read_pt = NULL
           ,.write_pt = NULL
           ,.status = Core·Map·Status·uninitialized
@@ -1247,33 +1363,33 @@
     };
 
     Core·M m = {
-      .Area·init_pe = Core·Area·init_pe
-      ,.Area·init_pp = Core·Area·init_pp
-      ,.Area·set_position = Core·Area·set_position
-      ,.Area·set_position_left = Core·Area·set_position
-      ,.Area·set_position_right = Core·Area·set_position_right
-      ,.Area·set_extent = Core·Area·set_extent
-      ,.Area·position = Core·Area·position
-      ,.Area·position_left = Core·Area·position
-      ,.Area·position_right = Core·Area·position_right
-      ,.Area·extent = Core·Area·extent
-      ,.Area·length_Kung = Core·Area·length_Kung
-      ,.Area·empty = Core·Area·empty
+      .Area·init_pe = Core·TM_NX_Array·init_pe
+      ,.Area·init_pp = Core·TM_NX_Array·init_pp
+      ,.Area·set_position = Core·TM_NX_Array·set_position
+      ,.Area·set_position_left = Core·TM_NX_Array·set_position
+      ,.Area·set_position_right = Core·TM_NX_Array·set_position_right
+      ,.Area·set_extent = Core·TM_NX_Array·set_extent
+      ,.Area·position = Core·TM_NX_Array·position
+      ,.Area·position_left = Core·TM_NX_Array·position
+      ,.Area·position_right = Core·TM_NX_Array·position_right
+      ,.Area·extent = Core·TM_NX_Array·extent
+      ,.Area·length_Kung = Core·TM_NX_Array·length_Kung
+      ,.Area·empty = Core·TM_NX_Array·empty
 
-      ,.Area·encloses_pt = Core·Area·encloses_pt
-      ,.Area·encloses_pt_strictly = Core·Area·encloses_pt_strictly
-      ,.Area·encloses_area = Core·Area·encloses_area
-      ,.Area·encloses_area_strictly = Core·Area·encloses_area_strictly
-      ,.Area·overlap = Core·Area·overlap
-      ,.Area·largest_aligned_64 = Core·Area·largest_aligned_64
-      ,.Area·complement = Core·Area·complement
+      ,.Area·encloses_pt = Core·TM_NX_Array·encloses_pt
+      ,.Area·encloses_pt_strictly = Core·TM_NX_Array·encloses_pt_strictly
+      ,.Area·encloses_area = Core·TM_NX_Array·encloses_area
+      ,.Area·encloses_area_strictly = Core·TM_NX_Array·encloses_area_strictly
+      ,.Area·overlap = Core·TM_NX_Array·overlap
+      ,.Area·largest_aligned_64 = Core·TM_NX_Array·largest_aligned_64
+      ,.Area·complement = Core·TM_NX_Array·complement
 
-      ,.Area·read_8_zero = Core·Area·read_8_zero
-      ,.Area·read_8_fwd = Core·Area·read_8_fwd
-      ,.Area·read_8_rev = Core·Area·read_8_rev
-      ,.Area·read_64_zero = Core·Area·read_64_zero
-      ,.Area·read_64_fwd = Core·Area·read_64_fwd
-      ,.Area·read_64_rev = Core·Area·read_64_rev
+      ,.Area·read_8_zero = Core·TM_NX_Array·read_8_zero
+      ,.Area·read_8_fwd = Core·TM_NX_Array·read_8_fwd
+      ,.Area·read_8_rev = Core·TM_NX_Array·read_8_rev
+      ,.Area·read_64_zero = Core·TM_NX_Array·read_64_zero
+      ,.Area·read_64_fwd = Core·TM_NX_Array·read_64_fwd
+      ,.Area·read_64_rev = Core·TM_NX_Array·read_64_rev
 
       ,.is_aligned_on_64 = Core·is_aligned_on_64
       ,.floor_64 = Core·floor_64
