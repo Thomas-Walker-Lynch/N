@@ -32,57 +32,49 @@
   #include <stdint.h>
   #include <stddef.h>
 
-  // the template filling macro
-  #include <xi.c>
-
   //----------------------------------------
   // memory interface
   //----------------------------------------
 
-    // Expand namespace with a macro parameter given value.
-    // The namespace and the extended value will be evaluated for macros.
-    // Greek capital letter 'Xi' for eXtend.
-    #define _Ξ(a ,b) a##·##b
-    #define Ξ(a ,b) _Ξ(a ,b)
+    // Define a namespace.
+    // #define _Ξ(a ,b) a##·##b
+    /// #define Ξ(a ,b) _Ξ(a ,b)
+    #include <xi.c>
 
-    // ask the machine what this is
-    // C language standard left this undefined, probably why unicode uses 'octet'
-    // AToW industry uses uint8_t
-    // reminds me of FORTRAN star types
-    #define AU uint8_t
-    #define AU2 uint16_t
-    #define AU4 uint32_t
-    #define AU8 uint64_t
+    // extent is the maximum index in an address space, tape or area, the doted
+    // unit is the cell type.
+    typedef extent_t·AU size_t
+    #define extent_of·AU(x) (sizeof(x) - 1)
 
-    #define AU_MAX (~(AU)0)
-    #define AU2_MAX (~(AU2)0)
-    #define AU4_MAX (~(AU4)0)
-    #define AU8_MAX (~(AU8)0)
+    // Funny, we seldom check for this, perhaps that matters on some tiny machine.
+    #define extent·AU_address_space ~(uintptr)0;
+
+    // addressable unit for the machine
+    // C language standard left this undefined. AToW industry uses uint8_t.
+    typedef AU  uint8_t;
+    typedef AU2 uint16_t;
+    typedef AU4 uint32_t;
+    typedef AU8 uint64_t;
+
+    const AU  AU_max  = (~(AU)0);
+    const AU2 AU2_max = (~(AU2)0);
+    const AU4 AU4_max = (~(AU4)0);
+    const AU8 AU8_max = (~(AU8)0);
 
     // ask the compiler what this is
     // when using enums we get this whether we want it or not
-    #define WU unsigned int
-    #define WU_MAX (~(WU)0)
+    typedef WU unsigned int;
+    const WU WU_max = (~(WU)0);
 
-    // extent is an address or an index.  It is not a length.
-    // The index scaling CVT type is appended to the end of the extent related identifiers..
-    // E.g. extent_of·AU(uint64_t) == 7 while extent_of·uint16_t(uint64_t) == 3;
-    // extent_of·AU of the address space is ~(uintptr)0;
-    #define extent_of·AU(x)(sizeof(x) - 1)
-    #define extent_t·AU size_t
-
-    // Funny, we seldom check for this, but maybe someone is running a microcontroller or something, so we will here. Also, too bad that address 0 can't be used.
-    #define extent_address_space·AU ~(uintptr)0;
+  //----------------------------------------
+  // flag facility, argument guard facility
+  //----------------------------------------
 
     typedef enum{
        Core·Status·mu = 0
       ,Core·Status·on_track
       ,Core·Status·derailed
     }Core·Status;
-
-  //----------------------------------------
-  // flag facility, argument guard facility
-  //----------------------------------------
 
     typedef void (*Core·Flag·Fn)(WU *flag ,WU err);
 
