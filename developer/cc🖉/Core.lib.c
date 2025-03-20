@@ -32,11 +32,12 @@
   #include <stdint.h>
   #include <stddef.h>
 
+  // the template filling macro
+  #include <xi.c>
+
   //----------------------------------------
   // memory interface
   //----------------------------------------
-
-  #ifndef CVT  
 
     // Expand namespace with a macro parameter given value.
     // The namespace and the extended value will be evaluated for macros.
@@ -78,8 +79,6 @@
       ,Core·Status·on_track
       ,Core·Status·derailed
     }Core·Status;
-
-  #endif
 
   //----------------------------------------
   // flag facility, argument guard facility

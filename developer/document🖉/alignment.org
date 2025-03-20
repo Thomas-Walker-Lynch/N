@@ -1,8 +1,13 @@
 
+*recovering alignment of pointers that point to array cells (elements)
 
 Interesting observation, recovering alignment for a pointer into an array is expensive.  It requires modulus against the element size to find how far off the pointer is.
 
+*converving alignment
+
 If one starts aligned, say on zero, then only increments by the element size, alignment is not ever lost.  However, if an element pointer is computed by a imprecise process, and rounding is recovered to get it back again, then the modulus is required.
+
+*power of radix boundaries
 
 However, modulus is not hard on powers of the radix boundaries. 
 
@@ -10,4 +15,14 @@ So either a) in the first place make elements a power of the radix in size, perh
 
 As a consequence it is expensive to compute the extent of an object with arbitrary CVT (Cell Value Type).  Given the two bounding pointers, one must subtract and divide by the sizeof(CVT) to recover the extent, and divide is expensive. In contrast when given the position and extent, the address of the rightmost cell can be recovered with an addition. 
 
+*store base and extent, rather than two pointers
+
 It follows that if the extent is needed that it makes more sense to store the position and extent for an interval than it does to store two bounding pointers.
+
+*unaligned bound
+
+`on_rightmost` is a precise predicate. If the head pointer were advanced by a value other than sizeof(CVT) then it could step right over the base pointer to the rightmost cell.  If this was part of looping, the loop would continue.
+
+A situation where this could happen, suppose we want to copy a block of memory.  We walk AU by AU (byte by byte)  up to an aligned on AU8 address.  Then we copy AU8 by AU8.  Here is the problem, the actual data being copied ends on an AU pointer boundary, not an AU8 pointer boundary.  It is not difficult to round down to an AU8 because 8 is a power of two. This round down is required, to the point of the last full AU8 that can be copied, to stop the AU8 copy. This is not a problem for AU8 because 8 is a power of two.  
+
+However, if the increment were by the size of CVT,  and the boundary was given given by an AU pointer, then rounding down requires a modulus operation to know where the last CVT fits in.  It is not clear what use case exists for this.
