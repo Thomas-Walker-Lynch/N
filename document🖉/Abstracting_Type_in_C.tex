@@ -1,0 +1,596 @@
+% Created 2025-03-23 Sun 06:28
+% Intended LaTeX compiler: pdflatex
+\documentclass[11pt]{article}
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{graphicx}
+\usepackage{longtable}
+\usepackage{wrapfig}
+\usepackage{rotating}
+\usepackage[normalem]{ulem}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{capt-of}
+\usepackage{hyperref}
+\author{Thomas}
+\date{\today}
+\title{Abstracting Type in C}
+\hypersetup{
+ pdfauthor={Thomas},
+ pdftitle={Abstracting Type in C},
+ pdfkeywords={},
+ pdfsubject={},
+ pdfcreator={Emacs 29.4 (Org mode 9.6.15)}, 
+ pdflang={English}}
+\begin{document}
+
+\maketitle
+\tableofcontents
+
+
+\section{Introduction}
+\label{sec:org8b18d97}
+
+Type abstraction is a fundamental challenge in C programming. Unlike object-oriented languages that provide built-in mechanisms for polymorphism, C requires explicit design patterns to achieve similar flexibility. This document explores various approaches to implementing type abstraction in C, using a tape machine (TM) as a concrete example.
+
+The core problem we're addressing is how to write generic code that can operate on different implementations of the same abstract interface. Specifically, we want to create functions that can work with any tape machine implementation without knowing the implementation details. This separation of interface from implementation facilitates creating modular, maintainable code in C.
+
+Throughout this document, we use the notation Ξ(TM, CVT) to represent a generic type where TM is the tape machine and CVT is a template parameter for the cell value type. This allows us to discuss both implementation-agnostic and type-specific behaviors.
+
+\section{Namespaces in C}
+\label{sec:org8165afa}
+
+C does not have built-in namespace support like C++ or other modern languages. However, we can simulate namespaces using naming conventions. In this document, we use the middle dot character (·) as a namespace separator to organize identifiers into logical groups.
+
+\subsection{The Middle Dot Convention}
+\label{sec:org598d1d1}
+
+The middle dot (·) in identifiers like `TM·Array` or `TM·Function·fg` is not a special operator in C. It is literally part of the identifier name. This convention creates a visual hierarchy that mimics namespaces while remaining valid C code.
+
+Examples:
+```c
+\emph{/ TM is the primary namespace
+/} Array is a sub-namespace
+// init\textsubscript{pe} is a function in that namespace
+Ξ(TM·Array, CVT)·init\textsubscript{pe}
+
+\emph{/ Core is the primary namespace
+/} Guard is a sub-namespace
+// check is a function in that namespace
+Core·Guard·fg.check(\&chk, 1, tm, TM·Msg·tm)
+```
+
+\subsection{Benefits of This Approach}
+\label{sec:orgc15284c}
+
+\begin{enumerate}
+\item \textbf{\textbf{Organization}}: Related functions and types are visually grouped together
+\item \textbf{\textbf{Collision avoidance}}: Reduces the risk of name collisions in large codebases
+\item \textbf{\textbf{Readability}}: Makes it clear which component a function or type belongs to
+\item \textbf{\textbf{Consistency}}: Provides a uniform naming scheme across the codebase
+\end{enumerate}
+
+\subsection{Implementation Details}
+\label{sec:org4c7d92c}
+
+Since the middle dot is part of the identifier, the C compiler treats these names as atomic units. For example, `TM·Array` is a single identifier to the compiler, not two identifiers separated by an operator.
+
+The Ξ macro system we discussed earlier helps generate these namespace-like identifiers consistently:
+
+```c
+// Generates TM·int
+Ξ(TM, int)
+
+// Generates TM·Array·int·init\textsubscript{pe}
+Ξ(TM·Array, int)·init\textsubscript{pe}
+```
+
+\subsection{Comparison with C++ Namespaces}
+\label{sec:org420b759}
+
+Unlike C++ namespaces, our convention:
+\begin{enumerate}
+\item Does not provide actual scope isolation
+\item Cannot be opened with `using` directives
+\item Is purely a naming convention, not a language feature
+\end{enumerate}
+
+Despite these limitations, this convention provides many of the organizational benefits of true namespaces while remaining compatible with standard C.
+
+\section{Tableau and FG Tables}
+\label{sec:org8b1de5b}
+
+Two key concepts in our type abstraction approach are the "Tableau" and "Function Given (FG) Table." Understanding these concepts is essential for following the rest of this document.
+
+\subsection{Tableau}
+\label{sec:orgdef1786}
+
+A "Tableau" is our term for a data structure that holds the state of a particular instance. In the context of our tape machine example:
+
+\begin{enumerate}
+\item \textbf{\textbf{Definition}}: A tableau is a struct that contains all the state variables needed for a specific implementation of an abstract interface.
+
+\item \textbf{\textbf{Purpose}}: The tableau serves as a shared workspace where functions can read and write state information. Think of it as a blackboard where functions can leave "notes" for each other.
+
+\item \textbf{\textbf{Implementation-specific}}: Each implementation of an abstract interface will have its own tableau structure with different fields appropriate to that implementation.
+\end{enumerate}
+
+For example, the tableau for an array-based tape machine might look like:
+
+```c
+struct \{
+  CVT *hd;           \emph{/ Current head position
+  CVT *position;     /} Base position (leftmost cell)
+  Ξ(extent\textsubscript{t}, CVT) extent;  // Number of cells in the tape
+\} Ξ(TM·Array, CVT);
+```
+
+While a function-based implementation might have a completely different tableau structure.
+
+\subsection{Function Given (FG) Tables}
+\label{sec:orgdfb6392}
+
+The "Function Given" (FG) table is a collection of function pointers that implement operations on a specific tableau type.
+
+\begin{enumerate}
+\item \textbf{\textbf{Definition}}: An FG table is a struct containing function pointers that all take a tableau as their first argument (hence "Function Given").
+
+\item \textbf{\textbf{Purpose}}: FG tables allow for polymorphic behavior in C by providing different implementations of the same interface.
+
+\item \textbf{\textbf{Structure}}: Each function in the FG table takes a pointer to a tableau as its first argument, allowing it to access and modify the state.
+\end{enumerate}
+
+A simplified example of an FG table for our tape machine might look like:
+
+```c
+typedef struct \{
+  TM·Tape·Topo (*Tape·topo)(TM *tm);
+  bool (*Tape·bounded)(TM *tm);
+  TM·Head·Status (*Head·status)(TM *tm);
+  Core·Status (*mount)(TM *tm);
+  void (*step)(TM *tm);
+  void (*rewind)(TM *tm);
+  // \ldots{} other functions
+\} TM·FG;
+```
+
+When specialized for a specific cell value type (CVT), we might have:
+
+```c
+typedef struct \{
+  TM·FG *fg;  // Base function table
+  Ξ(extent\textsubscript{t}, CVT) (*extent)(TM *tm);
+  CVT (*read)(TM *tm);
+  void (*write)(TM *tm, CVT *remote\textsubscript{pt});
+\} Ξ(TM, CVT)·FG;
+```
+
+\subsection{The Relationship Between Tableaux and FG Tables}
+\label{sec:org6e5cc1f}
+
+The tableau and FG table work together to implement polymorphism:
+
+\begin{enumerate}
+\item Each implementation provides its own tableau type and corresponding FG table.
+\item The first field of a tableau is typically a pointer to its corresponding FG table.
+\item Functions in the FG table operate on the tableau, reading and writing its state.
+\item Client code can work with any implementation by using the functions in the FG table without knowing the details of the tableau structure.
+\end{enumerate}
+
+This pattern allows us to achieve polymorphic behavior in C while maintaining type safety and avoiding the overhead of dynamic dispatch mechanisms like those used in object-oriented languages.
+
+\section{Implementing Templates in C}
+\label{sec:orge82e21e}
+
+C lacks built-in support for templates or generics, unlike C++ or modern languages like Java or Rust. However, we can implement template-like functionality using the C preprocessor. This section explains the template system used throughout this document.
+
+\subsection{The Xi (Ξ) Macro System}
+\label{sec:org1ff0935}
+
+We use a special macro system, represented by the Greek letter Xi (Ξ), to create template-like behavior in C. This system allows us to parameterize types and functions, similar to templates in C++.
+
+The Ξ macro concatenates identifiers with a middle dot (·) separator:
+
+```c
+Ξ(TM, CVT)              -> TM·CVT
+Ξ(TM·Array, CVT)·init   -> TM·Array·CVT·init
+```
+
+This allows us to create type and function names that are specialized for specific types, while maintaining a consistent naming convention.
+
+\subsubsection{Implementation Details}
+\label{sec:org08d9fe2}
+
+The Ξ macro system is implemented using variadic macros and the C preprocessor's token concatenation operator (\#\#):
+
+```c
+\#define \_Ξ2(a, b) a\#\#·\#\#b
+\#define Ξ2(a, b) \_Ξ2(a, b)
+```
+
+The system includes macros for different numbers of arguments (Ξ0 through Ξ10) and uses argument counting to automatically select the appropriate macro:
+
+```c
+\#define Ξ(\ldots{}) Ξ\textsubscript{EXPAND}(COUNT\textsubscript{ARGS}(\uline{\uline{VA\textsubscript{ARGS}}}), \uline{\uline{VA\textsubscript{ARGS}}})
+```
+
+This allows for flexible usage with different numbers of template parameters.
+
+\subsection{CVT: Cell Value Type}
+\label{sec:org8359158}
+
+Throughout our tape machine implementation, we use CVT (Cell Value Type) as a template parameter. This represents the type of data stored in each cell of the tape.
+
+The implementation uses conditional compilation to handle different CVT values:
+
+```c
+\#ifndef CVT
+  // Code for generic, non-specialized case
+\#endif
+
+\#ifdef CVT
+  // Code specialized for a specific CVT
+\#endif
+```
+
+When using the library, you include it multiple times with different CVT definitions:
+
+```c
+// First include with CVT undefined for base definitions
+\#include "TM.lib.c"
+
+// Then include with CVT defined for each type specialization
+\#define CVT int
+\#include "TM.lib.c"
+\#undef CVT
+
+\#define CVT float
+\#include "TM.lib.c"
+\#undef CVT
+```
+
+\subsection{Template-Based Type Generation}
+\label{sec:orgcde6c14}
+
+The template system generates several types of identifiers:
+
+\begin{enumerate}
+\item \textbf{\textbf{Type names}}: `Ξ(TM, CVT)` becomes `TM·int` when CVT is defined as `int`
+\item \textbf{\textbf{Function names}}: `Ξ(TM·Array, CVT)·init\textsubscript{pe}` becomes `TM·Array·int·init\textsubscript{pe}`
+\item \textbf{\textbf{Variable names}}: `Ξ(extent\textsubscript{t}, CVT)` becomes `extent\textsubscript{t}·int`
+\end{enumerate}
+
+\subsection{Function Given (FG) Tables}
+\label{sec:org691e6ba}
+
+A key part of our implementation is the Function Given (FG) table pattern. Each implementation of the tape machine provides an FG table containing function pointers for its operations.
+
+The FG tables are specialized based on the CVT:
+
+```c
+typedef struct \{
+  TM·FG *fg;  // Base function table
+  Ξ(extent\textsubscript{t}, CVT) (*extent)(TM *tm);
+  CVT (*read)(TM *tm);
+  void (*write)(TM *tm, CVT *remote\textsubscript{pt});
+\} Ξ(TM, CVT)·FG;
+```
+
+This allows for type-safe operations while maintaining a consistent interface.
+
+\subsection{Benefits of This Approach}
+\label{sec:org5338608}
+
+\begin{enumerate}
+\item \textbf{\textbf{Type safety}}: The compiler checks that the correct types are used with each specialized function
+\item \textbf{\textbf{Code reuse}}: Common functionality is defined once and specialized for different types
+\item \textbf{\textbf{Consistent naming}}: The Ξ macro ensures a consistent naming convention
+\item \textbf{\textbf{Modularity}}: Different implementations can share the same interface
+\end{enumerate}
+
+\subsection{Limitations}
+\label{sec:org70b9fc6}
+
+\begin{enumerate}
+\item \textbf{\textbf{Verbosity}}: More verbose than native templates in C++
+\item \textbf{\textbf{Complexity}}: Requires understanding of preprocessor macros and conditional compilation
+\item \textbf{\textbf{Debugging}}: Preprocessor-generated code can be harder to debug
+\item \textbf{\textbf{Limited IDE support}}: Most IDEs don't understand this template system for code completion
+\end{enumerate}
+
+Despite these limitations, this approach provides a powerful way to implement generic, type-safe code in C without resorting to void pointers or code duplication.
+
+\section{Generalizing type}
+\label{sec:orgbc78d46}
+
+\subsection{Passing a TM FG table instance}
+\label{sec:org326c1a7}
+
+\begin{enumerate}
+\item Suppose we have a generic TM FG table with the declared functions constituting the architecture (user's view, interface) of a tape machine.
+
+\item Instances of this TM FG table represent different implementations of the architecture. For example, TM·Array·fg for a TM implemented as an array, and TM·Function·fg for a function implementation (similar to the Natural\textsubscript{Number} in the Java implementation).
+
+\item Now suppose we have a function `map` that is given a TM\textsubscript{read}, a TM\textsubscript{write}, and a function.
+The map does not care how the TM is implemented.
+
+If these first two arguments are declared as TM FG type, then they can accept any fg table whether it be an Array implementation, a Function implementation, etc. The map can then pick the functions it needs, such as step and rightmost, from the
+table, and thus get tape behavior. 
+
+This achieves what we wanted: a map function that can use a tape machine and does not care what the implementation of that tape machine is.
+
+However, the TM functions that map calls require a first argument that holds the TM instance data. Without this, it cannot know which machine is being operated on.
+Furthermore, the instance data type must match the TM fg table type.
+
+Given steps 1 through 3, we never passed in instance data to map, only a TM FG table instance. So map has a type, but not the data.
+\end{enumerate}
+
+
+\subsection{Passing TM instance data, compile in the fg table}
+\label{sec:orged57256}
+
+\begin{enumerate}
+\item As noted, `map` is given a TM\textsubscript{read}, a TM\textsubscript{write}, and a function. For these first two
+arguments, suppose we pass in the instance data, i.e., struct pointers.
+
+\item The TM·Array struct will hold a base pointer to the array and the head location. The TM·Function struct would hold a handle recognized by the functions or some state used by them.
+
+\item Then we have a map function for each architecture type, and we compile into each of these a call to the correct default TM·fg table. The map·Array will have TM·Array·fg compiled into it, and the map·Function will have TM·Function·fg compiled into it, etc.
+
+\item This approach works, but we duplicate the map code many times just to get the types to match the calls.
+\end{enumerate}
+
+
+\subsection{Passing in both the TM instance data and corresponding TM FG tables instances}
+\label{sec:orgf9f5316}
+
+\begin{enumerate}
+\item Say we have one generic `map` that takes 5 arguments: TM\textsubscript{read} (an instance), TM\textsubscript{read}\textsubscript{fg}, a TM\textsubscript{write} (an instance), and TM\textsubscript{write}\textsubscript{fg}, plus the function to apply.
+
+\item The instance parameters must be declared `void *` to prevent argument checking on them; otherwise, it will be necessary to implement many map functions for each instance type combination.
+
+\item This works, though we have no way to know if the correct type of instance data that matches the fg table was actually passed in.
+
+\item We could create many wrapper functions to accomplish the instance data type check, then call a central map function with `void *` instance data pointers. With any luck, the optimizer would make this extra layer go away, so it will be efficient. Still, map now has 5 arguments instead of the three that are natural for the problem.
+\end{enumerate}
+
+
+\subsection{Using a "vtable"}
+\label{sec:orga3c331a}
+
+\begin{enumerate}
+\item All TM instance types are structs with a first field that points to the fg table,
+regardless of the implementation type. This is not a serious requirement because
+each implementation type already has a struct for its implementation data. However, it does make an instance bigger, and it is not clear that the optimizer will be able to
+optimize it effectively.
+
+\item Then a generic fg table is created, where the functions have the signatures as specified
+in the FG table. However, each of these functions follows the fg table pointer in the
+instance data given to it as a first argument, and then calls that function.
+
+\item It works, and it is a tried and true method.
+\end{enumerate}
+
+\subsection{Using a pointer pair}
+\label{sec:orgc9d996e}
+
+\begin{enumerate}
+\item Instead of the instance data being called the 'TM type', a pair is the 'TM type'.
+The first member of the pair points to an instance, the second to a corresponding
+fg table.
+
+\item Again there are some generic TM functions, each accepts a pair as a first argument, and then calls the corresponding fg table function while giving it the instance pointer
+from the pair as the first argument.
+
+\item This approach packs the same information as the vtable approach. If there is a
+one-to-one correspondence between instances and pairs, then it is larger by one pointer.
+
+\item This is a type of 'link' from our continuations, but the tableau pointer is gone due
+to using a stack frame, and the continuation table pointer is gone due to flow-through sequencing. Thus it is two pointers instead of 4.
+
+\item Hopefully, the optimizer would recognize that the pair pointers are redundant. They are only needed to ensure that the instance and fg table go together.
+\end{enumerate}
+
+\subsection{Instance curried dispatch function}
+\label{sec:orga7d5cdc}
+
+\begin{enumerate}
+\item In this case, a pointer to a function is the 'TM type'. There is an enum that gives numeric tags to each of the functions in the FG struct instance.
+
+\item The tag for the desired fg function to be called is passed as the first argument to the dispatch function, and the remaining arguments are for the fg function.
+
+\item The dispatch function has the instance data and fg table pointer curried into it, so it then calls the correct fg function while providing it with the correct instance data.
+
+\item In C, it is not immediately obvious how to create a function on the fly each time an
+instance is created to curry the instance data into it, and then later how to call
+the newly created function.
+\end{enumerate}
+
+\subsection{Self-typed Instance and dispatch function}
+\label{sec:orge6b7e0a}
+
+\begin{enumerate}
+\item With this method, an extra field is added to the instance data that identifies its type. Then a globally available TM-specific dispatch function is called to run the desired fg function on the data. It is similar to the dispatch function from above, but the instance data is an additional argument.
+
+\item The dispatch function uses the type information to know which fg table to call. This type information could be a pointer to the appropriate fg table.
+
+\item This approach differs from the vtable method in that all the arguments are given to the one TM dispatch function, and it figures out how to do the dispatch. There is not a wrapper-per-function.
+\end{enumerate}
+
+\subsection{Which approach?}
+\label{sec:org6c9a58c}
+
+We want to be able to declare an instance as a local variable, where it will end up being on the stack frame. We want to avoid heap allocation for performance reasons, but not exclude the use of heap memory.
+
+Dynamically created functions are out of the question. Dispatch approaches require the enum table to have tags. This is not a show-stopper. However, having one dispatch function means the argument types are not checked. That is a problem.
+
+Doubled-up arguments (one for the instance, the other for the table) either require wrappers or do not check that an instance really goes with the data. Besides, it requires a lot of typing.
+
+The pointer pair approach requires the separate maintenance of the pair. When these are local variables, the pair has to be tied to the instance. This would require the user to be aware of the existence of both the instance data and the pair, to pass them to an initializer. This could be avoided if the pair were combined with the instance, but that
+is identical to the vtable approach (the instance pointer no longer being needed).
+
+So we are led to the vtable approach, though we are still hoping for the curried dispatch function - lol.
+
+\section{Implementation Details}
+\label{sec:org009bd61}
+
+\subsection{Main objects}
+\label{sec:org4c8ad02}
+
+\begin{enumerate}
+\item Ξ(TM, CVT)·FG table (CVT is a template for the tape cell value type).
+\item Ξ(TM, CVT) instance, typically declared as a local variable.
+\item FG Ξ(TM·Array, CVT)·fg, which is a Ξ(TM, CVT)·FG type, provides pointers to function
+wrappers that are given a Ξ(TM, CVT) instance. Each wrapper then calls the function found in the
+instance's vtable.
+\end{enumerate}
+
+\subsection{Declaration}
+\label{sec:org2d5c70b}
+
+\begin{enumerate}
+\item With CVT not defined, \#include "TM.lib.c" in FACE section.
+\item With each different CVT value defined, \#include "TM.lib.c" in FACE section again.
+\item Do the same in the IMPLEMENTATION section.
+\end{enumerate}
+
+\subsection{Instantiation}
+\label{sec:orgf6668e0}
+
+\begin{enumerate}
+\item Define a local variable, or get from malloc, a Ξ(TM, CVT) type, say `tm`.
+\item Call init(tm).
+\end{enumerate}
+
+\subsection{Use}
+\label{sec:orgcb2825f}
+
+\begin{enumerate}
+\item Call, for example, Ξ(TM·Array, CVT)·fg.step(tm), where tm is a Ξ(TM, CVT) type.
+\end{enumerate}
+
+\subsection{FG table instances}
+\label{sec:org4267ad9}
+
+There can be multiple instances of an FG table, each with functions that are implemented differently, though they share the same FG table type.
+
+Each CVT and FG table instance type will have a different tableau struct. Each tableau struct will have the type Ξ(TM·<type>, CVT), where <type> is the FG instance table type. For example, Ξ(TM·Array, CVT) is a struct of state variables for an Array implementation of the TM.
+
+\subsection{One for all FG table}
+\label{sec:orga349d27}
+
+The "TM.lib.c" file defines an FG type called Ξ(TM, CVT)·FG. Note that CVT is a template
+parameter. Hence, giving different CVT bindings, there will be different FG tables.
+
+For each Ξ(TM, CVT)·FG, there can be a number of Ξ(TM·<implementation>, CVT)·fg instances. For
+example, Ξ(TM·Array, CVT)·fg. Each of these is a parameterized table.
+
+A user has an fg table to call functions from. This is either passed in or, more
+likely, found at global scope after including "TM.lib.c", and then including it again for
+each value of the CVT variable to be used.
+
+For each implementation type, there is a struct defined called Ξ(TM·<implementation>, CVT),
+note the lack of further suffix. Instances of this type are said to be instances of the tape
+machine. `FG` stands for `function given`, and what each said function is given is one or more arguments of the Ξ(TM·<implementation>, CVT) type.
+
+When a user wants a tape machine, the user makes an instance of a Ξ(TM·<implementation>, CVT).
+This is then handed to a function called Ξ(TM·<implementation>, CVT)·init(). The init function is given whatever parameters are needed for initializing the instance, and it returns a more generalized pointer of type `Ξ(TM, CVT) *`.
+
+After initialization, the Ξ(TM·<implementation>, CVT) instance will have a first field value that points to the Ξ(TM·<implementation>, CVT)·fg table. However, the pointer to this instance will be of the type returned by init, which is `Ξ(TM, CVT) *` (notice it lost the implementation). This more generic pointer can now be used with the generic instance of the
+Ξ(TM, CVT)·FG table, Ξ(TM, CVT)·fg, which holds wrapper functions that make use of the
+first field value to find the real fg table and to call those functions.
+
+Hence, after the user calls the correct init for the specific instance made, the resulting pointer points to the same type object independent of the implementation of the functions. Thus, code written to manipulate TMs can be written in a manner that is agnostic to the implementation of those TMs.
+
+When a function is called, say Ξ(TM, CVT)·fg.step(tm), it is passed the generic type `Ξ(TM, CVT) *`, tm. This will call the step wrapper function, which will in turn pass the same arguments (in this case, only `tm`) to the step function found in the fg table pointed to by the first member of the tm struct.
+
+\subsection{Separate FG tables}
+\label{sec:orgafbf17c}
+
+In the flat fg table approach described in the prior section, each wrapper function table of the form Ξ(TM, CVT)·fg, obtained by setting the CVT template to a type value, will have a full set of wrapper function pointers. When a wrapper function is the same independent of the CVT variable, it still has a pointer copied into each fg table. Thus, there will be a lot of redundancy in the tables if many functions are not CVT-specific.
+
+For the layered fg table, there are separate wrapper function tables for the wrappers that are independent of CVT and those that are CVT-differentiated. The user then calls functions from the CVT-independent table when invoking those functions and from the CVT-differentiated functions table when calling those. So, for example, the user would call TM·fg.step(tm) to do a step, as that is CVT-independent, but call Ξ(TM, CVT)·fg.read(tm) to do a read, as the read value is CVT-differentiated.
+
+\subsection{Direct access through instance field (Orrin suggestion)}
+\label{sec:orgfe58dd7}
+
+Instead of calling fg functions through a globally visible table such as:
+
+```c
+fg->step(tm); // Wrapper style
+```
+
+where fg is of type Ξ(TM, CVT)·FG and calls to it require globally accessible wrapper functions,
+
+we can use the instance's first field directly:
+
+```c
+tm->fg->step(tm);
+```
+
+Here, tm is a Ξ(TM, CVT) * — the generic type returned by init — and fg is the first field of the instance pointing to the correct FG table.
+
+This style removes the need for wrapper functions entirely. Each TM implementation embeds its corresponding FG table pointer directly in the instance. Thus, no global wrapper needs to be referenced, and function type-checking is preserved at compile time.
+
+If there are CVT-independent functions, we can use a layered FG table. Each CVT-specific FG table includes a pointer to a base table:
+
+```c
+tm->fg->base->step(tm); \emph{/ Access shared, CVT-independent function
+tm->fg->read(tm);       /} Access CVT-specific function
+```
+
+This structure mimics prototype delegation in JavaScript, except we resolve the chain explicitly with types, not dynamic name resolution.
+
+The benefit of this approach is that the user only needs to have the instance in scope — no global FG table declarations. All function dispatch is local and type-safe.
+
+The only remaining user burden is knowing whether a function is CVT-specific or not. This is made obvious by whether the function appears in the base or CVT-differentiated FG struct, and the compiler will catch mismatches.
+
+(Contribution by Orrin — co-author)
+
+\section{Observations}
+\label{sec:org46e6336}
+
+C does not have automatic conversion of a child type to its parent; instead, it will give a type mismatch error.
+
+The vtable pattern with separate tables will have a CVT-differentiated fg table pointer on the tableau. Without the function wrappers, a call can occur like this:
+
+```c
+tm->fg->step(tm)
+```
+
+Or even with the wrappers and a globally available fg table:
+
+```c
+fg->step(tm)
+```
+
+In both of these, `step` will be the CVT-differentiated version of step, so types will match, and these calls work.
+
+However, things change when we want to call the non-CVT-differentiated shared table:
+
+```c
+tm->TM·fg->mount(tm)
+```
+
+Due to `mount` being in the shared fg table that has type `TM·fg` where it expects to be given arguments of type `TM *`, and having type `TM·<CVT>`, there will be a type mismatch
+error on the call. The programmer will be compelled to fix this with a cast:
+
+```c
+tm->TM·fg->mount((TM *)tm)
+```
+
+Requiring the programmer to defeat the type system by habit is not a good approach.
+
+So the one solution that does work is the one big table per type. All functions will then have correct signatures in the FG declaration. In the implementation, the more generic functions can be cast when assigned directly to the fg table function pointers, or wrappers that delegate can be written and assigned to the fg table function pointers.
+
+\section{Conclusion}
+\label{sec:org1380bd0}
+
+After examining various approaches to type abstraction in C, the vtable pattern emerges as the most practical solution for our tape machine implementation. While it has some overhead in terms of memory usage, it provides the best balance of type safety, ease of use, and performance.
+
+The direct access through instance field approach suggested by Orrin offers an elegant alternative that eliminates the need for wrapper functions while maintaining type safety. This approach is particularly appealing for its simplicity and the fact that it keeps all the necessary information localized to the instance.
+
+For projects where performance is critical, the "one big table per type" approach may be the most efficient, as it avoids the need for type casting while still providing a clean interface.
+
+Ultimately, the choice of approach depends on the specific requirements of the project, but the vtable pattern and its variations provide a solid foundation for type abstraction in C programming.
+\end{document}

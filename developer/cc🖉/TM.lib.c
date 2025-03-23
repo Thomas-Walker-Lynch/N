@@ -13,7 +13,18 @@
    An Area with zero elements has 'length == 0' or is 'empty'. In contrast ,and
    area located (position specified) with a null pointer is said not to exist.
 
-   Template variable: CVT
+   ----
+
+   CVT is a template variable that affects type names that show on the interface.
+   They affect all implementations in the same way.
+
+   There are multiple implementations, such as Array. Each has its own FG
+   table instance. For example Array·fg. Also each has its own Tableau type, for
+   example, `typedef struct { ... } Ξ(TM·Array ,CVT)` is the Tableau type for
+   the array implementation.
+
+   This implementation uses pointer pairs to stand for 'TM type' that are
+   passed around. 
 
 */
 
@@ -47,80 +58,97 @@
   #ifndef CVT
     typedef enum{
        TM·Tape·Topo·mu = 0 
-      ,TM·Tape·Topo·nonexistent = 1 
-      ,TM·Tape·Topo·empty       = 1 << 1
-      ,TM·Tape·Topo·singleton   = 1 << 2
-      ,TM·Tape·Topo·segment     = 1 << 3
-      ,TM·Tape·Topo·circle      = 1 << 4
-      ,TM·Tape·Topo·tail_cyclic = 1 << 5
-      ,TM·Tape·Topo·infinite    = 1 << 6
+      ,TM·Tape·Topo·empty       = 1
+      ,TM·Tape·Topo·singleton   = 1 << 1
+      ,TM·Tape·Topo·segment     = 1 << 2
+      ,TM·Tape·Topo·circle      = 1 << 3
+      ,TM·Tape·Topo·tail_cyclic = 1 << 4
+      ,TM·Tape·Topo·infinite    = 1 << 5
     }TM·Tape·Topo;
 
-    const TM·Tape·Topo TM·Tape·Topo·finite_nz = 
-      TM·Tape·Topo·singleton | TM·Tape·Topo·segment
+    const TM·Tape·Topo TM·Tape·Topo·bounded = 
+      TM·Tape·Topo·singleton 
+      | TM·Tape·Topo·segment
       ;
 
     // If tape machine does not support step left ,then Status·leftmost 
     // will be reported as Status·interim.
     typedef enum{
        TM·Head·Status·mu = 0
-      ,TM·Head·Status·not_on_tape = 1
-      ,TM·Head·Status·origin    = 1 << 1
-      ,TM·Head·Status·interim   = 1 << 2
-      ,TM·Head·Status·rightmost = 1 << 3
+      ,TM·Head·Status·dismounted  = 1
+      ,TM·Head·Status·out_of_area = 1 << 1
+      ,TM·Head·Status·leftmost    = 1 << 2
+      ,TM·Head·Status·interim     = 1 << 3
+      ,TM·Head·Status·rightmost   = 1 << 4
     } TM·Head·Status;
 
     const TM·Head·Status TM·Head·Status·on_tape = 
-      TM·Head·Status·origin
+      TM·Head·Status·leftmost
       | TM·Head·Status·interim
       | TM·Head·Status·rightmost
       ;
 
-    typedef struct TM;
-
-    // tape and area are included with Tape Machine to facilitate abstract interfaces.
-    typedef struct{
-
-      Core·Status (*topo)  (TM *tm ,TM·Tape·Topo *result);
-
-      // tape machine functions
-      Core·Status (*mount)   (TM *tm);
-      Core·Status (*dismount)(TM *tm);
-
-      TM·Head·Status (*status)        (TM *tm ,TM·Head·Status *status);
-      Core·Status    (*head_on_format)(TM *tm ,bool *flag);
-
-      bool (*can_read)    (TM *tm);
-      bool (*on_leftmost) (TM *tm);
-      bool (*on_rightmost)(TM *tm);
-
-      void (*step)      (TM *tm);
-      void (*step_left) (TM *tm);
-      void (*step_right)(TM *tm); // Synonym for step
-      void (*rewind)    (TM *tm);
-
-    } TM·FG;
 
   #endif // #ifndef CVT
 
   #ifdef CVT
 
     typedef Ξ(extent_t ,CVT) size_t;
-
+                             
     // instance struct with vtable pointer as first entry
+    // tape and area are included with Tape Machine to facilitate abstract interfaces.
     typedef struct{
+
+      TM·Tape·Topo (*Tape·topo)(TM *tm);
+      bool (*Tape·bounded)(TM *tm);
+
+      TM·Head·Status (*Head·status)(TM *tm ,TM·Head·Status *status);
+      bool (*Head·on_tape)(TM *tm);
+      bool (*Head·on_leftmost) (TM *tm);
+      bool (*Head·on_rightmost)(TM *tm);
+
+      // tape machine functions
+      Core·Status (*mount)   (TM *tm);
+      Core·Status (*dismount)(TM *tm);
+
+      void (*step)      (TM *tm);
+      void (*step_left) (TM *tm);
+      void (*rewind)    (TM *tm);
+
+      TM·FG TM·fg; // points to TM·FG instance
       Ξ(extent_t ,CVT) (*extent)(TM *tm);
       CVT  (*read) (TM *tm);
       void (*write)(TM *tm ,CVT *remote_pt);
+
+    } Ξ(TM ,CVT)·FG;
+
+    // array FG instance
+                
+    typedef struct Ξ(TM ,CVT)·Tableau;
+    typedef struct Ξ(TM·Array ,CVT)·Tableau;
+
+    // `init` puts type consistent values in this struct
+    typedef struct{
+      Ξ(TM ,CVT)·FG *fg;
+      Ξ(TM ,CVT)·Tableau *t;
     } Ξ(TM ,CVT);
 
-    // Array Initializers
-    typedef struct{
-      TM *(*mount_pe)( Ξ(TM·Array ,CVT) *tm ,CVT position[] ,Ξ(extent_t ,CVT) extent );
-      TM *(*mount_pp)( Ξ(TM·Array ,CVT) *tm ,CVT *position_left ,CVT *position_right );
-    } Ξ(TM·Array ,CVT)·FG;
+    #define FG·call(tm, fn, ...) \
+      ((tm)->fg->fn)((tm)->t, ##__VA_ARGS__)
 
     Ξ(TM ,CVT)·FG Ξ(TM·Array ,CVT)·fg;
+                                  
+    Ξ(TM ,CVT) Ξ(TM·Array ,CVT)·init_pe( 
+       Ξ(TM·Array ,CVT)·Tableau t
+      ,CVT position[] 
+      ,Ξ(extent_t ,CVT) extent 
+    );
+
+    Ξ(TM ,CVT) Ξ(TM·Array ,CVT)·init_pp( 
+       Ξ(TM·Array ,CVT)·Tableau t
+      ,CVT *position_left 
+      ,CVT *position_right 
+    );
 
   #endif // #ifdef CVT
 
@@ -157,185 +185,153 @@
         "Null position.This is only possible when the tape machine has not been initialized.";
       const char *TM·Msg·flag="given NULL flag pointer";
       const char *TM·Msg·result="given NULL result pointer";
+      const char *TM·Msg·head="head not on tape";
 
-      //-----------------------------------
-      // generic instance type, with vtable pointer at top
+      //----------------------------------------
+      // TM Tableau, not CVT differentiated
 
       struct{
-        TM·FG *fg;
-      } TM;
+        void *hd;
+        void *position;
+      }TM·Tableau;
+
+
+      //----------------------------------------
+      // TM Array implementation, not CVT differentiated
+
+      TM·Tape·Topo  TM·Array·Tape·topo(TM·Tableau *t){
+        if(!t || !t->position) return T·Tape·Topo·mu;
+        if(t->extent == 0) TM·Tape·Topo·singleton; 
+        return TM·Tape·Topo·segment;
+      }
+      Local TM·Tape·Topo TM·Tape·bounded(TM·Tableau *t){
+        return TM·tape_top(t) & TM·Tape·Topo·bounded;
+      }
+
+      TM·Tape·Topo  TM·Array·Tape·mount(TM·Tableau *t){
+        if(!t || !t->position) return T·Tape·Topo·mu;
+        if(t->extent == 0) TM·Tape·Topo·singleton; 
+        return TM·Tape·Topo·segment;
+      }
+
 
       //-----------------------------------
       // generic call wrappers
 
-      Core·Status TM·topo(TM *tm ,TM·Tape·Topo *result){
-        #ifdef TM·DEBUG
-          Core·Guard·init_count(chk);
-          Core·Guard·fg.check(&chk ,1 ,tm ,TM·Msg·tm);
-          Core·Guard·fg.check(&chk ,1 ,result ,TM·Msg·result);
-          Core·Guard·if_return(chk);
-        #endif
-        return tm->fg.topo(tm ,result);
+      Local TM·Tape·Topo TM·Tape·topo(TM *tm){
+        return tm->fg.Tape·topo(tm);
+      }
+      Local TM·Tape·Topo TM·Tape·bounded(TM *tm){
+        return TM·tape_top(tm) & TM·Tape·Topo·bounded);
       }
 
-      // mount dismount
-      #define Core·Status_tm(name) \
-      Local Core·Status TM##name##(TM *tm) { \
-        #ifdef TM·DEBUG \
-          Core·Guard·init_count(chk); \
-          Core·Guard·fg.check(&chk, 1, tm, TM·Msg·tm); \
-          Core·Guard·if_return(chk); \
-        #endif \
-        return tm->fg.##name##(tm); \
-      }
-
-      Core·Status_tm(mount);
-      Core·Status_tm(dismount);
-   
-      Local TM·Head·Status TM·status(TM *tm ,TM·Head·Status *result){
-        #ifdef TM·DEBUG
-          Core·Guard·init_count(chk);
-          Core·Guard·fg.check(&chk ,1 ,tm ,TM·Msg·tm);
-          Core·Guard·fg.check(&chk ,1 ,result ,TM·Msg·result);
-          Core·Guard·if_return(chk);
-        #endif
+      Local TM·Head·Status TM·head_status(TM *tm){
         return tm->fg.status(tm ,result);
       }
-
-     // Stronger than `can_read`. Used mostly for debugging.
-     // as it checks for a legal head position.
-     Local Core·Status TM·head_on_format(TM *tm ,bool *flag){
-        #ifdef TM·DEBUG
-          Core·Guard·init_count(chk);
-          Core·Guard·fg.check(&chk ,1 ,tm ,TM·Msg·tm);
-          Core·Guard·fg.check(&chk ,1 ,flag ,TM·Msg·flag);
-          Core·Guard·if_return(chk);
-        #endif
-        return tm->fg.head_on_format(tm ,flag);
+      Local TM·Head·Status TM·head_on_tape(TM *tm){
+        return TM·status(tm) & TM·Head·Status·on_tape;
       }
 
-      bool bool_fn_tm(TM *tm){
-        #ifdef TM·DEBUG
-          Core·Guard·init_count(chk);
-          Core·Guard·fg.check(&chk ,1 ,tm ,TM·Msg·tm);
-          Core·Guard·if_return(chk);
-        #endif
-        return tm->fg.read(tm);
+      // does nothing if the head is already mounted
+      Local Core·Status TM·mount(TM *tm){
+        #ifdef TM·DEBUG 
+          Core·Guard·init_count(chk); 
+          Core·Guard·fg.check(&chk, 1, tm, TM·Msg·tm); 
+          Core·Guard·if_return(chk); 
+        #endif 
+        if( !TM·head_on_tape(tm) ) return Core·Status·on_track;
+        return tm->fg.mount(tm); 
       }
 
-      bool TM·on_leftmost(TM *tm){
-        #ifdef TM·DEBUG
-          Core·Guard·init_count(chk);
-          Core·Guard·fg.check(&chk ,1 ,tm ,TM·Msg·tm);
-          Core·Guard·if_return(chk);
+      // does nothing if the head is already dismounted
+      Local Core·Status TM·dismount(TM *tm){ 
+        #ifdef TM·DEBUG 
+          Core·Guard·init_count(chk); 
+          Core·Guard·fg.check(&chk, 1, tm, TM·Msg·tm); 
+          Core·Guard·if_return(chk); 
         #endif
-        return tm->fg.on_leftmost(tm);
+        if( TM·head_status(TM *tm) & TM·Head·Status·dismounted) ) return Core·Status·on_track;
+        return tm->fg.dismount(tm); 
       }
+   
+      #define TM·macro·bool_tm(name)
+      Local bool name(TM *tm){ \
+        #ifdef TM·DEBUG \
+          Core·Guard·init_count(chk); \
+          Core·Guard·fg.check( &chk ,1 ,TM·head_on_tape(tm) ,TM·Msg·head); \
+          Core·Guard·assert(chk); \
+        #endif \
+        return tm->fg.name(tm); \
+      } 
 
-      bool TM·on_rigthmost(TM *tm){
-        #ifdef TM·DEBUG
-          Core·Guard·init_count(chk);
-          Core·Guard·fg.check(&chk ,1 ,tm ,TM·Msg·tm);
-          Core·Guard·if_return(chk);
-        #endif
-        return tm->fg.on_rigthmost(tm);
-      }
-
-
-
-      Local bool TM·Given1(can_read);
-      Local bool TM·Given1(on_leftmost);
-      Local bool TM·Given1(on_rightmost);
-      Local bool TM·Given1(step);
-      Local bool TM·Given1(step_left);
-      Local bool TM·Given1(rewind);
-
-      // tm_can_read must be true for both machines.
-      void TM·copy_datum(TM *tm_read ,TM *tm_write){
-        #ifdef TM·DEBUG
-          Core·Guard·init_count(chk);
-          bool flag = true ,s;
-          s = TM·head_on_format(tm_read ,flag) == Control·Status·on_track;
-          Core·Guard·fg.check(&chk ,1 ,s && flag ,"tm_read head off track");
-          s = TM·head_on_format(tm_write ,flag) == Control·Status·on_track;
-          Core·Guard·fg.check(&chk ,1 ,s && flag ,"tm_write head off track");
-          Core·Guard·assert(chk);
-        #endif
-
-        *(tm_write->hd) = *(tm_read->hd);
-        return Core·Status·on_track;
-      }
-
-      void TM·read(TM *tm ,CVT *read_pt){
-        #ifdef TM·DEBUG
-          Core·Guard·init_count(chk);
-          bool flag = true ,s;
-          s = TM·head_on_format(tm ,flag) == Core·Status·on_track;
-          Core·Guard·fg.check(&chk ,1 ,s && flag ,"head off format");
-          Core·Guard·assert(chk);
-        #endif
-
-        *read_pt = *(tm->hd);
-      }
-
-      void TM·write(TM *tm ,CVT *write_pt){
-        #ifdef TM·DEBUG
-          Core·Guard·init_count(chk);
-          bool flag = true ,s;
-          s = TM·head_on_format(tm ,flag) == Core·Status·on_track;
-          Core·Guard·fg.check(&chk ,1 ,s && flag ,"head off format");
-          Core·Guard·assert(chk);
-        #endif
-
-        *(tm->hd) = *write_pt;
-      }
-
-      // step_right is a synonym for step
-
-      // check the topo to make sure tape has extent before calling this
-      // `extent·CVT` returns the index to the rightmost cell in the array.
-      Local Ξ(extent_t ,CVT) TM·extent(TM *tm){
-        #ifdef TM·DEBUG
-          Core·Guard·init_count(chk);
-          Core·Guard·fg.check(&chk ,1 ,tm ,TM·Msg·tm);
-          Core·Guard·assert(chk);
-        #endif
-        return tm->fg.extent(tm);
-      }
-
-
+      Local bool TM·macro·bool_tm(on_leftmost);
+      Local bool TM·macro·bool_tm(on_rightmost);
+      Local bool TM·macro·bool_tm(step);
+      Local bool TM·macro·bool_tm(step_left);
+      Local bool TM·macro·bool_tm(rewind);
 
       //----------------------------------------
       // Initialization for TM·fg
 
       Local TM·FG TM·fg = {
-        .tape = {
-           .topo   = TM·topo
-           .extent = TM·extent
-        }
+        .Tape·topo = TM·Tape·topo
+        ,.Tape·bounded = TM·Tape·bounded
+        ,.Head·status = TM·Head·status
+        ,.Head·on_tape = TM·Head·on_tape
 
-        ,.area = {
-           .mount_pe = TM·mount_pe
-          ,.mount_pp = TM·mount_pp
-        }
+        ,.Head·on_leftmost = TM·Head·on_leftmost
+        ,.Head·on_rightmost = TM·Head·on_rightmost
 
         ,.mount    = TM·mount
         ,.dismount = TM·dismount
 
-        ,.status         = TM·status
-        ,.head_on_format = TM·head_on_format
-
-        ,.can_read     = TM·can_read
-        ,.on_origin    = TM·on_origin
-        ,.on_rightmost = TM·on_rightmost
-
         ,.step = TM·step
         ,.step_left = TM·step_left
-        ,.step_right = TM·step_right // Synonym for step
+        ,.step_right = TM·step // Synonym
         ,.rewind = TM·rewind
 
-        ,.read = TM·read
-        ,.write = TM·write
+      };
+
+    #endif // ifndef CVT
+
+    //-----------------------------------
+    // CVT dependent functions
+
+    #ifdef CVT
+
+      Local Ξ(extent_t ,CVT) Ξ(TM ,CVT)·extent(TM *tm){
+        #ifdef TM·DEBUG
+          Core·Guard·init_count(chk);
+          Core·Guard·fg.check(&chk ,1 ,TM·Tape·bounded(tm) ,"Tape is not bounded.");
+          Core·Guard·assert(chk);
+        #endif
+        return tm->fg.extent(tm);
+      }
+
+      Local CVT TM·read(TM *tm){
+        #ifdef TM·DEBUG
+          Core·Guard·init_count(chk);
+          Core·Guard·fg.check( &chk ,1 ,TM·head_on_tape(tm) ,TM·Msg·head);
+          Core·Guard·assert(chk);
+        #endif
+        return tm->fg.read(tm);
+      }
+
+      Local void TM·write(TM *tm ,CVT *write_pt){
+        #ifdef TM·DEBUG
+          Core·Guard·init_count(chk); 
+          Core·Guard·fg.check( &chk ,1 ,TM·head_on_tape(tm) ,TM·Msg·head); 
+          Core·Guard·fg.check( &chk ,1 ,write_pt ,"Given NULL write_pt"); 
+          Core·Guard·assert(chk);
+        #endif
+        return tm->fg.write(tm ,write_pt);
+      }
+
+      Local Ξ(TM ,CVT)·FG Ξ(TM ,CVT)·fg = {
+        .parent = TM·fg
+        ,.extent = Ξ(TM ,CVT)·extent
+        ,.read = Ξ(TM ,CVT)·read
+        ,.write = Ξ(TM ,CVT)·write
       };
 
     #endif // ifdef CVT
@@ -371,8 +367,8 @@
       const char *TM·Array·Msg·tm="given NULL tm";
       const char *TM·Array·Msg·flag="given NULL flag pointer";
       const char *TM·Array·Msg·result="given NULL result pointer";
-      const char *TM·Array·Msg·position=
-        "Null position.This is only possible when the tape machine has not been initialized.";
+      const char *TM·Array·Msg·status="bad head status";
+        
 
     #endif // #ifndef CVT
 
@@ -387,37 +383,24 @@
       //-----------------------------------
       // TM·Array.tape implementation
 
-      /*
-        For an Array Tape Machine ,a bound tape will be singleton or segment.
-        An initialized Array Tape Machine always has a bound tape.
-      */
-      Core·Status Ξ(TM·Array ,CVT)·topo(Ξ(TM·Array ,CVT) *tm ,TM·Tape·Topo *result){
-        #ifdef TM·DEBUG
-          Core·Guard·init_count(chk);
-          Core·Guard·fg.check(&chk ,1 ,tm ,TM·Array·Msg·tm);
-          if(tm) Core·Guard·fg.check(&chk ,1 ,tm->position ,TM·Array·Msg·position);
-          Core·Guard·fg.check(&chk ,1 ,result ,TM·Array·Msg·result);
-          Core·Guard·if_return(chk);
-        #endif
-        if(tm->extent == 0){
-          *result = TM·Tape·Topo·singleton; 
-        }else{
-          *result = TM·Tape·Topo·segment;
-        }
-        return Core·Status·on_track;
+       // For an Array Tape Machine ,a bound tape will be singleton or segment.
+       TM·Tape·Topo  Ξ(TM·Array ,CVT)·Tape·topo(Ξ(TM·Array ,CVT) *tm){
+         if(!tm || !tm->position) return TM·Tape·Topo·mu;
+         if(tm->extent == 0) TM·Tape·Topo·singleton; 
+         return TM·Tape·Topo·segment;
       }
 
-      // check the topo to make sure tape has extent before calling this
+      // check the Tape·topo to make sure tape has extent before calling this
       // `extent·CVT` returns the index to the rightmost cell in the array.
       Local  Ξ(extent_t ,CVT) Ξ(TM·Array ,CVT)·extent(Ξ(TM·Array ,CVT) *tm){
         #ifdef TM·DEBUG
           Core·Guard·init_count(chk);
-          Core·Tape·Topo topo = Core·Tape·Topo·mu;
-          Core·Status status = Ξ(TM·Array ,CVT)·topo(tm ,&topo);
-          bool good_topo = 
-            (status == Core·Status·on_track) && (topo & Core·Tape·Topo·finite_nz)
+          Core·Tape·Topo Tape·topo = Core·Tape·Topo·mu;
+          Core·Status status = Ξ(TM·Array ,CVT)·Tape·topo(tm ,&Tape·topo);
+          bool good_Tape·topo = 
+            (status == Core·Status·on_track) && (Tape·topo & Core·Tape·Topo·finite_nz)
             ;
-          Core·Guard·fg.check(&chk ,1 ,good_topo ,"Tape does not have an extent.");
+          Core·Guard·fg.check(&chk ,1 ,good_Tape·topo ,"Tape does not have an extent.");
           Core·Guard·assert(chk);
         #endif
 
@@ -490,49 +473,17 @@
         return Core·Status·on_track;
       }
 
-      Local TM·Head·Status Ξ(TM·Array ,CVT)·status(
-        Ξ(TM·Array ,CVT) *tm ,TM·Head·Status *status
-      ){
-        #ifdef TM·DEBUG
-          Core·Guard·init_count(chk);
-          Core·Guard·fg.check(&chk ,1 ,tm ,TM·Array·Msg·tm);
-          Core·Guard·fg.check(&chk ,1 ,status ,"given NULL status pointer");
-          Core·Guard·if_return(chk);
-        #endif
+      Local TM·Head·Status Ξ(TM·Array ,CVT)·head_status(TM *tm){
+        if(!tm || !tm->position) return TM·Head·Status·mu;
+        if(!tm->hd) return TM·Head·Status·dismounted;
+        if(tm->hd == tm->position) return TM·Head·Status·leftmost;
 
-        if(tm->hd == NULL){
-          *status = TM·Head·Status·not_on_tape;
-        }else if(tm->hd == tm->position){
-          *status = TM·Head·Status·origin;
-        }else if(tm->hd == tm->position + tm->extent){
-          *status = TM·Head·Status·rightmost;
-        }else{
-          *status = TM·Head·Status·interim;
-        }
+        CVT *rightmost_pt = tm->position + tm->extent;
+        if(tm->hd == rightmost_pt) TM·Head·Status·rightmost;
+        if(tm->hd < tm->position || tm->hd > rightmost_pt)
+          return TM·Head·Status·out_of_area;
 
-        return Core·Status·on_track;
-      }
-
-     // Stronger than `can_read`. Used mostly for debugging.
-     // as it checks for a legal head position.
-      Local Core·Status Ξ(TM·Array ,CVT)·head_on_format(
-        Ξ(TM·Array ,CVT) *tm ,bool *flag
-      ){
-        #ifdef TM·DEBUG
-          Core·Guard·init_count(chk);
-          Core·Guard·fg.check(&chk ,1 ,tm ,TM·Array·Msg·tm);
-          if(tm) Core·Guard·fg.check(&chk ,1 ,tm->position ,TM·Array·Msg·position);
-          Core·Guard·fg.check(&chk ,1 ,flag ,TM·Array·Msg·flag);
-          Core·Guard·if_return(chk);
-        #endif
-
-        *flag = 
-             tm->hd
-          && tm->hd >= tm->position
-          && tm->hd - tm->position <= tm->extent
-          && ( (AU *)tm->hd - (AU *)tm->position ) % sizeof(CVT) == 0 // '%' expensive
-          ;
-        return Core·Status·on_track;
+         return TM·Head·Status·interim;
       }
 
       bool Ξ(TM·Array ,CVT)·can_read(Ξ(TM·Array ,CVT) *tm){
@@ -633,7 +584,7 @@
 
       Local Ξ(TM·Array ,CVT)·FG Ξ(TM·Array ,CVT)·fg = {
         .tape = {
-           .topo   = Ξ(TM·Array ,CVT)·topo
+           .Tape·topo   = Ξ(TM·Array ,CVT)·Tape·topo
            .extent = Ξ(TM·Array ,CVT)·extent
         }
 

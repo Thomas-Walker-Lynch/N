@@ -1,0 +1,216 @@
+#+TITLE: Model
+#+AUTHOR: Thomas
+#+STARTUP: content
+
+* Tableau
+
+A Tableau is a type definition for a work area, typically implemented as a typedef struct in C.
+
+An instance of a Tableau is a tableau. There can be many instances of a given Tableau. 
+
+There are multiple kinds of Tableau:
+
+- interface (also called a Face)
+- state
+
+* ActionTable
+
+
+An action is a function that operates on a tableau.
+
+Each action is an instance of an Action. An Action is a typedef for a function pointer.
+
+An ActionTable is a typedef of a struct,  and instance of is said to be an action_table.
+A given ActionTable can 
+
+An instance of an ActionTable is an action_table.  There can be many isntances of a given ActionTable.
+
+Each function in an action_table is an action.
+
+
+* Model
+
+A Model is a  TableauFace, a TableauState, and an ActionTable.
+
+An instance of a Model is a model.
+
+
+* Status bits or continuations?
+
+The problem I found with continuations is that when the library is
+limited to a single status function for a model, there will necessarily
+be many continuations from the status function, one for each shade of meaning that it can discern. To endow it with fewer would limit its usefulness for some scenario, perhaps rare, but still supported. 
+
+In addition, not all status's are independent. Thus there must be a priority scheme and then a choice of continuation, but the status function might not know the caller's
+priorities. An alternative would be to take both continuations and break into multithreaded execuation. However, many programs are designed to be single threaded.
+
+When status is used as an argument guard this often comes down to, "Is the passed in
+status baring model operable or not?" Thus the tableau for the many-continuations status function will have many duplicate next pointers.
+
+If rather than returning continuations, a highly discerning status function were to  return status bits, The caller could mask the bits and then chose among continuations.  In the cause of an argument guard, choosing among two paths.
+
+It is also a little funny when using a status function as an argument guard that the guard continues into the very function it is guarding. The tableau facilitates this
+design pattern in that the input operands need not be written again. Though this
+requires managing the tableau for the model who's status is being checked.
+
+An alternative to using status bits is to have more than one status function. One implementation is to embed the many-continuations status function inside the few-continuations status function, to perform the mask, and then pick the continuation.  This might be convenient function to have, but where a second status function really makes sense is where it reduces the amount of computation that need be done.
+
+* A Single Tableau per Model
+
+Inputs for actions are written to a tableau. A link currently holds an actions table pointer, and a tableau pointer, hence there is one tableau that holds both action inputs and model state variables.
+
+If this tableau is declared as part of the FACE then the user can access the model state variables. This would follow a philosophy of, "if they are useful, then so bit it"; however exposing state variables limits both the number of models that can be made that provide the user with the same interface, and limits what can be done with maintenance edits without risking breaking the user's code.  Recall that Model is an abstract type, and there can be many implementations for said type, i.e. many models for a given Model.
+
+C does not allow for public and private sections of a struct, or we could make the state variables private.
+
+However, we can accomplish the same thing as public and private, perhaps in even a better way, by including the interface tableau in the full tableau, and have the code know it was given the full tableau:
+
+#+BEGIN_SRC c
+typedef struct{
+  ...
+}X·TableaFace;
+
+// in the implementation
+
+typedef struct{
+  X·TableaFace face;
+  ...
+}X·Tablea;
+
+#+END_SRC
+
+The details of the TableauFace type are shown to the user.  The actions are
+declared to be given a TableauFace, so any directly calls will work.  Inside each action the tableau is converted from TableauFace to Tableau.
+
+=> Core uses separate Face and State tableaux
+
+** Tableau structure
+
+The TableauFace has:
+- all possible inputs
+- results
+- continuations
+
+Then the Tableau extension
+
+- state variables
+
+
+* Continuation Link
+
+There are two dimensions of variation. 1) Multiple action_tables from a given ActionTable, and 2) multiple tableau from a given Tableau.
+
+Each action_table instance of a given ActionTable can have very different function implementations, as only the function type signatures are specified in the ActionTable definition. 
+
+The interface tableau, TableauFace, is designed against the ActionTable. Both deal with the user's view of the Model. In contrast each state tableau, TableauState is designed against a specific action_table.
+
+Hence, for each ActionTable declaration there will be corresponding to a TableauFace declaration, unless by coincidence, an existing one can be recycled, though even then programmers would appreciate having matching names. This begs the question if the two structures can be combined into one. So doing would constrain our ability to make instances from them independently.
+
+A given action table can be used with multiple state tableaux. In other words, there can be multiple instances of the same type.
+
+Conversely a given tableau can be used with multiple action tables. This happens in
+polymorphism, where a child tableau can be passed to a parent action. The child
+parts are in an extended portion of the tableau, and thus not seen by the parent
+action.
+
+In the one Tableau per model approach, each tableau instance is both state and inputs, hence each instance will have its own inputs. We would lose the ability to make independent state and interface instances. The interface tableau is playing the role
+that is typically played by the stack frame. Hence there is a copy per call, now this the one tableau per model, there would be a copy per instance. If left independent, there would be as many or few copies as the user determines is necessary, with the network of interface tableaux being connected by pointers tending to look like a circuit.
+
+**proposal 1
+
+Place an action_table pointer in each single tableau per model tableau, then there would be many copies of the action_table pointer, one per tableau. This is the virtual table pointer approach from C++ or the delegate pointer from JavaScript.
+
+With this approach the action table can be reached through the tableau, so only the tableau, or references to it, need to be passed around as an instance of the model. This is appealing.
+
+However, such a link to such a tableau is not sufficient for knowing which action on the action table should be called.  Hence a link to such an overloaded tableau can not function as a continuation link.
+
+Suppose if instead of an action_table link, a function link were embedded in the tableau, perhaps as a first member. Then the first member could be called and given the tableau as its only argument. This could function as a link, but then the state of the model is owned by a single function call. This looks problematic.
+
+**proposal 2
+
+A link is a two pointer bundle. The first pointer to an action table, the second to single tableau. Then there is a macro called `call` that is used for calling functions in the action table. ``call(extent ,&tape_tableau)`
+
+The problem here is that such a link can not appear as a continuation because the link itself  does not say which action is being invoked. That information is in the call.
+
+Attempts to save this proposal by including a 'field pointer' in the link, that would be applied to the action table are rather awkward in C, though it can be done by creating an enumeration of the struct offsets, and using those tags.
+
+**proposal 3
+
+A three pointer bundle, the first pointer to the function being called, the second pointer to an interface tableau, the third pointer to the state tableau shared by the functions in the action_table the function comes from.
+
+In this approach there is not action_table pointer, though that is not a problem because if that information is needed it can be curried into the called function when it is written, though chances are if a given action needs to call another action function in the table, it will do so through a function pointer. The purposes of the action_table struct is then to document which actions share the corresponding tableau state, and to provide a namespace to put the actions in, which makes it conceptually nicer for the programmer.  It would be even nicer if C supported Pascal's 'with' statement.
+
+Such a link could be reduced to two pointers if the single tableau variation is used.
+
+==> Core uses proposal 3
+
+
+* Mixing continuations with fall through execution.
+
+#+BEGIN_SRC c
+    Local void call(Core·Link *lnk){
+      while(lnk) lnk = lnk->act(lnk);
+    }
+#+END_SRC
+
+This implementation of call falls through when a null `lnk` pointer is returned. However the caller can not know anything about the status of the call.
+
+**proposal 1
+
+Each continuation function that can return a NULL link, where the caller wants to know the status, also sets a `status` value at the top of the base tableau, that all FACE tableau's extend from.
+
+Disadvantage, all code must set status, so why have continuations?  The optimizer will drop unused status setting code, so perhaps this is not serious.  Though, on the other hand, for Local functions would the optimizer skip the status return and condition testing, and put the continuation in - thus making status setting the way to go as it must be coded anyway?
+
+
+**proposal 2
+
+Have actions that set status, link to them when status is desired.
+
+Actually we need default continuations anyway. In many cases these could
+be generic. Argument guard continuations could be 'good' or 'bad'. 
+
+=> Core uses option 2
+
+* Continuations and linking
+
+**proposal 1
+
+Put continuations on the interface tableau. The reasoning is that the programmer will want to set them, but actually this is not a general programming task. Rather it occurs up front as part of a 'wiring' phase, and is then typically it is not done again.
+
+Consider this example.
+
+#+BEGIN_SRC c
+    typedef struct{
+      Core·Tape·Tableau·Face tape_tableau;
+      Core·Area *area;
+      void *position_left;
+      void *position_right;
+      AU *pt0;
+      AU *pt1
+      Core·Area *a;
+      Core·Area *b;
+      bool q; // predicate -> q 
+      Core·Link next;
+    }Core·Area·Tableau·Face;
+#+END_SRC
+
+The idea is that there is one interface tableau used for all of the Area·Tableau actions, but it has a link field.  Normally while the linked together functions are running, they can not set the 'next' link, as that information comes from a higher level.  For example, after `encloses_pt_q` runs, it has no idea as to where the programmer wants control to flow next.
+
+**proposal 2
+
+Add a fourth pointer to a link.  This points to the continuations block.
+
+#+BEGIN_SRC c
+    typedef struct{
+      Core·Tableau *face;
+      Core·Tableau *state;
+      Core·ActionTable *action;
+      Core·NextTable *next_table;
+    }Core·Link;
+#+END_SRC
+
+We may then describe the program flow network as a series of next_tables, and then view the program as traversing a graph.
+
+In database representation a set of nodes, and the dual graph is specified as a bridge table. It is more efficient when traversing a graph, to keep make the neighbor list a property of the node. Thus,  "Link"  can be seen as a node with a neighbor list.
+
+=> Core uses option 2
