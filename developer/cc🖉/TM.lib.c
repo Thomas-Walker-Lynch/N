@@ -29,33 +29,44 @@
 */
 
 #define TM·DEBUG
+#ifdef TM·DEBUG
+  #include <stdio.h>
+#endif
+
+#define TM·ALL  ( defined(CVT) ) // ... && defined( ...
+#define TM·NONE ( !defined(CVT) )
+#if !( TM·ALL || TM·NONE )
+  #error "TM template inconsistency: must define all or none of: CVT"
+#endif
 
 #ifndef FACE
 #define TM·IMPLEMENTATION
 #define FACE
 #endif 
 
-#if defined(Array) && !defined(CVT)
-  #error "Array implementation requires CVT to be defined"
+//--------------------------------------------------------------------------------
+// Interface - always included
+
+#if TM·ALL
+  #define TM·ALL_VAL = CVT 
+  #define TM_t Ξ(TM ,TM·ALL_VAL)
 #endif
 
+#ifndef Ξ(TM ,FACE)
+#define Ξ(TM ,FACE)
 
-//--------------------------------------------------------------------------------
-// Interface
-
-#ifndef Ξ(TM·FACE ,CVT)
-#define Ξ(TM·FACE ,CVT)
-
+ 
   #include <stdint.h>
   #include <stddef.h>
 
   #include "Core.lib.c"
+  #include "FG.lib.c"
 
   //----------------------------------------
   // Tape Machine interface
   //----------------------------------------
 
-  #ifndef CVT
+  #if TM·NONE
     typedef enum{
        TM·Tape·Topo·mu = 0 
       ,TM·Tape·Topo·empty       = 1
@@ -88,81 +99,72 @@
       | TM·Head·Status·rightmost
       ;
 
-
   #endif // #ifndef CVT
 
-  #ifdef CVT
+  #if TM·All
 
+    // TM·<CVT>·Tableau
+    typedef struct Ξ(TM ,Tableau);
+    
+    // create an FG·Binding so that FG·call will work
+    #define FG·Type TM 
+    #include "FG.lib.c"
+    #undef FG·Type
+
+    // extent is an index, hence its effect is a function of CVT
     typedef Ξ(extent_t ,CVT) size_t;
                              
-    // instance struct with vtable pointer as first entry
-    // tape and area are included with Tape Machine to facilitate abstract interfaces.
     typedef struct{
 
-      TM·Tape·Topo (*Tape·topo)(TM *tm);
-      bool (*Tape·bounded)(TM *tm);
+      TM·Tape·Topo (*Tape·topo)(TM tm);
+      bool (*Tape·bounded)(TM tm);
 
-      TM·Head·Status (*Head·status)(TM *tm ,TM·Head·Status *status);
-      bool (*Head·on_tape)(TM *tm);
-      bool (*Head·on_leftmost) (TM *tm);
-      bool (*Head·on_rightmost)(TM *tm);
+      TM·Head·Status (*Head·status)(TM tm);
+      bool (*Head·on_tape)(TM tm);
+      bool (*Head·on_leftmost) (TM tm);
+      bool (*Head·on_rightmost)(TM tm);
 
       // tape machine functions
-      Core·Status (*mount)   (TM *tm);
-      Core·Status (*dismount)(TM *tm);
+      Core·Status (*mount)   (TM tm);
+      Core·Status (*dismount)(TM tm);
 
-      void (*step)      (TM *tm);
-      void (*step_left) (TM *tm);
-      void (*rewind)    (TM *tm);
+      void (*step)      (TM tm);
+      void (*step_left) (TM tm);
+      void (*rewind)    (TM tm);
 
       TM·FG TM·fg; // points to TM·FG instance
-      Ξ(extent_t ,CVT) (*extent)(TM *tm);
-      CVT  (*read) (TM *tm);
-      void (*write)(TM *tm ,CVT *remote_pt);
+      Ξ(extent_t ,CVT) (*extent)(TM tm);
+      CVT  (*read) (TM tm);
+      void (*write)(TM tm ,CVT *remote_pt);
 
-    } Ξ(TM ,CVT)·FG;
+    } Ξ(TM ,FG);
 
-    // array FG instance
-                
-    typedef struct Ξ(TM ,CVT)·Tableau;
-    typedef struct Ξ(TM·Array ,CVT)·Tableau;
+    //----------------------------------------
+    // Array interface
+    //----------------------------------------
 
-    // `init` puts type consistent values in this struct
-    typedef struct{
-      Ξ(TM ,CVT)·FG *fg;
-      Ξ(TM ,CVT)·Tableau *t;
-    } Ξ(TM ,CVT);
-
-    #define FG·call(tm, fn, ...) \
-      ((tm)->fg->fn)((tm)->t, ##__VA_ARGS__)
-
-    Ξ(TM ,CVT)·FG Ξ(TM·Array ,CVT)·fg;
+    typedef struct Ξ(TM ,Array)·Tableau;
                                   
-    Ξ(TM ,CVT) Ξ(TM·Array ,CVT)·init_pe( 
-       Ξ(TM·Array ,CVT)·Tableau t
+    TM Ξ(TM ,Array)·init_pe( 
+       Ξ(TM ,Array)·Tableau *t
       ,CVT position[] 
       ,Ξ(extent_t ,CVT) extent 
     );
 
-    Ξ(TM ,CVT) Ξ(TM·Array ,CVT)·init_pp( 
-       Ξ(TM·Array ,CVT)·Tableau t
+    TM Ξ(TM ,Array)·init_pp( 
+       Ξ(TM ,Array)·Tableau *t
       ,CVT *position_left 
       ,CVT *position_right 
     );
 
   #endif // #ifdef CVT
 
-#endif
+#endif // FACE
 
 //--------------------------------------------------------------------------------
 // Implementation
 
 #ifdef TM·IMPLEMENTATION
-  // declarations available to all of the IMPLEMENTATION go here
-  //
-    #ifdef TM·DEBUG
-      #include <stdio.h>
-    #endif
 
   // implementation to go into the lib.a file
   //
@@ -186,34 +188,6 @@
       const char *TM·Msg·flag="given NULL flag pointer";
       const char *TM·Msg·result="given NULL result pointer";
       const char *TM·Msg·head="head not on tape";
-
-      //----------------------------------------
-      // TM Tableau, not CVT differentiated
-
-      struct{
-        void *hd;
-        void *position;
-      }TM·Tableau;
-
-
-      //----------------------------------------
-      // TM Array implementation, not CVT differentiated
-
-      TM·Tape·Topo  TM·Array·Tape·topo(TM·Tableau *t){
-        if(!t || !t->position) return T·Tape·Topo·mu;
-        if(t->extent == 0) TM·Tape·Topo·singleton; 
-        return TM·Tape·Topo·segment;
-      }
-      Local TM·Tape·Topo TM·Tape·bounded(TM·Tableau *t){
-        return TM·tape_top(t) & TM·Tape·Topo·bounded;
-      }
-
-      TM·Tape·Topo  TM·Array·Tape·mount(TM·Tableau *t){
-        if(!t || !t->position) return T·Tape·Topo·mu;
-        if(t->extent == 0) TM·Tape·Topo·singleton; 
-        return TM·Tape·Topo·segment;
-      }
-
 
       //-----------------------------------
       // generic call wrappers
@@ -374,14 +348,36 @@
 
     #ifdef CVT
 
-      struct{
+      typedef struct Ξ(TM ,CVT)·Tableau;
+
+      typedef struct{
         CVT *hd;
         CVT *position;
         Ξ(extent_t ,CVT) extent;
-      }Ξ(TM·Array ,CVT);
+      }Ξ(TM·Array ,CVT)·Tableau;
 
       //-----------------------------------
+
       // TM·Array.tape implementation
+
+      //----------------------------------------
+      // TM Array implementation, not CVT differentiated
+
+      Local TM·Tape·Topo TM·Array·Tape·topo( Ξ(TM ,CVT)·Tableau *tableau ){
+        Ξ(TM·Array ,CVT)·Tableau *t = (Ξ(TM·Array ,CVT)·Tableau *)tableau;
+        if(!t || !t->position) return T·Tape·Topo·mu;
+        if(t->extent == 0) TM·Tape·Topo·singleton; 
+        return TM·Tape·Topo·segment;
+      }
+      Local TM·Tape·Topo TM·Tape·bounded(TM·Tableau *t){
+        return TM·tape_top(t) & TM·Tape·Topo·bounded;
+      }
+
+      TM·Tape·Topo  TM·Array·Tape·mount(TM·Tableau *t){
+        if(!t || !t->position) return T·Tape·Topo·mu;
+        if(t->extent == 0) TM·Tape·Topo·singleton; 
+        return TM·Tape·Topo·segment;
+      }
 
        // For an Array Tape Machine ,a bound tape will be singleton or segment.
        TM·Tape·Topo  Ξ(TM·Array ,CVT)·Tape·topo(Ξ(TM·Array ,CVT) *tm){

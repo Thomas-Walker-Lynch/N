@@ -17,6 +17,9 @@
 */
 
 #define Core·DEBUG
+#ifdef FG·DEBUG
+  #include <stdio.h>
+#endif
 
 #ifndef FACE
 #define Core·IMPLEMENTATION
@@ -127,6 +130,38 @@
     #define Core·Guard·assert(chk) assert(!chk.flag);
 
   //----------------------------------------
+  // Macro to call a function in the FG table with debug checks
+  // Usage: FG·call(tm, function_name, arg1, arg2, ...)
+  // Expands to: ((tm)->fg->function_name)((tm)->t, arg1, arg2, ...)
+  // With debug checks for NULL pointers when FG·DEBUG is defined
+  //----------------------------------------
+
+    typedef struct FG·FG;
+    typedef struct FG·Tableau;
+
+    typedef struct{
+      FG·FG *fg;
+      FG·Tableau *tableau;
+    } FG·Binding;
+
+    inline void FG·wellformed_binding(FG·Binding b) {
+      #ifdef FG·DEBUG
+        Core·Guard·init_count(chk);
+        Core·Guard·fg.check(&chk, 1, b->fg,      "NULL fg table");
+        Core·Guard·fg.check(&chk, 1, b->tableau, "NULL tableau");
+        Core·Guard·assert(chk);
+      #endif
+    }
+
+    // note the use of the comma operator to return the result from b.fg->fn
+    #define FG·call(b, fn, ...) \
+      ( \
+         FG·wellformed_binding(b)               \
+        ,b.fg->fn(b.tableau, ##__VA_ARGS__ )   \
+        ) 
+
+
+  //----------------------------------------
   // functions interface
   //----------------------------------------
   
@@ -141,16 +176,13 @@
     } Core·F;
     Local Core·F Core·f;
 
+#endif // FACE
+
 
 //--------------------------------------------------------------------------------
 // Implementation
 
 #ifdef Core·IMPLEMENTATION
-  // declarations available to all of the IMPLEMENTATION go here
-  //
-    #ifdef Core·DEBUG
-      #include <stdio.h>
-    #endif
 
   //--------------------------------------------------------------------------------
   // implementation to go into the lib.a file
