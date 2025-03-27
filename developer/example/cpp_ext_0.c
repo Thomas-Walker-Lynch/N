@@ -35,7 +35,7 @@ DEBUG
 
 #include <stdio.h>
 #define DEBUG_CPP
-#define STR(x) #x
+#define STR(...) #__VA_ARGS__
 
 // print the macro and the evaluation of the macro
 #define SHOW(expr) printf("%s -> %s\n", #expr, STR(expr))
@@ -48,7 +48,10 @@ Constants
 #define SEMICOLON ;
 
 #define ZERO 0
-#define ONE 1
+#define ONE  1
+
+#define FALSE 0
+#define TRUE  1
 
 //---------
 
@@ -84,7 +87,7 @@ Primitive Concatenation
 
 
 /*===========================================================================
-Logic
+Existence
 ===========================================================================*/
 
   //----------------------------------------
@@ -160,10 +163,6 @@ Logic Connectors
   #define NOT_EQ(x_item ,y_item) \
     NOT_MATCH_RWR( CAT4(_RWR_EQ__ ,x_item ,__oo__ ,y_item) )
 
-#if 0
-
-
-
 /*===========================================================================
   IF-ELSE construct.
   Usage: IF_ELSE(condition)(<true case>)(<false case>)
@@ -173,47 +172,44 @@ Logic Connectors
 
   The seemingly extra layer prevents BOOL_(condition) from being pasted with a ## which, if done, would prevent it from being evaluated.  Recall, the first step in evaluation is a literal copy in of the arguments.  ===symbol ========================================================================*/
 
-  #define _IF_ELSE(condition)  CAT2(_IF_ ,BOOL(condition))
+  #define IF_ELSE(condition)  CAT2(_IF_ ,BOOL(condition))
   #define _IF_1(...)          __VA_ARGS__ _IF_1_ELSE
   #define _IF_0(...)                      _IF_0_ELSE
   #define _IF_1_ELSE(...)
   #define _IF_0_ELSE(...)      __VA_ARGS__
 
-
 /*===========================================================================
 Access
-    see below the recursion section for Nth .. when it is written ;-)
+    see ext_1 with recursion for `Nth`
 
 ===========================================================================*/
 
   // _FIRST defined in the logic section
   #define FIRST(pad ,...)\
-    If_ELSE \
+    IF_ELSE \
       ( NOT_EXISTS(__VA_ARGS__) ) \
       (pad)                       \
       ( _FIRST(__VA_ARGS__) )  
 
   #define _REST(a ,...) __VA_ARGS__
   #define REST(...)\
-    If_ELSE \
+    IF_ELSE \
       ( NOT_EXISTS(__VA_ARGS__) ) \
       ()                          \
       ( _REST(__VA_ARGS__) )  
 
   // _SECOND defined in the logic section
   #define SECOND(pad ,...) \
-    If_ELSE \
+    IF_ELSE \
       ( NOT_EXISTS(__VA_ARGS__) ) \
       (pad)                       \
       ( _SECOND(__VA_ARGS__ ,pad) )  
 
   #define _THIRD(a ,b ,c ,...) c
   #define THIRD(pad ,...) \
-    If_ELSE \
+    IF_ELSE \
       ( NOT_EXISTS(__VA_ARGS__) ) \
       (pad)                       \
       ( _THIRD(__VA_ARGS__ ,pad, pad) )  
-
-#endif 
 
 #endif

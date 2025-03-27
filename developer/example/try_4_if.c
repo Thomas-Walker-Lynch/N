@@ -7,8 +7,8 @@ int main(void){
   //---------------------------------------------------------------------------
 
   SHOW(IF_ELSE(1)(yes)(no)); 
-#if 0
   SHOW(IF_ELSE(0)(yes)(no));        // → no
+  printf("\n");
 
   //---------------------------------------------------------------------------
   // Symbolic identifiers
@@ -16,6 +16,7 @@ int main(void){
   SHOW(IF_ELSE(TRUE)(ok)(fail));    // → ok
   SHOW(IF_ELSE(FALSE)(ok)(fail));   // → fail
   SHOW(IF_ELSE(foo)(alpha)(omega)); // → omega (foo is undefined)
+  printf("\n");
 
   //---------------------------------------------------------------------------
   // Logic expressions
@@ -23,23 +24,27 @@ int main(void){
   SHOW(IF_ELSE(AND(1 ,1))(pass)(fail));  // → pass
   SHOW(IF_ELSE(OR(0 ,0))(yes)(no));      // → no
   SHOW(IF_ELSE(NOT(0))(on)(off));        // → on
+  printf("\n");
 
   //---------------------------------------------------------------------------
   // Code-like output
   //---------------------------------------------------------------------------
   SHOW(IF_ELSE(1)(int x = 1;)(int x = 2;));  // → int x = 1;
   SHOW(IF_ELSE(0)(int x = 1;)(int x = 2;));  // → int x = 2;
+  printf("\n");
 
   //---------------------------------------------------------------------------
   // Comma usage in true/false branches
   //---------------------------------------------------------------------------
   SHOW(IF_ELSE(1)(a ,b ,c)(x ,y ,z));  // → a ,b ,c
   SHOW(IF_ELSE(0)(a ,b ,c)(x ,y ,z));  // → x ,y ,z
+  printf("\n");
 
   //---------------------------------------------------------------------------
   // Empty condition
   //---------------------------------------------------------------------------
   SHOW(IF_ELSE()(true)(false));       // → false (BOOL() = 0)
+  printf("\n");
 
   //---------------------------------------------------------------------------
   // Nested IF_ELSE
@@ -51,7 +56,7 @@ int main(void){
       outer_false
     )
   ); // → inner_false
+  printf("\n");
 
-#endif
   return 0;
 }
