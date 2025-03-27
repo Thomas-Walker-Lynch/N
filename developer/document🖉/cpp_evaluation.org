@@ -1,0 +1,259 @@
+#+TITLE: C Preprocessor Evaluation Example
+#+AUTHOR: Thomas Walker Lynch
+#+OPTIONS: toc:nil
+
+1. Macro function definition
+
+   A macro function has three parts, 1) a name 2) a parameter list  3) definition
+
+   Parameters are declared by listing them between parenthesis after the name. No space
+   can occur between the name and the parameter list! If there is space then the
+   parameter list will be taken as part of the definition.
+
+   Text after the parameter list forms the definition.
+
+      #+BEGIN_SRC c
+      #define name(x ,y ,z)  <replacement>
+      #define name(...) <replacement>   // argument list becomes __VA_ARGS__
+      #define name(x ,...) <replacement>
+      #+END_SRC
+
+2. Macro call
+
+   Can occur anywhere in the source code. Takes the form of an macro function
+   name followed by an argument list.
+
+      #+BEGIN_SRC c
+      name (1 ,a ,b)
+      #+END_SRC
+
+   In a call, space is allowed between the macro name and the arguments list.
+
+    1. Each parameter in the definition is replaced with the corresponding argument.
+       
+    2. cpp then scans the definition from left to right. 
+
+        2.1 Upon finding a non-macro call token cpp includes it as part of the result.
+
+        2.2. Uon finding a macro call token, it does a recursive evaluation on it. 
+
+   Non-macro call tokens include:
+
+   1. a non-identifier.
+
+   2. an identifier not followed by parenthesis.
+
+   3. anything followed by a `#`
+
+      `#` returns an atomic string token made from what follows it
+
+   4. anything connected by '##'
+
+      `##` does a concatenation and returns a new token.  This new token is not evaluated.
+
+   2. Recursion has been designed out.
+
+      Any macro call token that matches the name of the macro being evaluated is marked, and can never be called. It will forever more be treated as literal text. Note
+      the examples in the next section.
+      
+3. Example macros
+
+   #+BEGIN_SRC c
+   #define FORCE_ONE(x) 1
+   #define STR(x) #x  
+   #define VAL(x) STR(x)  
+   #define GROW(x) 7 * GROW(x)  
+   #+END_SRC
+
+   A call to ~FORCE_ONE(5)~ will expand to ~1~.
+
+   A call to ~STR(FORCE_ONE(5))~ will expand to the string ~"FORCE_ONE_(5)"~. This is because arguments given to the ~#~ operator are not expanded. The variable gets replaced with its value, but the value it not evaluated.
+
+   A call to ~VAL(FORCE_ONE(5))~ will result in `1`. This is because there is no hash symbol in the VAL macro that is stopping the recursive expansion of ~x~.
+
+5. Example of delayed evaluation
+
+   #+BEGIN_SRC c
+   #define EMPTY()
+   #define NEGATE(x) -x
+   #define NOT_SO_FAST(x)  NEGATE EMPTY() (x)
+   #+END_SRC
+
+   When evaluating ~NOT_SO_FAST(5)~, here's what happens:
+
+   1. ~NEGATE~ is encountered there is nothing to recur into, so it evaluates to itself.
+      the evaluation moves right.
+      
+   2. ~EMPTY()~ is a macro, so it has no operands, so it is expanded. As it has no
+      definition, it expands to nothing. CPP then moves to the right.
+
+   3. ~(x)~ is not a macro so there is nothing to recur into, so it becomes ~(5)~.
+
+   4. Thus the final result of the left to right pass is → ~NEGATE (5)~
+
+   #+BEGIN_SRC bash
+   cat >test.c <<EOF
+   #include <stdio.h>
+
+   int main(void){
+     printf("example_eval.c\\n");
+
+     #define STR(x) #x
+
+     // `#x` no evaluation of x due to the '#'
+     // `STR(x)` recurs and does a left to right expansion on the value of `x`
+     #define SHOW(x) printf(#x " → %s\\n", STR(x));
+
+     #define EMPTY()
+     #define NEGATE(x) -x
+     #define NOT_SO_FAST(x)  NEGATE EMPTY() (x)
+
+     SHOW(NOT_SO_FAST(5));
+
+     #define BE(x) x
+     SHOW(BE(NOT_SO_FAST(5)))
+   }
+   EOF
+
+   gcc test.c
+   ./a.out
+   #+END_SRC
+
+   Output:
+
+   #+BEGIN_EXAMPLE
+   example_eval.c
+   NOT_SO_FAST(5) → NEGATE (5)
+   BE(NOT_SO_FAST(5)) → -5
+   #+END_EXAMPLE
+
+   Let’s examine the final lines:
+
+   #+BEGIN_SRC c
+   #define BE(x) x
+   SHOW(BE(NOT_SO_FAST(5)))
+   #+END_SRC
+
+   The evaluation process:
+
+   - cpp encounters ~BE(NOT_SO_FAST(5))~.
+   - It enters ~NOT_SO_FAST(5)~, expands it to ~NEGATE (5)~.
+   - Then ~BE(NEGATE (5))~ becomes ~-5~ through final macro expansion.
+
+6. Nesting, recursion approaches that do not work, and one that does.
+
+    #+BEGIN_SRC c
+      
+      #include <stdio.h>
+      #define STR(x) #x
+      // no evaluation, and one pass of evaluation
+      #define SHOW(expr) printf("%s --> %s\n", #expr, STR(expr))
+
+      #define BE(...) __VA_ARGS__
+      #define EMPTY()
+
+      #include <stdio.h>
+      int main(void){
+        printf("example_grow.c\n");
+        printf("\n");
+
+        // case 1
+        /* 
+          GROW(7) → 17 * GROW(7)
+          GROW(GROW(5)) → 17 * GROW(17 * GROW(5))
+        ,*/
+        #define GROW(x) 17 * GROW(x)  
+        SHOW(GROW(7));
+        SHOW(GROW(GROW(5)));
+        printf("\n");
+
+        // case 2
+        // GROW2(11) --> 19 * GROW2 (11)
+        #define GROW2(x) 19 * GROW2 EMPTY() (x)  
+        SHOW(GROW2(11)) ;
+        printf("\n");
+
+        // case 3
+        // GROW3(13) --> 119 * 19 * GROW2 (13)
+        #define GROW3(x) BE(119 * GROW2 EMPTY() (x))
+        SHOW(GROW3(13));
+        printf("\n");
+
+        // case 4
+        /* 
+          `BE` placed on the outside. The idea is that evaluation will return `123 * GROW (15)` and then this will be evaluated resulting in `123 * 123 * GROW(15)`.
+
+          However, any time GROW4 literally spells out GROW4(...) inside its own expansion
+          it will leave it literally and not expand it. 
+
+          Though it is interesting that here that occurs at a higher level in the evaluation tree than the first ocurrance of the recursive call, but still it is in the tree.
+
+          GROW4(15) --> 123 * GROW4 (15)
+        ,*/
+        #define GROW4(x) BE(123 * GROW4 EMPTY() (x))
+        SHOW(GROW4(15));
+        printf("\n");
+
+        // case 5
+        /*
+          Substitution of the function named followed by a trampoline works.
+
+          The original expression is written in terms of a deferred CONDFEDERATE function
+          instead of in terms of a recursive call to GROW5. cpp can suspect nothing.
+
+          The result is an expression in terms of the unevaluated CONDFEDERATE function.
+
+          The CONFEDERATE function is defined to return the token GROW5. Hence in a subsequent evaluation, and there must be a subsequent evaluation for this to work,  The CONFEDERATE function will run, return GROW5 which is next to its call parenthesis, so then the
+          recursive call will run.
+
+          BE(GROW5(21)) --> 541 * 541 * CONFEDERATE () (21)
+          BE(BE(GROW5(57))) --> 541 * 541 * 541 * CONFEDERATE () (57)
+        ,*/
+        #define GROW5(x) 541 * CONFEDERATE EMPTY() () (x)
+        #define CONFEDERATE() GROW5
+        SHOW(BE(GROW5(21)));
+        SHOW(BE(BE(GROW5(57))));
+        printf("\n");
+
+        // case 6
+        /*
+          Once a recursively called function is marked, or 'colored' it can never be expanded, even when passed through to another variable and separately evaluation.
+         ,*/
+        #define GROW6(x) 1029 * GROW6 EMPTY() (x)
+        #define RESULT1 GROW6(51)
+        SHOW(RESULT1);
+        SHOW(BE(RESULT1));
+        printf("\n");
+        // RESULT1 --> 1029 * GROW6 (51)
+        // BE(RESULT1) --> 1029 * GROW6 (51)
+
+        // case 7
+        #define RESULT2 GROW6(151)
+        SHOW(RESULT2);
+        SHOW(BE(RESULT2));
+        printf("\n");
+        // RESULT2 --> 1029 * GROW6 (151)
+        // BE(RESULT2) --> 1029 * GROW6 (151)
+
+      }
+
+    #+END_SRC
+
+7. Discussion on recursion
+
+  Case 6, and Case 7 above show that once a token is marked as a would-be recursive call token it is marked and can never be evaluated, no matter how hard the programmer
+  might try hide its actual origin. It can be assigned to variables, passed between co-routines, and nothing will help because the macro call token itself is marked.
+
+  Case 5 shows a workaround. Instead of having a recursive call, a deferred call to a confederate is made.  The resulting expression then amounts to a lazy evaluation. The return value from the evaluation will contain unmade calls to the confederate in each and every place that a recursive call was desired.
+
+  In order to complete the evaluation, the lazy result must undergo a second evaluation,
+  where the confederate function calls are run, and they return the name of the original
+  function that was to be called, and then those calls are evaluated.
+
+  This leads to a trade off. To have recursion we must have two evaluations of expressions so as to replace the confederates.
+
+  Repeated evaluation is a consequence of using confederate method to avoid macro calls from being marked not to be evaluated. Deferring the calls is necessary so that the don't get replaced in the first evaluation so that their replacements don't get marked.
+
+  Note that each recursive call, potentially results in ore expressions appearing. Hence, there must be as many evaluations as there are levels of recursion. This is a tell order for list processing.
+
+  

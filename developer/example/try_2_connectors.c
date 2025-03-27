@@ -1,7 +1,9 @@
 #include <stdio.h>
-#include "cpp_RT.c"
+#define STR(x) #x
+// no evaluation, and one pass of evaluation
+#define SHOW(expr) printf("%s --> %s\n", #expr, STR(expr))
 
-#define SHOW( x) printf(#x " = %d\n", x)
+#include "cpp_ext_0.c"
 
 int main(void){
   //--------------------------------------------------------------------------
@@ -88,3 +90,66 @@ int main(void){
 
   return 0;
 }
+/*
+  2025-03-27T12:40:37Z[developer]
+  Thomas-developer@Stanley§/home/Thomas-masu/developer/N/developer/example§
+  > gcc try_2_connectors.c 
+
+  2025-03-27T12:41:56Z[developer]
+  Thomas-developer@Stanley§/home/Thomas-masu/developer/N/developer/example§
+  > ./a.out
+  EXISTS_ITEM(x0) --> 0
+  NOT_EXISTS_ITEM(x0) --> 1
+
+  MATCH(x0) --> MATCH()
+  NOT_MATCH(x0) --> NOT_MATCH()
+
+  _NOT(0) --> 1
+  _NOT(1) --> 0
+
+  _AND(0 ,0) --> 0
+  _AND(1 ,0) --> 0
+  _AND(0 ,1) --> 0
+  _AND(1 ,1) --> 1
+  _AND(1 ,x) --> 0
+
+  _OR(0 ,0) --> 0
+  _OR(0 ,1) --> 1
+  _OR(1 ,0) --> 1
+  _OR(1 ,1) --> 1
+
+  _EQ(0 ,0) --> 1
+  _EQ(1 ,1) --> 1
+  _EQ(0 ,1) --> 0
+  _EQ(x ,x) --> 0
+
+  _NOT_EQ(0 ,1) --> 1
+  _NOT_EQ(0 ,0) --> 0
+
+  _BOOL_2(0) --> 0
+  _BOOL_2(1) --> 1
+  _BOOL_2(2) --> 1
+  _BOOL_2(x0) --> 0
+
+  BOOL(0) --> 0
+  BOOL(1) --> 1
+  BOOL(10) --> 1
+  BOOL() --> 0
+  BOOL(x0) --> 0
+
+  NOT(0) --> 1
+  NOT(1) --> 0
+  NOT() --> 1
+  NOT(10) --> 0
+
+  AND(1 ,0) --> 0
+  AND(1 ,1) --> 1
+
+  OR(0 ,0) --> 0
+  OR(1 ,0) --> 1
+
+
+  2025-03-27T12:41:59Z[developer]
+  Thomas-developer@Stanley§/home/Thomas-masu/developer/N/developer/example§
+  >
+*/

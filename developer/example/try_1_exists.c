@@ -1,10 +1,9 @@
 #include <stdio.h>
-#include "cpp_RT.c"
-
-
 #define STR(x) #x
-#define XSTR(x) STR(x)
+// no evaluation, and one pass of evaluation
+#define SHOW(expr) printf("%s --> %s\n", #expr, STR(expr))
 
+#include "cpp_ext_0.c"
 
 // Patch for CAT to succeed
 #define FOOBAR 12345
@@ -75,3 +74,33 @@ int main(void){
 
   return 0;
 }
+
+/*
+  2025-03-27T12:38:04Z[developer]
+  Thomas-developer@Stanley§/home/Thomas-masu/developer/N/developer/example§
+  > gcc try_1_exists.c 
+
+  2025-03-27T12:40:32Z[developer]
+  Thomas-developer@Stanley§/home/Thomas-masu/developer/N/developer/example§
+  > ./a.out
+  _CAT(FOO ,BAR) → 12345
+
+  _FIRST(11 ,22 ,33) = 11
+  _SECOND(11 ,22 ,33) = 22
+
+  EXISTS_ITEM() = 0
+  EXISTS_ITEM(0) = 1
+  EXISTS_ITEM(1) = 1
+  EXISTS_ITEM(hello) = 1
+
+  NOT_EXISTS_ITEM() = 1
+  NOT_EXISTS_ITEM(0) = 0
+  NOT_EXISTS_ITEM(1) = 0
+  NOT_EXISTS_ITEM(hello) = 0
+
+  EXISTS(10,11,12) = 1
+  EXISTS() = 0
+
+  NOT_EXISTS(10,11,12) = 0
+  NOT_EXISTS() = 1
+*/
