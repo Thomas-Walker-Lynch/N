@@ -6,6 +6,7 @@
 #include "cpp_ext_0.c"
 
 int main(void){
+
   //--------------------------------------------------------------------------
   // Existence Checks (sanity anchor)
   //--------------------------------------------------------------------------
@@ -40,8 +41,6 @@ int main(void){
   SHOW( _OR(1 ,0) );   // rule missing → NOT_MATCH → 1
   SHOW( _OR(1 ,1) );   // rule missing → NOT_MATCH → 1
   printf("\n");
-
-
 
   //--------------------------------------------------------------------------
   // Equality
@@ -88,14 +87,54 @@ int main(void){
   SHOW( OR(1 ,0) );      // BOOL(1), BOOL(0) = 0,0 → OR(0 ,0) = _OR(0 ,0) = 0
   printf("\n");
 
+  //--------------------------------------------------------------------------
+  // Compound Connectors
+  //--------------------------------------------------------------------------
+
+  // Double NOT
+  SHOW( NOT(NOT(0)) );     // → NOT(1) → _NOT(1) → 0
+  SHOW( NOT(NOT(1)) );     // → NOT(0) → _NOT(0) → 1
+
+  // Triple NOT
+  SHOW( NOT(NOT(NOT(0))) );  // → NOT(0) → _NOT(0) → 1
+  SHOW( NOT(NOT(NOT(1))) );  // → NOT(1) → _NOT(1) → 0
+  printf("\n");
+
+  // Nested AND
+  SHOW( AND(1 ,AND(1 ,0)) );  // AND(1 ,AND(1 ,0)) → AND(1 ,0) → _AND(1 ,0) = 0
+  SHOW( AND(1 ,AND(1 ,1)) );  // → AND(1 ,1) → _AND(1 ,1) = 1
+  printf("\n");
+
+  // Nested OR
+  SHOW( OR(0 ,OR(0 ,1)) );    // → OR(0 ,1) → _OR(0 ,1) = 1
+  SHOW( OR(0 ,OR(0 ,0)) );    // → OR(0 ,0) → _OR(0 ,0) = 0
+  printf("\n");
+
+  // Mixed nesting
+  SHOW( AND(NOT(0) ,1) );     // → AND(1 ,1) → _AND(1 ,1) = 1
+  SHOW( AND(NOT(1) ,1) );     // → AND(0 ,1) → _AND(0 ,1) = 0
+  SHOW( OR(NOT(1) ,1) );      // → OR(0 ,1) → _OR(0 ,1) = 1
+  SHOW( OR(NOT(0) ,0) );      // → OR(1 ,0) → _OR(1 ,0) = 1
+  printf("\n");
+
+  // Deep mix
+  SHOW( NOT(AND(1 ,NOT(1))) );  // AND(1 ,0) = _AND(1 ,0) = 0 → NOT(0) = _NOT(0) = 1
+  SHOW( NOT(OR(0 ,NOT(0))) );   // OR(0 ,1) = _OR(0 ,1) = 1 → NOT(1) = _NOT(1) = 0
+  printf("\n");
+
+  // Asymmetric nesting
+  SHOW( AND(OR(0 ,1) ,AND(1 ,1)) ); // OR(0 ,1) = 1, AND(1 ,1) = 1 → AND(1 ,1) = 1
+  SHOW( OR(AND(1 ,0) ,AND(1 ,1)) ); // AND(1 ,0) = 0, AND(1 ,1) = 1 → OR(0 ,1) = 1
+  printf("\n");
+
   return 0;
 }
 /*
-  2025-03-27T12:40:37Z[developer]
+  2025-03-27T12:59:39Z[developer]
   Thomas-developer@Stanley§/home/Thomas-masu/developer/N/developer/example§
   > gcc try_2_connectors.c 
 
-  2025-03-27T12:41:56Z[developer]
+  2025-03-27T13:00:11Z[developer]
   Thomas-developer@Stanley§/home/Thomas-masu/developer/N/developer/example§
   > ./a.out
   EXISTS_ITEM(x0) --> 0
@@ -148,8 +187,32 @@ int main(void){
   OR(0 ,0) --> 0
   OR(1 ,0) --> 1
 
+  NOT(NOT(0)) --> 0
+  NOT(NOT(1)) --> 1
+  NOT(NOT(NOT(0))) --> 1
+  NOT(NOT(NOT(1))) --> 0
 
-  2025-03-27T12:41:59Z[developer]
+  AND(1 ,AND(1 ,0)) --> 0
+  AND(1 ,AND(1 ,1)) --> 1
+
+  OR(0 ,OR(0 ,1)) --> 1
+  OR(0 ,OR(0 ,0)) --> 0
+
+  AND(NOT(0) ,1) --> 1
+  AND(NOT(1) ,1) --> 0
+  OR(NOT(1) ,1) --> 1
+  OR(NOT(0) ,0) --> 1
+
+  NOT(AND(1 ,NOT(1))) --> 1
+  NOT(OR(0 ,NOT(0))) --> 0
+
+  AND(OR(0 ,1) ,AND(1 ,1)) --> 1
+  OR(AND(1 ,0) ,AND(1 ,1)) --> 1
+
+
+  2025-03-27T13:00:12Z[developer]
   Thomas-developer@Stanley§/home/Thomas-masu/developer/N/developer/example§
   >
 */
+
+  

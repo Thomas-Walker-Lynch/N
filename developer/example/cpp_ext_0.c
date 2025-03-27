@@ -1,15 +1,13 @@
 /*
+  See also 
+    https://github.com/18sg/uSHET/blob/master/lib/cpp_magic.h 
+    and tutorial at: http://jhnet.co.uk/articles/cpp_magic
 
-Provides:
+    documents in $REPO_HOME/developer/document🖉
+
+1. Provides:
 
   COMMA, SEMICOLON, EXISTS, NOT_EXISTS, ,MATCH_RWR ,NOT_MATCH_RWR, BOOL, NOT, AND, OR, EQ, NOT_EQ, IF_ELSE
-
-1.
-  See also https://github.com/18sg/uSHET/blob/master/lib/cpp_magic.h 
-  and tutorial at: http://jhnet.co.uk/articles/cpp_magic
-
-  I could not have even thought about writing this without Jonathan Heathcote's
-  little tutorial.
 
 2.
   These are the non-recursive extensions.  See cpp_ext_1 for the recursive extensions.
@@ -24,72 +22,6 @@ Provides:
   Macros starting with an '_' (underscore) are private.
 
   EQ comparisons apart from logic comparisons, must be registered in advance. They take the form of, _RWR_EQ__<x>__oo__<y>, note comments below.
-
-5. Evaluation 
-
-  1. cpp does not evaluate arguments that in the definition are attached to hash operator.
-
-       #define STR(x) #x   // x is not evaluated.
-       #define VAL(x) STR(x)  // x is evaluated recursively before STR is expanded
-
-     The same applies for '##'
-
-  2. cpp evaluates from left to right, for each macro it finds it does depth first revalution.
-
-  3. Due to the left to right evaluation a funny things happens.
-
-      #define EMPTY()
-      #define NEGATE(x) -x
-     
-      #define NOT_SO_FAST(x)  NEGATE EMPTY() (x)
-
-      What happens in left to right evaluation of NOT_SO_FAST(5)
-      1. first NEGATE will be evaluated, there is nothing to expand
-      2. EMPTY() is evaluated to nothing
-      3. (x) is evaluated to 5.
-      4. reached the right side, done result is:
-
-      ->  NEGATE (x)
-
-        > cat >test.c << EOF
-        #include <stdio.h>
-        int main(void){
-          printf("example_eval.c\n");
-
-          #define STR(x) #x
-
-          // `#x` no evaluation of x 
-          // `STR(x)` one left to right pass evaluation of `x` due to depth recursion
-          #define SHOW(x) printf(#x " → %s\n", STR(x));
-
-          #define EMPTY()
-          #define NEGATE(x) -x
-          #define NOT_SO_FAST(x)  NEGATE EMPTY() (x)
-          SHOW(NOT_SO_FAST(5));
-
-          #define BE(x) x
-          SHOW(BE(NOT_SO_FAST(5)))
-        }
-        EOF
-
-        > gcc test.c
-        > ./a.out
-        example_eval.c
-        NOT_SO_FAST(5) → NEGATE (5)
-        BE(NOT_SO_FAST(5)) → -5
-        > 
-
-    Consider the lines:
-
-      #define BE(x) x
-      SHOW(BE(NOT_SO_FAST(5)))
-    
-    cpp left to right scan finds one macro to expand: BE(NOT_SO_FAST(5))
-    cpp depth first into that macro finds 5, which expands to -> 5
-    going up a level cpp tries: NOT_SO_FAST(5) -> NEGATE (5)
-    going up a level cpp tries: BE( NEGATE (5) ) ->  BE( -5 ) -> -5
-
-
 
 
 */
@@ -125,6 +57,19 @@ Constants
 #define _RWR_EQ__1__oo__1
 
 /*===========================================================================
+Primitive Concatenation
+  Not due to elegance, as `##` is convenient, rather this is 
+  used to force evaluation of arguments before `##`.
+  There will be a recursive CAT of n things in cpp_ext_1.c
+===========================================================================*/
+
+#define _CAT2(a ,b) a ## b
+#define CAT2(a ,b) _CAT(a ,b)
+
+#define _CAT3(a ,b ,c) a ## b ## c
+#define CAT3(a ,b ,c) _CAT(a ,b ,c)
+
+/*===========================================================================
 Logic
 ===========================================================================*/
 
@@ -138,8 +83,10 @@ Logic
 
   //----------------------------------------
   // existence
+  //
+  // `##` prevents rewrite of _TWION_ in the _EXISTS_ITEM_1 macro, don't
+  // replace that with CAT!
 
-  // `##` prevents rewrite of _TWION_ in the _EXISTS_ITEM_1 macro
   #define _EXISTS_ITEM_2(x_item) _SECOND(x_item ,1) 
   #define _EXISTS_ITEM_1(x_item) _EXISTS_ITEM_2(_TWION_0##x_item)
 
@@ -200,17 +147,21 @@ Logic Connectors
   #define _NOT_EQ(x_item ,y_item) EXISTS(_RWR_EQ__##x_item##__oo__##y_item)
   #define NOT_EQ(x_item ,y_item) _NOT_EQ(x_item ,y_item)
 
-
 /*===========================================================================
   IF-ELSE construct.
   Usage: IF_ELSE(condition)(<true case>)(<false case>)
 
   A most amazing little macro. It has no dependencies on the other macros
   in this file, though many will be useful for setting (condition)
+
+  The seemingly extra layer prevents BOOL_(condition) from being pasted
+  with a ## which, if done, would prevent it from being evaluated.  Recall,
+  the first step in evaluation is a literal copy in of the arguments.
 ===========================================================================*/
 
   #define IF_ELSE(condition) _IF_ELSE(BOOL(condition))
-  #define _IF_ELSE(condition)  _IF_##condition
+  #define _IF_ELSE(condition) __IF_ELSE(condition)
+  #define __IF_ELSE(condition)  _IF_##condition
   #define _IF_1(...)          __VA_ARGS__ _IF_1_ELSE
   #define _IF_0(...)                      _IF_0_ELSE
   #define _IF_1_ELSE(...)

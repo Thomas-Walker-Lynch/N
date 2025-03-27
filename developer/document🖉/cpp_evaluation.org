@@ -4,13 +4,13 @@
 
 1. Macro function definition
 
-   A macro function has three parts, 1) a name 2) a parameter list  3) definition
+   A macro function has three parts, 1) a name 2) a parameter list  3) body
 
    Parameters are declared by listing them between parenthesis after the name. No space
    can occur between the name and the parameter list! If there is space then the
-   parameter list will be taken as part of the definition.
+   parameter list will be taken as part of the body.
 
-   Text after the parameter list forms the definition.
+   Text after the parameter list forms the body.
 
       #+BEGIN_SRC c
       #define name(x ,y ,z)  <replacement>
@@ -18,43 +18,84 @@
       #define name(x ,...) <replacement>
       #+END_SRC
 
-2. Macro call
+2. Macro Call
 
-   Can occur anywhere in the source code. Takes the form of an macro function
-   name followed by an argument list.
+   A macro call can occur anywhere in the source code. It takes the form of a macro
+   name followed by an argument list:
 
-      #+BEGIN_SRC c
-      name (1 ,a ,b)
-      #+END_SRC
+   #+BEGIN_SRC c
+   name(1 ,a ,b)
+   #+END_SRC
 
-   In a call, space is allowed between the macro name and the arguments list.
+   In a call, space is allowed between the macro name and the argument list.
 
-    1. Each parameter in the definition is replaced with the corresponding argument.
-       
-    2. cpp then scans the definition from left to right. 
+** 1. Argument Substitution Phase
 
-        2.1 Upon finding a non-macro call token cpp includes it as part of the result.
+   When the macro is invoked:
 
-        2.2. Uon finding a macro call token, it does a recursive evaluation on it. 
+   1. Each parameter in the macro body is replaced *verbatim* with the
+      corresponding argument. No evaluation is performed at this stage.
 
-   Non-macro call tokens include:
+   2. The new macro body is a new token stream: the old macro body with arguments pasted in.
 
-   1. a non-identifier.
+** 2. Evaluation Phase
 
-   2. an identifier not followed by parenthesis.
+   The preprocessor then scans the argument substituted macro body *from left to right*,
+   evaluating macro calls *as it encounters them*.
 
-   3. anything followed by a `#`
+   - If a token is **not** a macro call (see below), it is included as-is.
+   - If a token **is** a macro call, it is expanded immediately, using the same two-phase process.
 
-      `#` returns an atomic string token made from what follows it
+   This produces a depth-first, left-to-right expansion strategy.
 
-   4. anything connected by '##'
+   Non-macro-call tokens include:
 
-      `##` does a concatenation and returns a new token.  This new token is not evaluated.
+   1. Any non-identifier (e.g. `+`, `123`, `"text"`)
 
-   2. Recursion has been designed out.
+   2. Any identifier **not followed by `(`**
 
-      Any macro call token that matches the name of the macro being evaluated is marked, and can never be called. It will forever more be treated as literal text. Note
-      the examples in the next section.
+   3. Any parameter or token used with `#`
+
+      - `#param` turns the *original* argument text into a string.
+      - Because it stringifies, *the argument is never evaluated*.
+
+   4. Any parameter or token used with `##`
+
+      - `##` concatenates tokens without evaluating them.
+      - The pasted result is *not* scanned recursively for macro calls.
+
+   5. any macro call token that has been "colored blue" by the evaluator.
+
+   It is common that macros containing a `#` or a `##` will have an extra call
+   layer above them to cause the argument to be first substituted into a macro
+   where it will get evaluated. Large number of Eval calls are typically not needed
+   for this, rather what is needed is one layer above the layer with the `#` or `##`.
+
+** 3. Colored blue macro call tokens are taken as literal text.
+
+   A macro color token is the text of a macro call considered as a single token. The following is an example macro call token:
+
+   #+BEGIN_SRC c
+   name(1 ,a ,b)
+   #+END_SRC
+
+   During evaluation cpp keeps a list of macros that are actively being expanded.  This includes the macro that has been called, of course, and all the calls that it found during its depth traversal to get to the current point of evaluation. If it sees any calls to the macros on the active expand list, it marks the macro call token itself as unexpandable, and thus to be treated as literal text. It is said that the macro call token "has been colored blue".
+
+   Any subsequent appearance of a colored blue macro call token will be treated as literal text, no matter the context. This includes if the macro result was assigned to a variable, then that variable is evaluated later.  It includes if the macro call token or the expression it is in is sent to another macro, etc.  
+
+   Example:
+
+   #+BEGIN_SRC c
+   #define GROW(x) 1029 * GROW(x)
+   #define RESULT GROW(5)
+
+   SHOW(RESULT);        // → 1029 * GROW(5)
+   SHOW(EVAL(RESULT));    // → 1029 * GROW(5) again, never expands
+   #+END_SRC
+
+   The macro call token `GROW(x)` which occurs in the body of a macro definition of the same name, gets colored blue, and thus is always treated as literal text. This happens even though an expression containing it is assigned to a variable, then that variable is evaluated in a totally different evaluation context.
+
+  Apparently the designers of cpp do not want people to design recursive structures with cpp. However, there is a trick for getting around it using a confederate in place of the recursive call, then putting back the original call later, as shown in section 6.
       
 3. Example macros
 
@@ -85,7 +126,7 @@
       the evaluation moves right.
       
    2. ~EMPTY()~ is a macro, so it has no operands, so it is expanded. As it has no
-      definition, it expands to nothing. CPP then moves to the right.
+      body, it expands to nothing. CPP then moves to the right.
 
    3. ~(x)~ is not a macro so there is nothing to recur into, so it becomes ~(5)~.
 
