@@ -7,7 +7,7 @@
 
 1. Provides:
 
-  COMMA, SEMICOLON, EXISTS, NOT_EXISTS, ,MATCH_RWR ,NOT_MATCH_RWR, BOOL, NOT, AND, OR, EQ, NOT_EQ, IF_ELSE
+  COMMA, SEMICOLON, NOT_EMPTY, EMPTY, ,MATCH_RWR ,NOT_MATCH_RWR, BOOL, NOT, AND, OR, EQ, NOT_EQ, IF_ELSE
 
 2.
   These are the non-recursive extensions.  See cpp_ext_1 for the recursive extensions.
@@ -101,24 +101,24 @@ Existence
   //----------------------------------------
   // existence
   //
-  // `##` prevents rewrite of _TWION_ in the _EXISTS_ITEM_1 macro, don't
+  // `##` prevents rewrite of _TWION_ in the _NOT_EMPTY_ITEM_1 macro, don't
   // replace that with CAT!
 
-  #define _EXISTS_ITEM_2(x_item) _SECOND(x_item ,1) 
-  #define _EXISTS_ITEM_1(x_item) _EXISTS_ITEM_2(_TWION_0##x_item)
+  #define _NOT_EMPTY_ITEM_2(x_item) _SECOND(x_item ,1) 
+  #define _NOT_EMPTY_ITEM_1(x_item) _NOT_EMPTY_ITEM_2(_TWION_0##x_item)
 
-  #define EXISTS_ITEM(x_item)   _EXISTS_ITEM_1(x_item)
-  #define EXISTS(...) EXISTS_ITEM( _FIRST(__VA_ARGS__) )
+  #define NOT_EMPTY_ITEM(x_item)   _NOT_EMPTY_ITEM_1(x_item)
+  #define NOT_EMPTY(...) NOT_EMPTY_ITEM( _FIRST(__VA_ARGS__) )
 
-  #define _NOT_EXISTS_ITEM_2(x_item) _SECOND(x_item ,0) 
-  #define _NOT_EXISTS_ITEM_1(x_item) _NOT_EXISTS_ITEM_2(_TWION_1##x_item)
+  #define _EMPTY_ITEM_2(x_item) _SECOND(x_item ,0) 
+  #define _EMPTY_ITEM_1(x_item) _EMPTY_ITEM_2(_TWION_1##x_item)
 
-  #define NOT_EXISTS_ITEM(x_item)   _NOT_EXISTS_ITEM_1(x_item)
-  #define NOT_EXISTS(...) NOT_EXISTS_ITEM( _FIRST(__VA_ARGS__) )
+  #define EMPTY_ITEM(x_item)   _EMPTY_ITEM_1(x_item)
+  #define EMPTY(...) EMPTY_ITEM( _FIRST(__VA_ARGS__) )
 
   // useful to use with rewrite rules that substitute to nothing
-  #define MATCH_RWR(x_item) NOT_EXISTS(x_item)
-  #define NOT_MATCH_RWR(x_item) EXISTS(x_item)
+  #define MATCH_RWR(x_item) EMPTY(x_item)
+  #define NOT_MATCH_RWR(x_item) NOT_EMPTY(x_item)
 
 /*===========================================================================
 Logic Connectors
@@ -135,7 +135,7 @@ Logic Connectors
 
   #define _BOOL(x_item) \
     _AND( \
-       EXISTS_ITEM( x_item ) \
+       NOT_EMPTY_ITEM( x_item ) \
       ,NOT_MATCH_RWR( CAT2(_RWR_EQ__0__oo__ ,x_item) )  \
     )
   #define BOOL(x_item) _BOOL(_FIRST(x_item))
@@ -187,28 +187,28 @@ Access
   // _FIRST defined in the logic section
   #define FIRST(pad ,...)\
     IF_ELSE \
-      ( NOT_EXISTS(__VA_ARGS__) ) \
+      ( EMPTY(__VA_ARGS__) ) \
       (pad)                       \
       ( _FIRST(__VA_ARGS__) )  
 
   #define _REST(a ,...) __VA_ARGS__
   #define REST(...)\
     IF_ELSE \
-      ( NOT_EXISTS(__VA_ARGS__) ) \
+      ( EMPTY(__VA_ARGS__) ) \
       ()                          \
       ( _REST(__VA_ARGS__) )  
 
   // _SECOND defined in the logic section
   #define SECOND(pad ,...) \
     IF_ELSE \
-      ( NOT_EXISTS(__VA_ARGS__) ) \
+      ( EMPTY(__VA_ARGS__) ) \
       (pad)                       \
       ( _SECOND(__VA_ARGS__ ,pad) )  
 
   #define _THIRD(a ,b ,c ,...) c
   #define THIRD(pad ,...) \
     IF_ELSE \
-      ( NOT_EXISTS(__VA_ARGS__) ) \
+      ( EMPTY(__VA_ARGS__) ) \
       (pad)                       \
       ( _THIRD(__VA_ARGS__ ,pad, pad) )  
 

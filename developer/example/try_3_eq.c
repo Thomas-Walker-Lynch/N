@@ -18,7 +18,7 @@ int main(void){
   // NOTEQ Tests — inverse behavior
   //---------------------------------------------------------------------------
 
-  SHOW(NOT_EQ(0 ,0));  // Expected → 0 (because EQ → 1, so EXISTS → 0)
+  SHOW(NOT_EQ(0 ,0));  // Expected → 0 (because EQ → 1, so NOT_EMPTY → 0)
   SHOW(NOT_EQ(1 ,1));  // Expected → 0
   SHOW(NOT_EQ(0 ,1));  // Expected → 1
   SHOW(NOT_EQ(1 ,0));  // Expected → 1
