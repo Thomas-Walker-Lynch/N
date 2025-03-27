@@ -1,8 +1,3 @@
-#include <stdio.h>
-#define STR(x) #x
-// no evaluation, and one pass of evaluation
-#define SHOW(expr) printf("%s --> %s\n", #expr, STR(expr))
-
 #include "cpp_ext_0.c"
 
 int main(void){
@@ -19,7 +14,6 @@ int main(void){
   SHOW(  MATCH(x0) );
   SHOW(  NOT_MATCH(x0) );
   printf("\n");
-
 
   //--------------------------------------------------------------------------
   // Primitive Connectors
@@ -43,27 +37,15 @@ int main(void){
   printf("\n");
 
   //--------------------------------------------------------------------------
-  // Equality
-  //--------------------------------------------------------------------------
-
-  SHOW( _EQ(0 ,0) );     // rule defined → MATCH → 1
-  SHOW( _EQ(1 ,1) );     // rule defined → MATCH → 1
-  SHOW( _EQ(0 ,1) );     // no rule → MATCH fails → 0
-  SHOW( _EQ(x ,x) );     // no rule → MATCH fails → 0
-  printf("\n");
-
-  SHOW( _NOT_EQ(0 ,1) ); // rule missing → EXISTS → 1
-  SHOW( _NOT_EQ(0 ,0) ); // rule exists → EXISTS → 0
-  printf("\n");
-
-  //--------------------------------------------------------------------------
   // Logical Connectors (BOOL + AND/OR/NOT)
   //--------------------------------------------------------------------------
 
-  SHOW( _BOOL_2(0) );       // 0
-  SHOW( _BOOL_2(1) );       // 1
-  SHOW( _BOOL_2(2) );       //  1 because it exists
-  SHOW( _BOOL_2(x0) );       // 0 because it does not exit (see the #define at the top)
+  printf("x0 is a macro with an empty definition");
+
+  SHOW( _BOOL(0) );       // 0
+  SHOW( _BOOL(1) );       // 1
+  SHOW( _BOOL(2) );       //  1 because it exists
+  SHOW( _BOOL(x0) );       // 0 because it does not exit (see the #define at the top)
   printf("\n");
 
   SHOW( BOOL(0) );       // _FIRST = 0, EXISTS_ITEM(_FIRST) = 0 → _AND(0 ,1) → 0

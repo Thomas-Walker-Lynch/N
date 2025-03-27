@@ -1,24 +1,28 @@
-#include <stdio.h>
-#define STR(x) #x
-// no evaluation, and one pass of evaluation
-#define SHOW(expr) printf("%s --> %s\n", #expr, STR(expr))
-
 #include "cpp_ext_0.c"
 
-// Patch for CAT to succeed
-#define FOOBAR 12345
+#define F 1
+#define O1 2
+#define O2 3
+#define B 4
+#define A 5
+#define R 6
+#define D 7
+
 
 // Patch for _EXISTS to succeed on 0
 #define _REWRITE_TWION_0 _REWRITE_TWION
 
 int main(void){
+  printf("try_1_exists\n\n");
 
   // Constant macros
   int x COMMA y = 1;  // Tests that COMMA = ,
+  printf("y? %d\n", y);
+  printf("\n");
 
   // Token paste test
-  int _cat_result = FOOBAR; // _CAT(FOO ,BAR) → FOOBAR → 12345
-  printf("_CAT(FOO ,BAR) → %d\n", _cat_result);
+  int _cat_result = CAT2(CAT3(F ,O1 ,O2) ,CAT4(B ,A ,R ,D));
+  printf("FOOBARD %d\n" ,_cat_result);
   printf("\n");
 
   // Selector macros

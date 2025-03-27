@@ -29,6 +29,16 @@
 #ifndef CPP_EXT_0
 #define CPP_EXT_0
 
+/*===========================================================================
+DEBUG
+===========================================================================*/
+
+#include <stdio.h>
+#define DEBUG_CPP
+#define STR(x) #x
+
+// print the macro and the evaluation of the macro
+#define SHOW(expr) printf("%s -> %s\n", #expr, STR(expr))
 
 /*===========================================================================
 Constants
@@ -64,10 +74,14 @@ Primitive Concatenation
 ===========================================================================*/
 
 #define _CAT2(a ,b) a ## b
-#define CAT2(a ,b) _CAT(a ,b)
+#define CAT2(a ,b) _CAT2(a ,b)
 
 #define _CAT3(a ,b ,c) a ## b ## c
-#define CAT3(a ,b ,c) _CAT(a ,b ,c)
+#define CAT3(a ,b ,c) _CAT3(a ,b ,c)
+
+#define _CAT4(a ,b ,c ,d) a ## b ## c ## d
+#define CAT4(a ,b ,c ,d) _CAT4(a ,b ,c ,d)
+
 
 /*===========================================================================
 Logic
@@ -107,26 +121,25 @@ Logic
 Logic Connectors
 ===========================================================================*/
 
-  #define _NOT_1(x_item) MATCH_RWR( _RWR_NOT__##x_item )
-  #define _NOT(x_item) _NOT_1(x_item)
+  #define _NOT(x_item) \
+    MATCH_RWR( CAT2(_RWR_NOT__ ,x_item) )
 
-  #define _AND_1(x_item ,y_item) MATCH_RWR( _RWR_AND__##x_item##__oo__##y_item )
-  #define _AND(x_item ,y_item) _AND_1(x_item ,y_item)
+  #define _AND(x_item ,y_item) \
+    MATCH_RWR( CAT4(_RWR_AND__ ,x_item ,__oo__ ,y_item) )
 
-  #define _OR_1(x_item ,y_item) NOT_MATCH_RWR( _RWR_OR__##x_item##__oo__##y_item )
-  #define _OR(x_item ,y_item) _OR_1(x_item ,y_item)
+  #define _OR(x_item ,y_item) \
+    NOT_MATCH_RWR( CAT4(_RWR_OR__ ,x_item ,__oo__ ,y_item) )
 
-  #define _BOOL_2(x_item) \
-    _AND(\
-       EXISTS_ITEM( _FIRST(x_item) )            \
-      ,NOT_MATCH_RWR( _RWR_EQ__0__oo__##x_item) \
+  #define _BOOL(x_item) \
+    _AND( \
+       EXISTS_ITEM( x_item ) \
+      ,NOT_MATCH_RWR( CAT2(_RWR_EQ__0__oo__ ,x_item) )  \
     )
-  #define _BOOL_1(x_item) _BOOL_2(x_item)
-  #define BOOL(x_item) _BOOL_1(_FIRST(x_item))
-
-  #define NOT(x_item) _NOT(BOOL(x_item))
+  #define BOOL(x_item) _BOOL(_FIRST(x_item))
+  
+  #define NOT(x_item)         _NOT(BOOL(x_item))
   #define AND(x_item ,y_item) _AND(BOOL(x_item) ,BOOL(y_item))
-  #define OR(x_item ,y_item) _OR(BOOL(x_item) ,BOOL(y_item))
+  #define  OR(x_item ,y_item)  _OR(BOOL(x_item) ,BOOL(y_item))
 
 /*===========================================================================
   Equality
@@ -141,11 +154,15 @@ Logic Connectors
 
 ===========================================================================*/
 
-  #define _EQ(x_item ,y_item) MATCH_RWR( _RWR_EQ__##x_item##__oo__##y_item )
-  #define EQ(x_item ,y_item) _EQ(x_item ,y_item)
+  #define EQ(x_item ,y_item) \
+        MATCH_RWR( CAT4(_RWR_EQ__ ,x_item ,__oo__ ,y_item) )
 
-  #define _NOT_EQ(x_item ,y_item) EXISTS(_RWR_EQ__##x_item##__oo__##y_item)
-  #define NOT_EQ(x_item ,y_item) _NOT_EQ(x_item ,y_item)
+  #define NOT_EQ(x_item ,y_item) \
+    NOT_MATCH_RWR( CAT4(_RWR_EQ__ ,x_item ,__oo__ ,y_item) )
+
+#if 0
+
+
 
 /*===========================================================================
   IF-ELSE construct.
@@ -154,18 +171,14 @@ Logic Connectors
   A most amazing little macro. It has no dependencies on the other macros
   in this file, though many will be useful for setting (condition)
 
-  The seemingly extra layer prevents BOOL_(condition) from being pasted
-  with a ## which, if done, would prevent it from being evaluated.  Recall,
-  the first step in evaluation is a literal copy in of the arguments.
-===========================================================================*/
+  The seemingly extra layer prevents BOOL_(condition) from being pasted with a ## which, if done, would prevent it from being evaluated.  Recall, the first step in evaluation is a literal copy in of the arguments.  ===symbol ========================================================================*/
 
-  #define IF_ELSE(condition) _IF_ELSE(BOOL(condition))
-  #define _IF_ELSE(condition) __IF_ELSE(condition)
-  #define __IF_ELSE(condition)  _IF_##condition
+  #define _IF_ELSE(condition)  CAT2(_IF_ ,BOOL(condition))
   #define _IF_1(...)          __VA_ARGS__ _IF_1_ELSE
   #define _IF_0(...)                      _IF_0_ELSE
   #define _IF_1_ELSE(...)
   #define _IF_0_ELSE(...)      __VA_ARGS__
+
 
 /*===========================================================================
 Access
@@ -201,6 +214,6 @@ Access
       (pad)                       \
       ( _THIRD(__VA_ARGS__ ,pad, pad) )  
 
-
+#endif 
 
 #endif

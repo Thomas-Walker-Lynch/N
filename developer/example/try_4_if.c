@@ -1,8 +1,3 @@
-#include <stdio.h>
-#define STR(x) #x
-// no evaluation, and one pass of evaluation
-#define SHOW(expr) printf("%s --> %s\n", #expr, STR(expr))
-
 #include "cpp_ext_0.c"
 
 int main(void){
