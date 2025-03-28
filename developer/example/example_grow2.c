@@ -6,8 +6,8 @@
 
 #define BE(...) __VA_ARGS__
 
-#define EMPTY() 
-#define GROW(x)     19 * _GROW EMPTY() ()(x)
+#define NULL_FN() 
+#define GROW(x)     19 * _GROW NULL_FN() ()(x)
 #define _GROW() GROW
 
 

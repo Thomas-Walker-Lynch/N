@@ -1,0 +1,37 @@
+Grammar
+
+  identifier = [_a-zA-Z][_a-zA-Z0-9]*
+             | ([_a-zA-Z\u00A0-\uFFFF])([_a-zA-Z0-9\u00A0-\uFFFF])*
+
+  macro_name = identifier
+
+  token = identifier
+        | number              ; e.g., 42, 0xFF, 3.14
+        | string_literal      ; "hello"
+        | character_constant  ; 'a', '\n'
+        | operator_token      ; +, -, ~, <<, etc.
+        | punctuation         ; (), [], {}, etc. (when tokenized)
+        | parenthesized_expr  ; (1,2), (x + y)
+
+  empty_item = ε  
+     An item with no content, but syntactically present and contributing to list length.
+     For example, ( , ) is a two-item arg_list with two empty_items.
+
+  shim_item = ~,1
+     A special two-token item treated as a single item.
+     Its role is to shift the remaining members of a list by one position when prepended.
+     An honorary member of the single item club.
+
+  item = token | empty_item | shim_item
+
+  arg_list = item (, item)* ; comma-separated list of items
+
+  pair     = item , item ; exactly two items
+
+2.2 'private' identify 
+
+  By convention private identifiers begin with an `_` character. 
+
+  Macros with this prefix are not intended to be called by users, and
+  indentifiers with this prefix are not intended to to used.
+

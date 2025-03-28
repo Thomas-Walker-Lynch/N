@@ -4,7 +4,7 @@
 #define SHOW(expr) printf("%s --> %s\n", #expr, STR(expr))
 
 #define BE(...) __VA_ARGS__
-#define EMPTY()
+#define NULL_FN()
 
 #include <stdio.h>
 int main(void){
@@ -23,13 +23,13 @@ int main(void){
 
   // case 2
   // GROW2(11) --> 19 * GROW2 (11)
-  #define GROW2(x) 19 * GROW2 EMPTY() (x)  
+  #define GROW2(x) 19 * GROW2 NULL_FN() (x)  
   SHOW(GROW2(11)) ;
   printf("\n");
 
   // case 3
   // GROW3(13) --> 119 * 19 * GROW2 (13)
-  #define GROW3(x) BE(119 * GROW2 EMPTY() (x))
+  #define GROW3(x) BE(119 * GROW2 NULL_FN() (x))
   SHOW(GROW3(13));
   printf("\n");
     
@@ -44,7 +44,7 @@ int main(void){
 
     GROW4(15) --> 123 * GROW4 (15)
   */
-  #define GROW4(x) BE(123 * GROW4 EMPTY() (x))
+  #define GROW4(x) BE(123 * GROW4 NULL_FN() (x))
   SHOW(GROW4(15));
   printf("\n");
 
@@ -63,7 +63,7 @@ int main(void){
     BE(GROW5(21)) --> 541 * 541 * CONFEDERATE () (21)
     BE(BE(GROW5(57))) --> 541 * 541 * 541 * CONFEDERATE () (57)
   */
-  #define GROW5(x) 541 * CONFEDERATE EMPTY() () (x)
+  #define GROW5(x) 541 * CONFEDERATE NULL_FN() () (x)
   #define CONFEDERATE() GROW5
   SHOW(BE(GROW5(21)));
   SHOW(BE(BE(GROW5(57))));
@@ -73,7 +73,7 @@ int main(void){
   /*
     Once a recursively called function is marked, or 'colored' it can never be expanded, even when passed through to another variable and separately evaluation.
    */
-  #define GROW6(x) 1029 * GROW6 EMPTY() (x)
+  #define GROW6(x) 1029 * GROW6 NULL_FN() (x)
   #define RESULT1 GROW6(51)
   SHOW(RESULT1);
   SHOW(BE(RESULT1));

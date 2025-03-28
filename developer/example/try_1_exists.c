@@ -9,7 +9,7 @@
 #define D 7
 
 
-// Patch for _NOT_EMPTY to succeed on 0
+// Patch for _EXISTS to succeed on 0
 #define _REWRITE_TWION_0 _REWRITE_TWION
 
 int main(void){
@@ -33,46 +33,46 @@ int main(void){
   printf("\n");
 
   // Existence detection
-  int empty = NOT_EMPTY_ITEM();         // → 1 (rewrite hits)
-  int empty_0 = NOT_EMPTY_ITEM(0);      // → 1 (rewrite hits)
-  int empty_1 = NOT_EMPTY_ITEM(1);      // → 0 (no rewrite)
-  int empty_f = NOT_EMPTY_ITEM(hello);  // → 0
+  int empty = EXISTS_ITEM();         // → 1 (rewrite hits)
+  int empty_0 = EXISTS_ITEM(0);      // → 1 (rewrite hits)
+  int empty_1 = EXISTS_ITEM(1);      // → 0 (no rewrite)
+  int empty_f = EXISTS_ITEM(hello);  // → 0
 
-  printf("NOT_EMPTY_ITEM() = %d\n", empty);
-  printf("NOT_EMPTY_ITEM(0) = %d\n", empty_0);
-  printf("NOT_EMPTY_ITEM(1) = %d\n", empty_1);
-  printf("NOT_EMPTY_ITEM(hello) = %d\n", empty_f);
+  printf("EXISTS_ITEM() = %d\n", empty);
+  printf("EXISTS_ITEM(0) = %d\n", empty_0);
+  printf("EXISTS_ITEM(1) = %d\n", empty_1);
+  printf("EXISTS_ITEM(hello) = %d\n", empty_f);
   printf("\n");
 
   // Not Existence detection
-  empty = EMPTY_ITEM();         // → 1 (rewrite hits)
-  empty_0 = EMPTY_ITEM(0);      // → 1 (rewrite hits)
-  empty_1 = EMPTY_ITEM(1);      // → 0 (no rewrite)
-  empty_f = EMPTY_ITEM(hello);  // → 0
+  empty = NOT_EXISTS_ITEM();         // → 1 (rewrite hits)
+  empty_0 = NOT_EXISTS_ITEM(0);      // → 1 (rewrite hits)
+  empty_1 = NOT_EXISTS_ITEM(1);      // → 0 (no rewrite)
+  empty_f = NOT_EXISTS_ITEM(hello);  // → 0
 
-  printf("EMPTY_ITEM() = %d\n", empty);
-  printf("EMPTY_ITEM(0) = %d\n", empty_0);
-  printf("EMPTY_ITEM(1) = %d\n", empty_1);
-  printf("EMPTY_ITEM(hello) = %d\n", empty_f);
+  printf("NOT_EXISTS_ITEM() = %d\n", empty);
+  printf("NOT_EXISTS_ITEM(0) = %d\n", empty_0);
+  printf("NOT_EXISTS_ITEM(1) = %d\n", empty_1);
+  printf("NOT_EXISTS_ITEM(hello) = %d\n", empty_f);
   printf("\n");
 
 
-  //  int empty_10 = NOT_EMPTY_ITEM(10,11,12); // illegal call, try it anyway ..compilation error
-  int empty_11 = NOT_EMPTY(10,11,12); // this is a legal call
-  int empty_12 = NOT_EMPTY(); 
+  //  int empty_10 = EXISTS_ITEM(10,11,12); // illegal call, try it anyway ..compilation error
+  int empty_11 = EXISTS(10,11,12); // this is a legal call
+  int empty_12 = EXISTS(); 
 
-  // printf("NOT_EMPTY_ITEM(10,11,12) = %d\n", empty_10);
-  printf("NOT_EMPTY(10,11,12) = %d\n", empty_11);
-  printf("NOT_EMPTY() = %d\n", empty_12);
+  // printf("EXISTS_ITEM(10,11,12) = %d\n", empty_10);
+  printf("EXISTS(10,11,12) = %d\n", empty_11);
+  printf("EXISTS() = %d\n", empty_12);
   printf("\n");
 
-  //  int empty_10 = NOT_EMPTY_ITEM(10,11,12); // illegal call, try it anyway ..compilation error
-  empty_11 = EMPTY(10,11,12); // this is a legal call
-  empty_12 = EMPTY(); 
+  //  int empty_10 = EXISTS_ITEM(10,11,12); // illegal call, try it anyway ..compilation error
+  empty_11 = NOT_EXISTS(10,11,12); // this is a legal call
+  empty_12 = NOT_EXISTS(); 
 
-  // printf("EMPTY_ITEM(10,11,12) = %d\n", empty_10);
-  printf("EMPTY(10,11,12) = %d\n", empty_11);
-  printf("EMPTY() = %d\n", empty_12);
+  // printf("NOT_EXISTS_ITEM(10,11,12) = %d\n", empty_10);
+  printf("NOT_EXISTS(10,11,12) = %d\n", empty_11);
+  printf("NOT_EXISTS() = %d\n", empty_12);
   printf("\n");
 
 
@@ -92,19 +92,19 @@ int main(void){
   _FIRST(11 ,22 ,33) = 11
   _SECOND(11 ,22 ,33) = 22
 
-  NOT_EMPTY_ITEM() = 0
-  NOT_EMPTY_ITEM(0) = 1
-  NOT_EMPTY_ITEM(1) = 1
-  NOT_EMPTY_ITEM(hello) = 1
+  EXISTS_ITEM() = 0
+  EXISTS_ITEM(0) = 1
+  EXISTS_ITEM(1) = 1
+  EXISTS_ITEM(hello) = 1
 
-  EMPTY_ITEM() = 1
-  EMPTY_ITEM(0) = 0
-  EMPTY_ITEM(1) = 0
-  EMPTY_ITEM(hello) = 0
+  NOT_EXISTS_ITEM() = 1
+  NOT_EXISTS_ITEM(0) = 0
+  NOT_EXISTS_ITEM(1) = 0
+  NOT_EXISTS_ITEM(hello) = 0
 
-  NOT_EMPTY(10,11,12) = 1
-  NOT_EMPTY() = 0
+  EXISTS(10,11,12) = 1
+  EXISTS() = 0
 
-  EMPTY(10,11,12) = 0
-  EMPTY() = 1
+  NOT_EXISTS(10,11,12) = 0
+  NOT_EXISTS() = 1
 */

@@ -4,7 +4,7 @@
 #define STR(x) #x
 #define SHOW(expr) printf("%s --> %s\n", #expr, STR(expr))
 
-#define EMPTY()
+#define NULL_FN()
 #define EVAL1(...) __VA_ARGS__
 
 #define A(n) I like the number n
@@ -17,13 +17,13 @@ int main(){
     "    A (123)\n"
   );
   SHOW(A (123));
-  SHOW(A EMPTY() (123));
+  SHOW(A NULL_FN() (123));
   printf("\n");
 
   printf(
     "    I like the number 123\n"
   );
-  SHOW(EVAL1(A EMPTY() (123)));
+  SHOW(EVAL1(A NULL_FN() (123)));
   printf("\n");
 
 

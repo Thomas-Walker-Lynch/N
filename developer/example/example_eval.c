@@ -5,9 +5,9 @@
 int main(void){
   printf("example_eval.c\n");
 
-  #define EMPTY()
+  #define NULL_FN()
   #define NEGATE(x) -x
-  #define NOT_SO_FAST(x)  NEGATE EMPTY() (x)
+  #define NOT_SO_FAST(x)  NEGATE NULL_FN() (x)
   SHOW(NOT_SO_FAST(5));
 
   #define BE(x) x

@@ -7,8 +7,8 @@ int main(void){
   //--------------------------------------------------------------------------
 
   #define x0 
-  SHOW(  NOT_EMPTY_ITEM(x0) );       // → 0 (assumed undefined)
-  SHOW(  EMPTY_ITEM(x0) );   // → 1
+  SHOW(  EXISTS_ITEM(x0) );       // → 0 (assumed undefined)
+  SHOW(  NOT_EXISTS_ITEM(x0) );   // → 1
   printf("\n");
 
   SHOW(  MATCH(x0) );
@@ -48,11 +48,11 @@ int main(void){
   SHOW( _BOOL(x0) );       // 0 because it does not exit (see the #define at the top)
   printf("\n");
 
-  SHOW( BOOL(0) );       // _FIRST = 0, NOT_EMPTY_ITEM(_FIRST) = 0 → _AND(0 ,1) → 0
-  SHOW( BOOL(1) );       // NOT_EMPTY_ITEM(1) = 0 → BOOL = 0
-  SHOW( BOOL(10) );       // NOT_EMPTY_ITEM(1) = 0 → BOOL = 0
-  SHOW( BOOL() );       // NOT_EMPTY_ITEM(1) = 0 → BOOL = 0
-  SHOW( BOOL(x0) );       // NOT_EMPTY_ITEM(1) = 0 → BOOL = 0
+  SHOW( BOOL(0) );       // _FIRST = 0, EXISTS_ITEM(_FIRST) = 0 → _AND(0 ,1) → 0
+  SHOW( BOOL(1) );       // EXISTS_ITEM(1) = 0 → BOOL = 0
+  SHOW( BOOL(10) );       // EXISTS_ITEM(1) = 0 → BOOL = 0
+  SHOW( BOOL() );       // EXISTS_ITEM(1) = 0 → BOOL = 0
+  SHOW( BOOL(x0) );       // EXISTS_ITEM(1) = 0 → BOOL = 0
   printf("\n");
 
   SHOW( NOT(0) );        // BOOL = 0 → NOT(0) = _NOT(0) = 1
@@ -119,8 +119,8 @@ int main(void){
   2025-03-27T13:00:11Z[developer]
   Thomas-developer@Stanley§/home/Thomas-masu/developer/N/developer/example§
   > ./a.out
-  NOT_EMPTY_ITEM(x0) --> 0
-  EMPTY_ITEM(x0) --> 1
+  EXISTS_ITEM(x0) --> 0
+  NOT_EXISTS_ITEM(x0) --> 1
 
   MATCH(x0) --> MATCH()
   NOT_MATCH(x0) --> NOT_MATCH()

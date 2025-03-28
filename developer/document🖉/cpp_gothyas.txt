@@ -1,0 +1,33 @@
+
+1.
+
+A semicolon after a macro definition becomes part of the macro body.
+
+
+2. 
+
+When defining a macro:
+
+  No space between the macro function name and the parameter list. 
+
+  Otherwise the would-be parameter list will be taken to be part of a macro variable definition.
+
+When calling a macro.
+  Can have space between a macro function name and the argument list.
+
+2.
+
+Macros can be called with empty arguments.
+
+  #+BEGIN_SRC c
+    #define a_macro(a ,b ,c) (a + b + c)
+    int a_macro (a,,b)  // -> a + + c
+  #+END_SRC
+
+  3. The access macros,  FIRST, SECOND ... have a padding character as a first argument.
+  The padding character is returned if the list is not long enough for the access.
+  It can be left empty.
+
+  FIRST(,)  will return the empty_token.
+
+

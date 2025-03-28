@@ -6,7 +6,7 @@
 // no evaluation, and one pass of evalutation
 #define SHOW(expr) printf("%s --> %s\n", #expr, STR(expr))
 
-#define EMPTY()
+#define NULL_FN()
 
 #define EVAL32(...) EVAL16(EVAL16(__VA_ARGS__))
 #define EVAL16(...) EVAL8(EVAL8(__VA_ARGS__))
@@ -15,7 +15,7 @@
 #define EVAL2(...) EVAL1(EVAL1(__VA_ARGS__))
 #define EVAL1(...) __VA_ARGS__
 
-#define DEFER1(m) m EMPTY()
+#define DEFER1(m) m NULL_FN()
 
 #define RECURSE() I am recursive, look: DEFER1(_RECURSE)()()
 #define _RECURSE() RECURSE

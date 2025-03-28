@@ -112,12 +112,15 @@
 
    A call to ~VAL(FORCE_ONE(5))~ will result in `1`. This is because there is no hash symbol in the VAL macro that is stopping the recursive expansion of ~x~.
 
-5. Example of delayed evaluation
+5. Cascading evaluation
+
+   A macro can also fail to evaluate all possible macros, because during
+   the left to right scan, it did not see the new macro call.
 
    #+BEGIN_SRC c
-   #define EMPTY()
+   #define NULL_FN() // expands to nothing
    #define NEGATE(x) -x
-   #define NOT_SO_FAST(x)  NEGATE EMPTY() (x)
+   #define NOT_SO_FAST(x)  NEGATE NULL_FN() (x)
    #+END_SRC
 
    When evaluating ~NOT_SO_FAST(5)~, here's what happens:
@@ -180,6 +183,25 @@
    - cpp encounters ~BE(NOT_SO_FAST(5))~.
    - It enters ~NOT_SO_FAST(5)~, expands it to ~NEGATE (5)~.
    - Then ~BE(NEGATE (5))~ becomes ~-5~ through final macro expansion.
+
+   -------
+
+   The `IF` macro evolves and does three self evaluations, due to new strings
+   being created which in turn match already defined macros.
+
+   <walk through an IF> series of events, explain why the DEFER3, ph
+
+   #+BEGIN_SRC c
+   IF \
+    ( NOT_EXISTS(__VA_ARGS__) ) \
+    () \
+    (IF \
+      ( predicate(FIRST(__VA_ARGS__)) ) \
+      ( FIRST( ,__VA_ARGS__) )                    \
+      ( DEFER3(_FIND_CONFEDERATE) ()(predicate ,REST(__VA_ARGS__)) )     \
+     )
+  #+END_SRC
+
 
 6. Nesting, recursion approaches that do not work, and one that does.
 
