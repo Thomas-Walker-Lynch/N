@@ -7,7 +7,23 @@
 
 1. Provides:
 
-  COMMA, SEMICOLON, NOT_EMPTY, EMPTY, ,MATCH_RWR ,NOT_MATCH_RWR, BOOL, NOT, AND, OR, EQ, NOT_EQ, IF_ELSE
+  Raw constants: ZERO, ONE, COMMA, SEMICOLON
+
+  Token tagging: _TWION_0, _TWION_1
+
+  Controlled concatenation: CAT2, CAT3, CAT4
+
+  Existence (now NOT_EMPTY) with token safety via ##
+
+  Rewrite matchers: MATCH_RWR, NOT_MATCH_RWR
+
+  Logical base: _AND, _OR, _NOT, BOOL, EQ, NOT_EQ
+
+  Structural access: FIRST, REST, SECOND, THIRD
+
+  Branching: IF_ELSE(...), with macro-safe conditioning
+
+  Tests for all major features: try_eq.c, try_access.c, try_3_if.c, etc.
 
 2.
   These are the non-recursive extensions.  See cpp_ext_1 for the recursive extensions.
@@ -22,6 +38,19 @@
   Macros starting with an '_' (underscore) are private.
 
   EQ comparisons apart from logic comparisons, must be registered in advance. They take the form of, _RWR_EQ__<x>__oo__<y>, note comments below.
+
+5. todo
+
+cpp_ext as separate project
+make the try into tests
+make EXISTS true, leave an empty element as false
+
+IS_LIST to distinguish element from list, though it will be tough to
+detect IS_LIST on a list with EMPTY elements,  then a list with all
+empty elements is still a list, still exits.
+
+mv BOOL AND OR 
+make AND and OR versions of FIND on EXISTS  (existence quantification)
 
 
 */
@@ -84,6 +113,9 @@ Primitive Concatenation
 
 #define _CAT4(a ,b ,c ,d) a ## b ## c ## d
 #define CAT4(a ,b ,c ,d) _CAT4(a ,b ,c ,d)
+
+#define APPEND(list ,...) list ,__VA_ARGS__
+
 
 
 /*===========================================================================
@@ -172,7 +204,7 @@ Logic Connectors
 
   The seemingly extra layer prevents BOOL_(condition) from being pasted with a ## which, if done, would prevent it from being evaluated.  Recall, the first step in evaluation is a literal copy in of the arguments.  ===symbol ========================================================================*/
 
-  #define IF_ELSE(condition)  CAT2(_IF_ ,BOOL(condition))
+  #define IF(predicate)  CAT2(_IF_ ,BOOL(predicate))
   #define _IF_1(...)          __VA_ARGS__ _IF_1_ELSE
   #define _IF_0(...)                      _IF_0_ELSE
   #define _IF_1_ELSE(...)
@@ -186,28 +218,28 @@ Access
 
   // _FIRST defined in the logic section
   #define FIRST(pad ,...)\
-    IF_ELSE \
+    IF \
       ( EMPTY(__VA_ARGS__) ) \
       (pad)                       \
       ( _FIRST(__VA_ARGS__) )  
 
   #define _REST(a ,...) __VA_ARGS__
   #define REST(...)\
-    IF_ELSE \
+    IF \
       ( EMPTY(__VA_ARGS__) ) \
       ()                          \
       ( _REST(__VA_ARGS__) )  
 
   // _SECOND defined in the logic section
   #define SECOND(pad ,...) \
-    IF_ELSE \
+    IF \
       ( EMPTY(__VA_ARGS__) ) \
       (pad)                       \
       ( _SECOND(__VA_ARGS__ ,pad) )  
 
   #define _THIRD(a ,b ,c ,...) c
   #define THIRD(pad ,...) \
-    IF_ELSE \
+    IF \
       ( EMPTY(__VA_ARGS__) ) \
       (pad)                       \
       ( _THIRD(__VA_ARGS__ ,pad, pad) )  
