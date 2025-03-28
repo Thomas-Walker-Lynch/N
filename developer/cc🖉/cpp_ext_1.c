@@ -71,5 +71,20 @@ DROPE_NOT_EXISTS_RIGHT
 // number of evals required depends upon length of not found list prefix
 #define FIND(predicate ,...) EVAL( _FIND(predicate ,__VA_ARGS__) )
 
+#define _FIND_ITEM(item ,...) \
+  IF \
+    ( NOT_EXISTS(__VA_ARGS__) ) \
+    () \
+    (IF \
+      ( EQ(item ,FIRST(__VA_ARGS__)) )             \
+      ( FIRST( ,__VA_ARGS__) )                    \
+      ( DEFER3(_FIND_ITEM_CONFEDERATE) ()(predicate ,REST(__VA_ARGS__)) )     \
+     )
+#define _FIND_ITEM_CONFEDERATE() _FIND_ITEM
+
+// number of evals required depends upon length of not found list prefix
+#define FIND_ITEM(predicate ,...) EVAL( _FIND_ITEM(predicate ,__VA_ARGS__) )
+
+
 
 #endif  

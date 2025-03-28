@@ -1,11 +1,13 @@
 /*
 Template parameters:
 
-FG·Type - Type of FG table, will be used to name the binding struct.
+  FG·Type - Type used to name the binding struct. Binding struct instances get passed as arguments to functions etc.
 
-Note that template variables are _use once_ per #include. (They are #undef at the bottom of this file.)
+Template variables are _use once_ per #include. (They are #undef at the bottom of this file.)
        
 */
+
+#include "cpp_ext.c"
 
 #ifndef FACE
 #define FG·IMPLEMENTATION
@@ -15,60 +17,50 @@ Note that template variables are _use once_ per #include. (They are #undef at th
 //--------------------------------------------------------------------------------
 // Interface 
 
-#ifndef Ξ(FG·FACE ,FG·Type)
-#define Ξ(FG·FACE ,FG·Type)
-
+// once per translation unit
+#ifndef FG·TYPE_LIST
+#define FG·TYPE_LIST
 
   #define FG·DEBUG
   #ifdef FG·DEBUG
     #include <stdio.h>
   #endif
 
-  #define FG·ALL  ( defined(FG·Type) )
-  #define FG·NONE ( !defined(FG·Type) )
-  #if !( FG·ALL || FG·NONE )
-    #error "FG template inconsistency: must define all or none of: FG·Type"
-  #endif
+#endif
 
-  //----------------------------------------
-  // Macro to call a function in the FG table with debug checks
-  // Usage: FG·call(tm, function_name, arg1, arg2, ...)
-  // Expands to: (tm.fg->function_name)((tm)->t, arg1, arg2, ...)
-  // With debug checks for NULL pointers when FG·DEBUG is defined
-  //----------------------------------------
-  #if FG·ALL
+// once per FG·TYPE value
+#if ! FIND_ITEM( FG·TYPE ,FG·TYPE_LIST )
+#define FG·TYPE_LIST APPEND(FG·TYPE_LIST ,FG·TYPE)
 
-    //#define  ALL_VAL V0··V1··V2 ...
-    // the double cdot underscore non aliasing across identifiers
-    #define  FG·ALL_VAL FG·Type
-    // FG is not yet a type, so we don't have this
-    // #define FG_t Ξ(FG_t ,FG·ALL_VAL)
+  // a simplifying naming convention
+  #define FG·Binding Ξ(FG·Type)
+  #define FG·FG      Ξ(FG·Type ,FG)
+  #define FG·Tableau Ξ(FG·Type ,Tableau)
 
-    // a simplifying naming convention
-    #define FG·Binding Ξ(FG·Type)
-    #define FG·FG      Ξ(FG·Type ,FG)
-    #define FG·Tableau Ξ(FG·Type ,Tableau)
+  // as a convention, we name the binding after the type
+  typedef struct{
+    FG·FG *fg;
+    FG·Tableau *tableau;
+  } FG·Binding;
 
-    // as a convention, we name the binding after the type
-    typedef struct{
-      FG·FG *fg;
-      FG·Tableau *tableau;
-    } FG·Binding;
+  // binds a tableau and FG tabel instance together
+  inline void FG·wellformed_binding(FG·Binding b){
+    #ifdef FG·DEBUG
+      FG·Guard·init_count(chk);
+      FG·Guard·fg.check(&chk, 1, b.fg,      "NULL fg table");
+      FG·Guard·fg.check(&chk, 1, b.tableau, "NULL tableau");
+      FG·Guard·assert(chk);
+    #endif
+  }
 
-    inline void FG·wellformed_binding(FG·Binding b){
-      #ifdef FG·DEBUG
-        FG·Guard·init_count(chk);
-        FG·Guard·fg.check(&chk, 1, b.fg,      "NULL fg table");
-        FG·Guard·fg.check(&chk, 1, b.tableau, "NULL tableau");
-        FG·Guard·assert(chk);
-      #endif
-    }
+  /*
+    usage e.g.: FG·call(tm, function_name, arg1, arg2, ...)
+    Expands to: (tm.fg->function_name)((tm)->t, arg1, arg2, ...)
 
-     // note the use of the comma operator to return the result from the b.fg->fn call
-    #define FG·call(b, fn, ...) \
-      ( FG·wellformed_binding(b) ,b.fg->fn(b.tableau, ##__VA_ARGS__) )
-
-  #endif
+    note the use of the comma operator to return the result from the b.fg->fn call
+  */
+  #define FG·call(b, fn, ...) \
+    ( FG·wellformed_binding(b) ,b.fg->fn(b.tableau, ##__VA_ARGS__) )
 
 #endif // FACE
 

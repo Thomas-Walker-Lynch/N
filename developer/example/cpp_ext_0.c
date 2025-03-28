@@ -37,7 +37,7 @@
 
   Macros starting with an '_' (underscore) are private.
 
-  EQ comparisons apart from logic comparisons, must be registered in advance. They take the form of, _RWR_EQ__<x>__oo__<y>, note comments below.
+  EQ comparisons apart from logic comparisons, must be registered in advance. They take the form of, EQ__<x>__oo__<y>, note comments below.
 
 5. todo
 
@@ -93,8 +93,8 @@ Constants
 #define _RWR_OR__0__oo__0
 
 // add more of this form to register other equivalences
-#define _RWR_EQ__0__oo__0
-#define _RWR_EQ__1__oo__1
+#define EQ__0__oo__0
+#define EQ__1__oo__1
 
 /*===========================================================================
 Primitive Concatenation
@@ -166,7 +166,7 @@ Logic Connectors
   #define _BOOL(x_item) \
     _AND( \
        EXISTS_ITEM( x_item ) \
-      ,NOT_MATCH_RWR( CAT2(_RWR_EQ__0__oo__ ,x_item) )  \
+      ,NOT_MATCH_RWR( CAT2(EQ__0__oo__ ,x_item) )  \
     )
   #define BOOL(x_item) _BOOL(_FIRST(x_item))
   
@@ -180,18 +180,18 @@ Logic Connectors
   more general than a connector because more rules can be added.
 
   each registered equality rule has the form
-     _RWR_EQ__<x>__oo__<y>
+     EQ__<x>__oo__<y>
   for example, logic equalities are already registered:
-     _RWR_EQ__0__oo__0
-     _RWR_EQ__1__oo__1
+     EQ__0__oo__0
+     EQ__1__oo__1
 
 ===========================================================================*/
 
   #define EQ(x_item ,y_item) \
-        MATCH_RWR( CAT4(_RWR_EQ__ ,x_item ,__oo__ ,y_item) )
+        MATCH_RWR( CAT4(EQ__ ,x_item ,__oo__ ,y_item) )
 
   #define NOT_EQ(x_item ,y_item) \
-    NOT_MATCH_RWR( CAT4(_RWR_EQ__ ,x_item ,__oo__ ,y_item) )
+    NOT_MATCH_RWR( CAT4(EQ__ ,x_item ,__oo__ ,y_item) )
 
 /*===========================================================================
   IF-ELSE construct.

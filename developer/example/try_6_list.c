@@ -4,10 +4,10 @@
 #define LIST int ,float ,char ,void 
 
 // register equality
-#define _RWR_EQ__int__oo__int
-#define _RWR_EQ__float__oo__float
-#define _RWR_EQ__char__oo__char
-#define _RWR_EQ__void__oo__void
+#define EQ__int__oo__int
+#define EQ__float__oo__float
+#define EQ__char__oo__char
+#define EQ__void__oo__void
 
 // make predicates
 #define IS_int(x)   EQ(x ,int)
