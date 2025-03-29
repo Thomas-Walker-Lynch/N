@@ -29,6 +29,10 @@
 
    In a call, space is allowed between the macro name and the argument list.
 
+   Not in strings, not embedded in other tokens. If a macro definition has the same name as the call, then that is a redefinition, an redefinition is not allowed.
+
+   cpp scans the tokens in the translation unit, upon finding a macro call it replaces it with the body from the macro definition using the following steps:
+
 ** 1. Argument Substitution Phase
 
    When the macro is invoked:

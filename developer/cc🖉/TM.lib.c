@@ -1,14 +1,11 @@
 /*
-  TM - Tape Machine
+  TM - Tape Machine Model
 
-  `TM·CVT` Cell Value Type`.
+   Template parameters
+
+    `TM·CVT` Cell Value Type`.
 
 */
-
-#ifndef FACE
-#define TM·IMPLEMENTATION
-#define FACE
-#endif 
 
 //--------------------------------------------------------------------------------
 // Interface 
@@ -22,7 +19,7 @@
   #include "cpp_ext.c"
 
   #include "Core.lib.c"
-  #include "FG.lib.c"
+  #include "Binding.lib.c"
 
   #define TM·DEBUG
   #ifdef TM·DEBUG
@@ -58,23 +55,19 @@
     | TM·Head·Status·rightmost
     ;
 
-  // set type equality pattern
-  #define EQ__TM__oo__TM
-
 #endif
 
 // once per TM·CVT value
+#ifdef TM·CVT
 #if ! FIND_ITEM( TM·CVT ,TM·TYPE_LIST )
 #define TM·TYPE_LIST APPEND(TM·TYPE_LIST ,TM·TYPE)
 
-  // TM·<TM·CVT>·Tableau
-  typedef struct Ξ(TM ,Tableau);
+  // declare 'TM' as a type
+  #define EQ__TM__oo__TM
+  #define Binding·Type TM 
+  #include "Binding.lib.c"
   
-  // bind the tableau to an FG table, call the binding a 'TM' type
-  #define FG·Type TM 
-  #include "FG.lib.c"
-
-  // extent is an index, hence its effect is a function of TM·CVT
+  // `extent_t` is an index, so element size matters, so TM·CVT matters
   typedef Ξ(extent_t ,TM·CVT) size_t;
                            
   typedef struct{
@@ -95,7 +88,7 @@
     void (*step_left) (TM tm);
     void (*rewind)    (TM tm);
 
-    TM·FG TM·fg; // points to TM·FG instance
+    TM·Binding TM·fg; // points to TM·Binding instance
     Ξ(extent_t ,TM·CVT) (*extent)(TM tm);
     TM·CVT  (*read) (TM tm);
     void (*write)(TM tm ,TM·CVT *remote_pt);
@@ -121,11 +114,12 @@
   );
 
 #endif 
+#endif 
 
 //--------------------------------------------------------------------------------
 // Implementation
 
-#ifdef TM·IMPLEMENTATION
+#ifdef IMPLEMENTATION
 
   // implementation to go into the lib.a file
   //
@@ -135,7 +129,7 @@
   #ifdef LOCAL
 
     //----------------------------------------
-    // Dispatch wrapper
+    // included first without defining TM·CVT
     //----------------------------------------
 
     #ifndef TM·CVT
@@ -208,7 +202,7 @@
       //----------------------------------------
       // Initialization for TM·fg
 
-      Local TM·FG TM·fg = {
+      Local TM·Binding TM·fg = {
         .Tape·topo = TM·Tape·topo
         ,.Tape·bounded = TM·Tape·bounded
         ,.Head·status = TM·Head·status
@@ -262,7 +256,7 @@
         return tm->fg.write(tm ,write_pt);
       }
 
-      Local Ξ(TM ,TM·CVT)·FG Ξ(TM ,TM·CVT)·fg = {
+      Local Ξ(TM ,TM·CVT)·Binding Ξ(TM ,TM·CVT)·fg = {
         .parent = TM·fg
         ,.extent = Ξ(TM ,TM·CVT)·extent
         ,.read = Ξ(TM ,TM·CVT)·read
@@ -539,7 +533,7 @@
       //----------------------------------------
       // Initialization for Ξ(TM·Array ,TM·CVT)·fg
 
-      Local Ξ(TM·Array ,TM·CVT)·FG Ξ(TM·Array ,TM·CVT)·fg = {
+      Local Ξ(TM·Array ,TM·CVT)·Binding Ξ(TM·Array ,TM·CVT)·fg = {
         .tape = {
            .Tape·topo   = Ξ(TM·Array ,TM·CVT)·Tape·topo
            .extent = Ξ(TM·Array ,TM·CVT)·extent

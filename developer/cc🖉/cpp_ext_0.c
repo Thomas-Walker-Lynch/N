@@ -65,9 +65,15 @@ DEBUG
 
 #include <stdio.h>
 #define DEBUG_CPP
-#define STR(...) #__VA_ARGS__
 
-// print the macro and the evaluation of the macro
+// print the macro and the evaluation of the macro at compile time:
+//   #pragma message( STR_VAL(<macro>) )
+
+#define STR(...) #__VA_ARGS__
+#define VAL(...) STR(__VA_ARGS__)
+#define STR_VAL(...) #__VA_ARGS__ " -> " VAL(__VA_ARGS__)
+
+// print the macro and the evaluation of the macro at run time:
 #define SHOW(expr) printf("%s -> %s\n", #expr, STR(expr))
 
 /*===========================================================================

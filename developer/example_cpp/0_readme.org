@@ -1,0 +1,9 @@
+These are direct built one at a time, for example:
+
+   #+BEGIN_SRC bash
+   > gcc try_6_list.c 
+   > ./a.out
+   IS_char(int) -> 0
+   IS_char(char) -> 1
+   ...
+   EOF

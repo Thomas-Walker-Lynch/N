@@ -16,58 +16,49 @@
 
 */
 
-#define Core·DEBUG
-#ifdef FG·DEBUG
-  #include <stdio.h>
-#endif
-
-#ifndef FACE
-#define Core·IMPLEMENTATION
-#define FACE
-#endif 
-
 //--------------------------------------------------------------------------------
-// Interface
+// Interface 
 
 #ifndef Core·FACE
 #define Core·FACE
 
+  #define Core·DEBUG
+  #ifdef FG·DEBUG
+    #include <stdio.h>
+  #endif
+
   #include <stdint.h>
+  #include <stdbool.h>
   #include <stddef.h>
+  #include "cpp_ext.c"
 
   //----------------------------------------
   // memory interface
   //----------------------------------------
 
-    // Define a namespace.
-    // #define _Ξ(a ,b) a##·##b
-    /// #define Ξ(a ,b) _Ξ(a ,b)
-    #include <xi.c>
-
     // extent is the maximum index in an address space, tape or area, the doted
     // unit is the cell type.
-    typedef extent_t·AU size_t
+    typedef size_t extent_t·AU;
     #define extent_of·AU(x) (sizeof(x) - 1)
-
     // Funny, we seldom check for this, perhaps that matters on some tiny machine.
     #define extent·AU_address_space ~(uintptr)0;
 
     // addressable unit for the machine
     // C language standard left this undefined. AToW industry uses uint8_t.
-    typedef AU  uint8_t;
-    typedef AU2 uint16_t;
-    typedef AU4 uint32_t;
-    typedef AU8 uint64_t;
+    typedef  uint8_t AU ;
+    typedef uint16_t AU2;
+    typedef uint32_t AU4;
+    typedef uint64_t AU8;
 
-    const AU  AU_max  = (~(AU)0);
-    const AU2 AU2_max = (~(AU2)0);
-    const AU4 AU4_max = (~(AU4)0);
-    const AU8 AU8_max = (~(AU8)0);
+    const AU  AU_MAX  = (~(AU)0);
+    const AU2 AU2_MAX = (~(AU2)0);
+    const AU4 AU4_MAX = (~(AU4)0);
+    const AU8 AU8_MAX = (~(AU8)0);
 
     // ask the compiler what this is
     // when using enums we get this whether we want it or not
-    typedef WU unsigned int;
-    const WU WU_max = (~(WU)0);
+    typedef unsigned int WU;
+    const WU WU_MAX = (~(WU)0);
 
   //----------------------------------------
   // flag facility, argument guard facility
@@ -130,38 +121,6 @@
     #define Core·Guard·assert(chk) assert(!chk.flag);
 
   //----------------------------------------
-  // Macro to call a function in the FG table with debug checks
-  // Usage: FG·call(tm, function_name, arg1, arg2, ...)
-  // Expands to: ((tm)->fg->function_name)((tm)->t, arg1, arg2, ...)
-  // With debug checks for NULL pointers when FG·DEBUG is defined
-  //----------------------------------------
-
-    typedef struct FG·FG;
-    typedef struct FG·Tableau;
-
-    typedef struct{
-      FG·FG *fg;
-      FG·Tableau *tableau;
-    } FG·Binding;
-
-    inline void FG·wellformed_binding(FG·Binding b) {
-      #ifdef FG·DEBUG
-        Core·Guard·init_count(chk);
-        Core·Guard·fg.check(&chk, 1, b->fg,      "NULL fg table");
-        Core·Guard·fg.check(&chk, 1, b->tableau, "NULL tableau");
-        Core·Guard·assert(chk);
-      #endif
-    }
-
-    // note the use of the comma operator to return the result from b.fg->fn
-    #define FG·call(b, fn, ...) \
-      ( \
-         FG·wellformed_binding(b)               \
-        ,b.fg->fn(b.tableau, ##__VA_ARGS__ )   \
-        ) 
-
-
-  //----------------------------------------
   // functions interface
   //----------------------------------------
   
@@ -170,25 +129,25 @@
     typedef struct{
       Core·Status (*on_track)();
       Core·Status (*derailed)();
-      Core·Status (*is_aligned)(AU *p ,extent·AU alignment ,bool *flag);
-      Core·Status (*round_down)(AU *p ,extent·AU alignment ,AU **result);
-      Core·Status (*round_up)(AU *p ,extent·AU alignment ,AU **result);
+      Core·Status (*is_aligned)(AU *p ,extent_t·AU alignment ,bool *flag);
+      Core·Status (*round_down)(AU *p ,extent_t·AU alignment ,AU **result);
+      Core·Status (*round_up)(AU *p ,extent_t·AU alignment ,AU **result);
     } Core·F;
     Local Core·F Core·f;
 
-#endif // FACE
+#endif // #if CORE·FACE
 
 
 //--------------------------------------------------------------------------------
 // Implementation
 
-#ifdef Core·IMPLEMENTATION
+#ifdef IMPLEMENTATION
 
   //--------------------------------------------------------------------------------
   // implementation to go into the lib.a file
   //
-    #ifndef LOCAL
-    #endif 
+  #ifndef LOCAL
+  #endif 
 
   //--------------------------------------------------------------------------------
   #ifdef LOCAL

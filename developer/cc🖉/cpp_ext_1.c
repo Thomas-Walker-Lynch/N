@@ -62,8 +62,8 @@ DROPE_NOT_EXISTS_RIGHT
     ( NOT_EXISTS(__VA_ARGS__) ) \
     () \
     (IF \
-      ( predicate(FIRST(__VA_ARGS__)) ) \
-      ( FIRST( ,__VA_ARGS__) )                    \
+      ( predicate(FIRST(,__VA_ARGS__)) )         \
+      ( FIRST(,__VA_ARGS__) )                    \
       ( DEFER3(_FIND_CONFEDERATE) ()(predicate ,REST(__VA_ARGS__)) )     \
      )
 #define _FIND_CONFEDERATE() _FIND
@@ -76,9 +76,9 @@ DROPE_NOT_EXISTS_RIGHT
     ( NOT_EXISTS(__VA_ARGS__) ) \
     () \
     (IF \
-      ( EQ(item ,FIRST(__VA_ARGS__)) )             \
-      ( FIRST( ,__VA_ARGS__) )                    \
-      ( DEFER3(_FIND_ITEM_CONFEDERATE) ()(predicate ,REST(__VA_ARGS__)) )     \
+      ( EQ(item ,FIRST(,__VA_ARGS__)) )          \
+      ( item )                    \
+      ( DEFER3(_FIND_ITEM_CONFEDERATE) ()(item ,REST(__VA_ARGS__)) )     \
      )
 #define _FIND_ITEM_CONFEDERATE() _FIND_ITEM
 

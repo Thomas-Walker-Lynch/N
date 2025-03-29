@@ -1,0 +1,3 @@
+
+To build these standalone edit the tool🖉/makefil and uncommon the SRC=example and the CEFLAGS+= -I/cpp🖉  lines.  Then do the usual make clean dependency; make cli
+

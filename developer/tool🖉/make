@@ -13,10 +13,6 @@ set -e
 set -x
 
   cd "$REPO_HOME"/developer || exit 1
-
-  pushd python
-    ./fill_template
-  popd
   /bin/make -f tool🖉/makefile $@
 
 set +x
