@@ -30,6 +30,7 @@
   #include <stdint.h>
   #include <stdbool.h>
   #include <stddef.h>
+  #include <assert.h>
   #include "cpp_ext.c"
 
   //----------------------------------------

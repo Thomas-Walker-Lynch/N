@@ -43,7 +43,7 @@
 
 cpp_ext as separate project
 make the try into tests
-make EXISTS true, leave an empty element as false
+make EXISTS true, leave an empty element as false, NOT() would then be 'true'
 
 IS_LIST to distinguish element from list, though it will be tough to
 detect IS_LIST on a list with NOT_EXISTS elements,  then a list with all
@@ -83,11 +83,7 @@ Constants
 #define COMMA ,
 #define SEMICOLON ;
 
-#define FALSE 0
-#define TRUE  1
-
-//---------
-
+// 'twion' is a two component object that masquerades as a single object
 #define _TWION_0 ~,0
 #define _TWION_1 ~,1
 
@@ -118,10 +114,6 @@ Primitive Concatenation
 #define _CAT4(a ,b ,c ,d) a ## b ## c ## d
 #define CAT4(a ,b ,c ,d) _CAT4(a ,b ,c ,d)
 
-#define APPEND(list ,...) list ,__VA_ARGS__
-
-
-
 /*===========================================================================
 Existence
 ===========================================================================*/
@@ -129,7 +121,7 @@ Existence
   //----------------------------------------
   // primitive access
 
-  // note: _FIRST of nothing, _FIRST(), means passing an empty_item as the first item
+  // note: _FIRST(), means passing an empty_item as the first item
   // so it will return empty.
   #define _FIRST(a ,...) a
   #define _SECOND(a ,b ,...) b

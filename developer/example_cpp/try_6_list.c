@@ -23,12 +23,12 @@ int main(void){
   printf("\n");
 
   SHOW( FIND(IS_Char ,) );
-  SHOW( FIND(IS_Char ,Char) );  // → Char
-  SHOW( FIND(IS_Char ,Integer) );  // → 
+  SHOW( FIND(IS_Char ,Char) ); 
+  SHOW( FIND(IS_Char ,Integer) ); 
   printf("\n");
 
-  SHOW( FIND(IS_Char ,Integer ,Void) );  // → 
-  SHOW( FIND(IS_Void ,Integer ,Void) );  // → 
+  SHOW( FIND(IS_Char ,Integer ,Void) ); 
+  SHOW( FIND(IS_Void ,Integer ,Void) ); 
   printf("\n");
 
   SHOW( FIND(IS_Integer ,LIST) ); 
@@ -40,12 +40,12 @@ int main(void){
   printf("\n");
 
   SHOW( FIND_ITEM(Char ,) );
-  SHOW( FIND_ITEM(Char ,Char) );  // → Char
-  SHOW( FIND_ITEM(Char ,Integer) );  // → 
+  SHOW( FIND_ITEM(Char ,Char) );  
+  SHOW( FIND_ITEM(Char ,Integer) );  
   printf("\n");
 
-  SHOW( FIND_ITEM(Char ,Integer ,Void) );  // → 
-  SHOW( FIND_ITEM(Void ,Integer ,Void) );  // → 
+  SHOW( FIND_ITEM(Char ,Integer ,Void) ); 
+  SHOW( FIND_ITEM(Void ,Integer ,Void) ); 
   printf("\n");
 
   SHOW( FIND_ITEM(Integer ,LIST) ); 

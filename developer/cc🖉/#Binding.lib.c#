@@ -8,7 +8,6 @@ Template parameters:
 //--------------------------------------------------------------------------------
 // Interface
 
-
 // once per translation unit
 #ifndef Binding·TYPE_LIST
 #define Binding·TYPE_LIST
