@@ -8,17 +8,12 @@ To be added:
 
 LIST_TOO_LONG
   
-// scanning left to right finds first that exists
-LEFTMOST_EXISTENT 
+cleanup list
+DROP_EMPTY_ALL
+DROP_EMPTY_LEFT
+DROPE_EMPTY_RIGHT
 
-// scanning left to right finds last that exits
-RIGHTMOST_EXISTENT
-
-DROP_NOT_EXISTS_ALL
-DROP_NOT_EXISTS_LEFT
-DROPE_NOT_EXISTS_RIGHT
-
-#define _CAT(sep,first,...)                              \
+#define CAT(sep,first,...)                              \
 
 */
 
@@ -30,61 +25,141 @@ DROPE_NOT_EXISTS_RIGHT
   This chain of EVAL macros forces the preprocessor to perform many rescans,
   which is necessary to “unroll” recursive macros.
 ===========================================================================*/
-//#define EVAL(...)            EVAL1024(__VA_ARGS__)
-#define EVAL(...)            EVAL32(__VA_ARGS__)
-#define EVAL1024(...)        EVAL512(EVAL512(__VA_ARGS__))
-#define EVAL512(...)         EVAL256(EVAL256(__VA_ARGS__))
-#define EVAL256(...)         EVAL128(EVAL128(__VA_ARGS__))
-#define EVAL128(...)         EVAL64(EVAL64(__VA_ARGS__))
-#define EVAL64(...)          EVAL32(EVAL32(__VA_ARGS__))
-#define EVAL32(...)          EVAL16(EVAL16(__VA_ARGS__))
-#define EVAL16(...)          EVAL8(EVAL8(__VA_ARGS__))
-#define EVAL8(...)           EVAL4(EVAL4(__VA_ARGS__))
-#define EVAL4(...)           EVAL2(EVAL2(__VA_ARGS__))
-#define EVAL2(...)           EVAL1(EVAL1(__VA_ARGS__))
-#define EVAL1(...)           __VA_ARGS__
+  //#define EVAL(...)            EVAL1024(__VA_ARGS__)
+  #define EVAL(...)            EVAL32(__VA_ARGS__)
+  #define EVAL1024(...)        EVAL512(EVAL512(__VA_ARGS__))
+  #define EVAL512(...)         EVAL256(EVAL256(__VA_ARGS__))
+  #define EVAL256(...)         EVAL128(EVAL128(__VA_ARGS__))
+  #define EVAL128(...)         EVAL64(EVAL64(__VA_ARGS__))
+  #define EVAL64(...)          EVAL32(EVAL32(__VA_ARGS__))
+  #define EVAL32(...)          EVAL16(EVAL16(__VA_ARGS__))
+  #define EVAL16(...)          EVAL8(EVAL8(__VA_ARGS__))
+  #define EVAL8(...)           EVAL4(EVAL4(__VA_ARGS__))
+  #define EVAL4(...)           EVAL2(EVAL2(__VA_ARGS__))
+  #define EVAL2(...)           EVAL1(EVAL1(__VA_ARGS__))
+  #define EVAL1(...)           __VA_ARGS__
 
 /*===========================================================================
   Defer macros: these help “hide” recursive calls for additional expansion passes.
 ===========================================================================*/
-#define NULL_FN()
-#define DEFER1(m)            m NULL_FN()
-#define DEFER2(m)            m NULL_FN NULL_FN()()
-#define DEFER3(m)            m NULL_FN NULL_FN NULL_FN()()()
-#define DEFER4(m)            m NULL_FN NULL_FN NULL_FN NULL_FN()()()()
+// defined in cpp_ext_0: RETURN_NOTHING()
+
+  #define DEFER1(m) \
+    m RETURN_NOTHING()
+  #define DEFER2(m) \
+    m RETURN_NOTHING RETURN_NOTHING()()
+  #define DEFER3(m) \
+    m RETURN_NOTHING RETURN_NOTHING RETURN_NOTHING()()()
+  #define DEFER4(m) \
+    m RETURN_NOTHING RETURN_NOTHING RETURN_NOTHING RETURN_NOTHING()()()()
+  #define DEFER5(m) \
+    m RETURN_NOTHING RETURN_NOTHING RETURN_NOTHING RETURN_NOTHING RETURN_NOTHING()()()()()
+
+/*===========================================================================
+  Find an item in a list
+
+  number of EVALs required depends upon length of not found list prefix
+
+  REST will return nothing on one of two conditions, that the list has
+  been exhausted, or that the list is about to exhausted, it has nothing
+  after the last comma. To assure that a tailing item always gets sent
+  to the predicate, even when empty, we append an empty item.
+
+===========================================================================*/
+  // defined in cpp_ext_0: _FIRST(a ,...) a 
+
+  // returns found item or EOL()
+  #define _FIND(predicate ,...) \
+    IF \
+      (__VA_ARGS__) \
+      (IF \
+        ( predicate(_FIRST(__VA_ARGS__)) ) \
+        ( _FIRST(__VA_ARGS__) ) \
+        ( DEFER3(_FIND_CONFEDERATE)()(predicate ,REST(__VA_ARGS__)) ) \
+        ) \
+      (EOL()) 
+  #define _FIND_CONFEDERATE() _FIND
+  #define FIND(predicate ,...) EVAL( _FIND(predicate ,__VA_ARGS__ ,) )
+
+  // true if list exhausted, false otherwise
+  #define _WHILE(predicate ,...) \
+    IF \
+      (__VA_ARGS__) \
+      (IF \
+        ( predicate(_FIRST(__VA_ARGS__)) ) \
+        ( DEFER3(_WHILE_CONFEDERATE)()(predicate ,REST(__VA_ARGS__)) ) \
+        () \
+        ) \
+      (1) 
+  #define _WHILE_CONFEDERATE() _WHILE
+  #define WHILE(predicate ,...) EVAL( _WHILE(predicate ,__VA_ARGS__ ,) )
+
+  // returns true or false
+  #define _HAS_ITEM(item ,...) \
+    IF \
+      (__VA_ARGS__) \
+      (IF \
+        ( EQ(item ,_FIRST(__VA_ARGS__)) ) \
+        ( 1 ) \
+        ( DEFER3(_HAS_ITEM_CONFEDERATE)()(item ,REST(__VA_ARGS__)) ) \
+        ) \
+      () 
+  #define _HAS_ITEM_CONFEDERATE() _HAS_ITEM
+  #define HAS_ITEM(predicate ,...) EVAL( _HAS_ITEM(predicate ,__VA_ARGS__ ,) )
+
+  // if no list, returns EOL(), else returns last item in the list
+  #define _LAST(...) \
+    IF \
+      (__VA_ARGS__) \
+      ( _LAST_s(_FIRST(__VA_ARGS__) ,REST(__VA_ARGS__)) ) \
+      (EOL())
+  #define _LAST_s(item, ...) \
+    IF \
+      (__VA_ARGS__) \
+      ( DEFER3(_LAST_s_CONFEDERATE)()(_FIRST(__VA_ARGS__) ,REST(__VA_ARGS__)) ) \
+      (item)
+  #define _LAST_s_CONFEDERATE() _LAST_s
+  #define LAST(...) EVAL( _LAST(__VA_ARGS__ ,) )
+
+  // join tokens with a separator in between, separator can have nothing as a value
+
+
+#define _CAT(sep ,...) \
+  IF \
+    (__VA_ARGS__) \
+    (_CAT_s(sep ,__VA_ARGS__)) \
+    ()
+
+#define _CAT_s(sep ,a ,...) \
+  IF \
+    (__VA_ARGS__) \
+    ( CAT3( a ,sep ,DEFER5(_CAT_s_CONFEDERATE())(sep ,__VA_ARGS__)) )  \
+    (a)
+
+#define _CAT_s_CONFEDERATE() _CAT_s
+
+#define CAT(...) EVAL( _CAT(__VA_ARGS__ ,) )
+
+
 
 /*===========================================================================
   Quantifiers
 ===========================================================================*/
 
-#define _FIND(predicate ,...) \
-  IF \
-    ( NOT_EXISTS(__VA_ARGS__) ) \
-    () \
-    (IF \
-      ( predicate(FIRST(,__VA_ARGS__)) )         \
-      ( FIRST(,__VA_ARGS__) )                    \
-      ( DEFER3(_FIND_CONFEDERATE) ()(predicate ,REST(__VA_ARGS__)) )     \
-     )
-#define _FIND_CONFEDERATE() _FIND
+  // AKA all quantification, returns true or false
+  #define AND(...) WHILE(EXISTS ,__VA_ARGS__)
 
-// number of evals required depends upon length of not found list prefix
-#define FIND(predicate ,...) EVAL( _FIND(predicate ,__VA_ARGS__) )
+  // AKA existence quantification, returns true or false
+  #define OR(...)  NOT(WHILE(NOT ,__VA_ARGS__)
 
-#define _FIND_ITEM(item ,...) \
-  IF \
-    ( NOT_EXISTS(__VA_ARGS__) ) \
-    () \
-    (IF \
-      ( EQ(item ,FIRST(,__VA_ARGS__)) )          \
-      ( item )                    \
-      ( DEFER3(_FIND_ITEM_CONFEDERATE) ()(item ,REST(__VA_ARGS__)) )     \
-     )
-#define _FIND_ITEM_CONFEDERATE() _FIND_ITEM
+/*===========================================================================
+  Access
+===========================================================================*/
 
-// number of evals required depends upon length of not found list prefix
-#define FIND_ITEM(predicate ,...) EVAL( _FIND_ITEM(predicate ,__VA_ARGS__) )
-
+  #define FIRST(...) \
+    IF( __VA_ARGS__ ) \
+      ( _FIRST(__VA_ARGS__) ) \
+      (EOL())
 
 
 #endif  

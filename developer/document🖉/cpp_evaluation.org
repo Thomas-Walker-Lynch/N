@@ -4,6 +4,9 @@
 
 1. Macro function definition
 
+   Macro function definitions are not evaluated, so macro calls in them remain
+   literal.
+
    A macro function has three parts, 1) a name 2) a parameter list  3) body
 
    Parameters are declared by listing them between parenthesis after the name. No space

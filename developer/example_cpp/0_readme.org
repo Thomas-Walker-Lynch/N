@@ -1,4 +1,4 @@
-These are direct built one at a time, for example:
+These examples are directly built one at a time, for example:
 
    #+BEGIN_SRC bash
    > gcc try_6_list.c 

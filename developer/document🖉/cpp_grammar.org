@@ -14,19 +14,34 @@ Grammar
         | parenthesized_expr  ; (1,2), (x + y)
 
   empty_item = ε  
-     An item with no content, but syntactically present and contributing to list length.
-     For example, ( , ) is a two-item arg_list with two empty_items.
+     This stands for nothing. It is useful for talking about item lists, because in general lists can have empty slots. Remember cpp works with literal text.
 
-  shim_item = ~,1
-     A special two-token item treated as a single item.
+     For example, ( , ) is a length 2 list with two empty slots.
+
+     For example, (1,,2) is a length 3 three list with one empty slot.
+
+     On calls, the length of the arg_list must match length of the parameter list.
+
+     For example, _FIRST() has a first parameter that expands to nothing if it is referenced
+       #define _FIRST(a ,...) a
+       _FIRST() --> ε is not a bad argument count error, but instead expands to nothing
+
+  general_list = token (, token | ε)*
+     Comma-separated list of items. Commas can appear without tokens between them.
+
+  arg_list = general_list
+
+  pair  = token | ε , token | ε; exactly two tokens.
+
+  twion = pair
+     A special two-token list given to certain macros in a place one token is expected.
      Its role is to shift the remaining members of a list by one position when prepended.
-     An honorary member of the single item club.
+     An honorary member of the single token club. A common twion is `~,1`
 
-  item = token | empty_item | shim_item
+  parm_list = identifier (, identifier)* ; comma-separated list of identifiers
+     A parameter list differs from a general list in that two commas can not
+     appear adjacent to each other, and all members are identifiers.
 
-  arg_list = item (, item)* ; comma-separated list of items
-
-  pair     = item , item ; exactly two items
 
 2.2 'private' identify 
 
