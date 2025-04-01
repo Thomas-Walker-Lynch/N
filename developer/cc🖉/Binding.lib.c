@@ -25,7 +25,7 @@ Template parameters:
 
 // once per Binding·TYPE value
 #ifdef Binding·TYPE
-#if NOT( FIND_ITEM(Binding·TYPE ,Binding·TYPE_LIST) )
+#if NOT_CONTAINS(Binding·TYPE ,Binding·TYPE_LIST) )
 #pragma message( STR_VAL(Binding·TYPE) )
 
   //this is what it takes to append to a list in cpp ...

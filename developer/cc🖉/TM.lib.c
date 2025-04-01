@@ -59,7 +59,7 @@
 
 // once per TM·CVT value
 #ifdef TM·CVT
-#if ! FIND_ITEM( TM·CVT ,TM·TYPE_LIST )
+#if NOT_CONTAINS( TM·CVT ,TM·TYPE_LIST )
 #define TM·TYPE_LIST APPEND(TM·TYPE_LIST ,TM·TYPE)
 
   // declare 'TM' as a type

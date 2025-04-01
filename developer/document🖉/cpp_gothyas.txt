@@ -15,7 +15,7 @@ When defining a macro:
 When calling a macro.
   Can have space between a macro function name and the argument list.
 
-2.
+3.
 
 Macros can be called with empty arguments.
 
@@ -24,10 +24,8 @@ Macros can be called with empty arguments.
     int a_macro (a,,b)  // -> a + + c
   #+END_SRC
 
-  3. The access macros,  FIRST, SECOND ... have a padding character as a first argument.
-  The padding character is returned if the list is not long enough for the access.
-  It can be left empty.
+4.
 
-  FIRST(,)  will return the empty_token.
+The COMMA macro, though defined, can't be used in any two level or more deep macro calls, because it will expand to a comma on the first level. It perhaps could be wrapped in a function that is given a deferred call, and then have eval expand it, dunno.
 
 

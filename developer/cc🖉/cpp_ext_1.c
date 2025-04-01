@@ -56,12 +56,12 @@ DROPE_EMPTY_RIGHT
     m RETURN_NOTHING RETURN_NOTHING RETURN_NOTHING RETURN_NOTHING RETURN_NOTHING()()()()()
 
 /*===========================================================================
-  Find an item in a list
+  List operations
 
-  number of EVALs required depends upon length of not found list prefix
+  number of EVALs required depends upon length list that is processed
 
-  REST will return nothing on one of two conditions, that the list has
-  been exhausted, or that the list is about to exhausted, it has nothing
+  REST will return nothing on one of two conditions: that the list has
+  been exhausted, or that the list is about to be exhausted and it has nothing
   after the last comma. To assure that a tailing item always gets sent
   to the predicate, even when empty, we append an empty item.
 
@@ -95,17 +95,17 @@ DROPE_EMPTY_RIGHT
   #define WHILE(predicate ,...) EVAL( _WHILE(predicate ,__VA_ARGS__ ,) )
 
   // returns true or false
-  #define _HAS_ITEM(item ,...) \
+  #define _CONTAINS(item ,...) \
     IF \
       (__VA_ARGS__) \
       (IF \
         ( EQ(item ,_FIRST(__VA_ARGS__)) ) \
         ( 1 ) \
-        ( DEFER3(_HAS_ITEM_CONFEDERATE)()(item ,REST(__VA_ARGS__)) ) \
+        ( DEFER3(_CONTAINS_CONFEDERATE)()(item ,REST(__VA_ARGS__)) ) \
         ) \
       () 
-  #define _HAS_ITEM_CONFEDERATE() _HAS_ITEM
-  #define HAS_ITEM(predicate ,...) EVAL( _HAS_ITEM(predicate ,__VA_ARGS__ ,) )
+  #define _CONTAINS_CONFEDERATE() _CONTAINS
+  #define CONTAINS(predicate ,...) EVAL( _CONTAINS(predicate ,__VA_ARGS__ ,) )
 
   // if no list, returns EOL(), else returns last item in the list
   #define _LAST(...) \
@@ -121,26 +121,25 @@ DROPE_EMPTY_RIGHT
   #define _LAST_s_CONFEDERATE() _LAST_s
   #define LAST(...) EVAL( _LAST(__VA_ARGS__ ,) )
 
-  // join tokens with a separator in between, separator can have nothing as a value
+  #define CAT(sep ,...) \
+    IF \
+      (__VA_ARGS__) \
+      (_CAT_s(sep ,__VA_ARGS__))   \
+      ()
 
+  #define _CAT_s(sep ,a ,...)\
+    IF \
+      (__VA_ARGS__) \
+      ( EVAL(_CAT_ss(sep ,a ,__VA_ARGS__)) )  \
+      (a)
 
-#define _CAT(sep ,...) \
-  IF \
-    (__VA_ARGS__) \
-    (_CAT_s(sep ,__VA_ARGS__)) \
-    ()
+  #define _CAT_ss(sep ,accumulator ,a ,...) \
+    IF \
+      (__VA_ARGS__) \
+      ( DEFER2(_CAT_ss_CONFEDERATE)()(sep ,accumulator##sep##a ,__VA_ARGS__) ) \
+      (accumulator##sep##a)
 
-#define _CAT_s(sep ,a ,...) \
-  IF \
-    (__VA_ARGS__) \
-    ( CAT3( a ,sep ,DEFER5(_CAT_s_CONFEDERATE())(sep ,__VA_ARGS__)) )  \
-    (a)
-
-#define _CAT_s_CONFEDERATE() _CAT_s
-
-#define CAT(...) EVAL( _CAT(__VA_ARGS__ ,) )
-
-
+  #define _CAT_ss_CONFEDERATE() _CAT_ss
 
 /*===========================================================================
   Quantifiers
@@ -150,7 +149,7 @@ DROPE_EMPTY_RIGHT
   #define AND(...) WHILE(EXISTS ,__VA_ARGS__)
 
   // AKA existence quantification, returns true or false
-  #define OR(...)  NOT(WHILE(NOT ,__VA_ARGS__)
+  #define OR(...)  NOT( WHILE(NOT ,__VA_ARGS__) )
 
 /*===========================================================================
   Access

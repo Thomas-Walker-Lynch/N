@@ -34,7 +34,7 @@ DEBUG
 #define STR_VAL(...) #__VA_ARGS__ " -> " VAL(__VA_ARGS__)
 
 // print the macro and the evaluation of the macro at run time:
-#define SHOW(expr) printf("%s -> %s\n", #expr, STR(expr))
+#define SHOW(expr) printf("%s -> %s\n", #expr, STR(expr));
 
 /*===========================================================================
 Constants

@@ -32,7 +32,7 @@ int main(void){
   printf("\n");
 
   //--------------------------------------------------------------------------
-  // HAS_ITEM: returns 1 if item found
+  // CONTAINS: returns 1 if item found
   //    HAS requires the EQ templates to be set for each case.
   //--------------------------------------------------------------------------
 
@@ -40,8 +40,8 @@ int main(void){
   SHOW( EQ(B ,B) );
   printf("\n");
 
-  SHOW( HAS_ITEM(C ,A ,B ,C ,D) );   // → 1
-  SHOW( HAS_ITEM(Z ,A ,B ,C ,D) );   // → ε
+  SHOW( CONTAINS(C ,A ,B ,C ,D) );   // → 1
+  SHOW( CONTAINS(Z ,A ,B ,C ,D) );   // → ε
   printf("\n");
 
 
@@ -79,9 +79,9 @@ int main(void){
   // CAT: join items with a separator
   //--------------------------------------------------------------------------
 
-  //  SHOW( CAT( ;, A ,B ,C ,D ,Z) );  // → Z
+  //  SHOW( CAT( SEMICOLON, A ,B ,C ,D ,Z) );  // → Z
+  SHOW( CAT(__oo__,A ,B ,C) );  // → 
   SHOW( CAT(,A ,B ,C) );  // → 
-  SHOW( CAT( COMMA, A ,B ,C ,D ,Z) );  // → Z
   SHOW( CAT(,A ,B ,) );  // → 
   SHOW( CAT(,1) );  
   SHOW( CAT(,) );              // → ε
@@ -90,7 +90,6 @@ int main(void){
   //--------------------------------------------------------------------------
   // AND: true if all items are true (non-empty)
   //--------------------------------------------------------------------------
-#if 0
   SHOW( AND(1 ,X ,0) );        // → 1
   SHOW( AND(1 ,X ,) );       // → ε
   printf("\n");
@@ -102,5 +101,52 @@ int main(void){
   SHOW( OR( , , ,X) );         // → 1
   SHOW( OR( , , ,) );          // → ε
   printf("\n");
-#endif
+
 }
+/*
+  2025-04-01T04:44:40Z[developer]
+  Thomas-developer@Stanley§/home/Thomas-masu/developer/N/developer/example_cpp§
+  > gcc try_ext_1.c 
+
+  2025-04-01T04:44:44Z[developer]
+  Thomas-developer@Stanley§/home/Thomas-masu/developer/N/developer/example_cpp§
+  > ./a.out
+  EVAL(EXAMPLE_CHAIN(3)) -> 3 + 1 + 1
+
+  FIND(IS_X ,A ,B ,X ,Y ,Z) -> X
+  FIND(IS_X ,A ,B ,C ,D) -> EOL()
+
+  EQ(A ,B) -> 
+  EQ(B ,B) -> 1
+
+  CONTAINS(C ,A ,B ,C ,D) -> 1
+  CONTAINS(Z ,A ,B ,C ,D) -> 
+
+  WHILE(NON_Z ,A ,B ,C ,Z ,D ,E) -> 
+  WHILE(NON_Z ,A ,B ,C) -> 1
+
+  EXISTS() -> 
+  EXISTS(0) -> 1
+  EXISTS(1) -> 1
+  EXISTS(X) -> 1
+  WHILE(EXISTS ,1 ,X , ) -> 
+  WHILE(EXISTS ,1 , ,X ,0) -> 
+  WHILE(EXISTS ,1 ,X ,0) -> 1
+
+  LAST(A ,B ,C ,D ,Z) -> Z
+  LAST(A ,B ,) -> 
+  LAST() -> 
+
+  CAT(__oo__,A ,B ,C) -> A__oo__B__oo__C
+  CAT(,A ,B ,C) -> ABC
+  CAT(,A ,B ,) -> AB
+  CAT(,1) -> 1
+  CAT(,) -> 
+
+  AND(1 ,X ,0) -> 1
+  AND(1 ,X ,) -> 
+
+  OR( , , ,X) -> 1
+  OR( , , ,) -> 
+
+*/
