@@ -15,8 +15,6 @@
 
   */
  
-  #define NOT_CONTAINS(item ,list) BOOL( NOT(CONTAINS(item ,list)) )
-
   #define Ξ(...)  CAT(· ,__VA_ARGS__)
 
 #endif 

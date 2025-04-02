@@ -1,0 +1,8 @@
+
+
+> make clean
+> make dependency
+> make library
+> make cli
+
+I manually edit the make file to turn on and off the making of the main program or the example directories.  See notes in ` tool🖉/makefile`.

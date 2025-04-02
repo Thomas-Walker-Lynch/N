@@ -1,4 +1,4 @@
- /*
+/*
   Core - core memory operations.
 
   Abbreviations used in comments:
@@ -6,19 +6,19 @@
     'ATP' `At This Point' in the code. Acronym used in comments usually before pointing
     out certain values variables must have.
 
-    'AToW' - At Time of Writing, also used in comments.
+    'AToW' - At Time of Writing ,also used in comments.
 
   Abbreviations used in identifiers:
  
   `AU` `Addressable Unit for the machine`. The C standard leaves this open to definition by the architecture and calls it `char`. On most all machines today it is uint8_t;
 
-  We use structs to group functions into a namespace. When all the functions that have a specific type of given argument are group together, we call the table a 'Functions Given Type X table', or 'FG table' for short. A specific instance of an FG table is an `fg` table.
+  We use structs to group functions into a namespace. When all the functions that have a specific type of given argument are group together ,we call the table a 'Functions Given Type X table' ,or 'FG table' for short. A specific instance of an FG table is an `fg` table.
 
 */
 
 //--------------------------------------------------------------------------------
 // Interface 
-
+//--------------------------------------------------------------------------------
 #ifndef Core·FACE
 #define Core·FACE
 
@@ -35,14 +35,13 @@
 
   //----------------------------------------
   // memory interface
-  //----------------------------------------
 
-    // extent is the maximum index in an address space, tape or area, the doted
+    // extent is the maximum index in an address space ,tape or area ,the doted
     // unit is the cell type.
     typedef size_t extent_t·AU;
     #define extent_of·AU(x) (sizeof(x) - 1)
-    // Funny, we seldom check for this, perhaps that matters on some tiny machine.
-    #define extent·AU_address_space ~(uintptr)0;
+    // Funny ,we seldom check for this ,perhaps that matters on some tiny machine.
+    #define extent_of·AU_address_space ~(uintptr)0;
 
     // addressable unit for the machine
     // C language standard left this undefined. AToW industry uses uint8_t.
@@ -62,8 +61,7 @@
     const WU WU_MAX = (~(WU)0);
 
   //----------------------------------------
-  // flag facility, argument guard facility
-  //----------------------------------------
+  // flag facility ,argument guard facility
 
     typedef enum{
        Core·Status·mu = 0
@@ -87,7 +85,7 @@
     }
 
     typedef struct {
-      char *name;
+      const char *name;
       Core·Flag·Fn flag_function;
       WU flag;
     } Core·Guard;
@@ -123,9 +121,8 @@
 
   //----------------------------------------
   // functions interface
-  //----------------------------------------
   
-    // no state, this is merely a namespace
+    // no state ,this is merely a namespace
 
     typedef struct{
       Core·Status (*on_track)();
@@ -140,101 +137,105 @@
 
 
 //--------------------------------------------------------------------------------
-// Implementation
+// Local - at bottom of translation unit, to keep some functions private
+//--------------------------------------------------------------------------------
+#ifdef LOCAL
 
-#ifdef IMPLEMENTATION
+// once per translation unit
+#ifndef Core·LOCAL
+#define Core·LOCAL
 
-  //--------------------------------------------------------------------------------
-  // implementation to go into the lib.a file
-  //
-  #ifndef LOCAL
-  #endif 
+  //----------------------------------------
+  // argument guard implementation
 
-  //--------------------------------------------------------------------------------
-  #ifdef LOCAL
+    Local void Core·Guard·init(Core·Guard *chk ,const char *name ,Core·Flag·Fn af){
+      if(!chk) return;
+      chk->name = name;
+      chk->flag_function = af;
+      chk->flag = 0;
+    }
 
-    //----------------------------------------
-    // argument guard implementation
-    //----------------------------------------
+    Local void Core·Guard·reset(Core·Guard *chk){
+      if( !chk ) return;
+      chk->flag = 0;
+    }
 
-      Local void Core·Guard·init(Core·Guard *chk, const char *name, Core·Flag·Fn af){
-        if(!chk) return;
-        chk->name = name;
-        chk->flag_function = af;
-        chk->flag = 0;
-      }
+    Local void Core·Guard·check(
+       Core·Guard *chk
+      ,WU err
+      ,bool condition
+      ,char *message
+    ){
+      if( !chk || !chk->flag_function ) return;
+      if( condition ) return;
+      fprintf(stderr ,"%s\n" ,message);
+      chk->flag_function(&chk->flag ,err);
+    }
 
-      Local void Core·Guard·reset(Core·Guard *chk){
-        if( !chk ) return;
-        chk->flag = 0;
-      }
+    Local Core·Guard·FG Core·Guard·fg = {
+       .init = Core·Guard·init
+      ,.reset = Core·Guard·reset
+      ,.check = Core·Guard·check
+    };
 
-      Local void Core·Guard·check(
-         Core·Guard *chk
-        ,WU err
-        ,bool condition
-        ,const char *message
-      ){
-        if( !chk || !chk->flag_function ) return;
-        if( condition ) return;
-        fprintf(stderr ,"%s\n" ,message);
-        chk->flag_function(&chk->flag ,err);
-      }
+  //----------------------------------------
+  // Functions implementation
 
-      Local Core·Guard·FG Core·Guard·fg = {
-         .init = Core·Guard·init
-        ,.reset = Core·Guard·reset
-        ,.check = Core·Guard·check
-      };
+    Core·Status Core·on_track(){ return Core·Status·on_track; }
+    Core·Status Core·derailed(){ return Core·Status·derailed; }
 
-    //----------------------------------------
-    // Functions implementation
-    //----------------------------------------
+    Local Core·Status Core·is_aligned(AU *p ,extent_t·AU alignment ,bool *flag){
+      #ifdef Core·DEBUG
+        Core·Guard·init_count(chk);
+        Core·Guard·fg.check(&chk ,1 ,p ,"given NULL p");
+        Core·Guard·fg.check(&chk ,1 ,flag ,"flag is NULL, so nowhere to write result");
+        Core·Guard·if_return(chk);
+      #endif
+      *flag = ( (uintptr_t)p & alignment ) == 0;
+      return Core·Status·on_track;
+    }
 
-      Core·Status Core·on_track(){ return Core·Status·on_track; }
-      Core·Status Core·derailed(){ return Core·Status·derailed; }
+    Local Core·Status Core·round_down(AU *p ,extent_t·AU alignment ,AU **result){
+      #ifdef Core·DEBUG
+        Core·Guard·init_count(chk);
+        Core·Guard·fg.check(&chk ,1 ,p ,"given NULL p to round");
+        Core·Guard·fg.check(&chk ,1 ,result ,"result is NULL, so nowhere to write result");
+        Core·Guard·if_return(chk);
+      #endif
+      *result = (AU *)( (uintptr_t)p & ~(uintptr_t)alignment );
+      return Core·Status·on_track;
+    }
 
-      Local Core·Status Core·is_aligned(AU *p ,extent·AU alignment ,bool *flag){
-        #ifdef Core·DEBUG
-          Core·Guard·init_count(chk);
-          Core·Guard·fg.check(&chk ,1 ,p ,"given NULL p");
-          Core·Guard·fg.check(&chk ,1 ,flag ,"flag is NULL, so nowhere to write result");
-          Core·Guard·if_return(chk);
-        #endif
-        *flag = ( (uintptr_t)p & alignment ) == 0;
-        return Core·Status·on_track;
-      }
+    Local Core·Status Core·round_up(AU *p ,extent_t·AU alignment ,AU **result){
+      #ifdef Core·DEBUG
+        Core·Guard·init_count(chk);
+        Core·Guard·fg.check(&chk ,1 ,p ,"given NULL p to round");
+        Core·Guard·fg.check(&chk ,1 ,result ,"result is NULL, so nowhere to write result");
+        Core·Guard·if_return(chk);
+      #endif
+      *result = (AU *)( ( (uintptr_t)p + alignment ) & ~(uintptr_t)alignment );
+      return Core·Status·on_track;
+    }
 
-      Local Core·Status Core·round_down(AU *p ,extent·AU alignment ,AU **result){
-        #ifdef Core·DEBUG
-          Core·Guard·init_count(chk);
-          Core·Guard·fg.check(&chk ,1 ,p ,"given NULL p to round");
-          Core·Guard·fg.check(&chk ,1 ,result ,"result is NULL, so nowhere to write result");
-          Core·Guard·if_return(chk);
-        #endif
-        *result = (AU *)( (uintptr_t)p & ~(uintptr_t)alignment );
-        return Core·Status·on_track;
-      }
+    Local Core·F Core·f = {
+        .on_track = Core·on_track
+        ,.derailed = Core·derailed
+        ,.is_aligned = Core·is_aligned
+        ,.round_down = Core·round_down  // Add `Core`
+        ,.round_up = Core·round_up      // Add `Core`
+    };
 
-      Local Core·Status Core·round_up(AU *p ,extent·AU alignment ,AU **result){
-        #ifdef Core·DEBUG
-          Core·Guard·init_count(chk);
-          Core·Guard·fg.check(&chk ,1 ,p ,"given NULL p to round");
-          Core·Guard·fg.check(&chk ,1 ,result ,"result is NULL, so nowhere to write result");
-          Core·Guard·if_return(chk);
-        #endif
-        *result = (AU *)( ( (uintptr_t)p + alignment ) & ~(uintptr_t)alignment );
-        return Core·Status·on_track;
-      }
+#endif // Core·LOCAL
+#endif // LOCAL
 
-      Local Core·F Core·f = {
-          .on_track = Core·on_track
-          ,.derailed = Core·derailed
-          ,.is_aligned = Core·is_aligned
-          ,.round_down = Core·round_down  // Add `Core`
-          ,.round_up = Core·round_up      // Add `Core`
-      };
+//--------------------------------------------------------------------------------
+// Library - compiled into a lib.a file by the current make
+//   Core currently has no library components
+//--------------------------------------------------------------------------------
+#ifdef LIBRARY
+#endif 
 
-  #endif // LOCAL
-
-#endif // IMPLEMENTATION
+//--------------------------------------------------------------------------------
+// undef the template parameters
+//   Core currently has not template parameters
+//--------------------------------------------------------------------------------

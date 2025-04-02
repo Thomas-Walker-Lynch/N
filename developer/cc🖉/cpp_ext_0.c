@@ -13,6 +13,7 @@
 
 - cpp_ext as separate project
 - make the try into tests
+- cpp_ext macros put into a namespace to prevent aliasing
 
 */
 
@@ -39,6 +40,8 @@ DEBUG
 /*===========================================================================
 Constants
 ===========================================================================*/
+
+#define NOTHING
 
 #define COMMA ,
 #define SEMICOLON ;

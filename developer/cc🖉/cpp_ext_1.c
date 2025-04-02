@@ -15,6 +15,15 @@ DROPE_EMPTY_RIGHT
 
 #define CAT(sep,first,...)                              \
 
+Instead of comma separated lists consider instead to make a list with #define:
+```
+#define LIST_1
+#define LIST_2
+
+#ifdef LIST_2
+ ...
+``
+
 */
 
 #ifndef CPP_EXT_1
@@ -124,7 +133,7 @@ DROPE_EMPTY_RIGHT
   #define CAT(sep ,...) \
     IF \
       (__VA_ARGS__) \
-      (_CAT_s(sep ,__VA_ARGS__))   \
+      (_CAT_s( sep ,__VA_ARGS__))   \
       ()
 
   #define _CAT_s(sep ,a ,...)\
@@ -140,6 +149,28 @@ DROPE_EMPTY_RIGHT
       (accumulator##sep##a)
 
   #define _CAT_ss_CONFEDERATE() _CAT_ss
+
+  // comma does not work with CAT so use this, though perhaps list ,a would be faster?
+  #define APPEND(...) \
+    IF \
+      (__VA_ARGS__) \
+      (_APPEND_s(__VA_ARGS__))   \
+      ()
+
+  #define _APPEND_s(a ,...)\
+    IF \
+      (__VA_ARGS__) \
+      ( EVAL(_APPEND_ss(a ,__VA_ARGS__)) )  \
+      (a)
+
+  #define _APPEND_ss(accumulator ,a ,...) \
+    IF \
+      (__VA_ARGS__) \
+      ( DEFER2(_APPEND_ss_CONFEDERATE)()(accumulator, a, ,__VA_ARGS__) ) \
+      (accumulator,a)
+
+  #define _APPEND_ss_CONFEDERATE() _APPEND_ss
+
 
 /*===========================================================================
   Quantifiers

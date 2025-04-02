@@ -5,8 +5,11 @@ include $(RT-INCOMMON)/make/environment_RT_0
 
 # to compile only the example directory
 # comment these out for a normal compile
+#
 SRCDIR_List=example
+#
 # if the .lib.c interfaces are needed:
+#
 CFLAGS+=-Icc🖉
 
 CFLAGS+= -include "$(RT-INCOMMON)/make/RT_0.h"

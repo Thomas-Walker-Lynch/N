@@ -1,0 +1,20 @@
+/*
+  Coffee Species Reference
+
+  | Species   | Origin(s)                  | Flavor Notes               | Notes                          |
+  |-----------|----------------------------|----------------------------|------------------------------- |
+  | Arabica   | Vietnam (Da Lat), Malawi   | Floral, bright, acidic     | High elevation, lower caffeine |
+  | Robusta   | Vietnam (Dak Lak, Gia Lai) | Bitter, strong, earthy     | Common in Vietnamese blends    |
+  | Excelsa   | Vietnam (Central Highlands)| Tart, fruity, smoky        | Adds depth, low production     |
+  | Liberica  | Vietnam (rare farms)       | Woody, floral, full-bodied | Very large beans, low yield    |
+
+  Likely Blend (CASA Blue Mountain):
+    - Arabica (Malawi or Da Lat)
+    - Robusta (Vietnam)
+    - Possibly Excelsa (depth/complexity)
+
+  Notes:
+    - "Made in Taiwan" likely refers to roasting/packaging.
+    - Shelf life: 2 years (cool, dry, or frozen recommended).
+    - Freezing whole beans is safe *if sealed airtight* and thawed only once.
+*/
