@@ -1,5 +1,5 @@
 /*
-This files declares a binding struct named [Binding·TYPE]. It also provides
+This files declares a binding struct named [Binding]. It also provides
 the macro `call` that uses the binding.
 
 Note this file does not make an instance of the binding, and does not intialize
@@ -7,7 +7,7 @@ fields in an instance.
 
 Template parameters:
 
-  Binding·TYPE - Type used to name the binding struct. Binding struct instances get passed as arguments to functions etc.
+  Binding - Type used to name the binding struct. Binding struct instances get passed as arguments to functions etc.
 
 */
 
@@ -23,13 +23,11 @@ Template parameters:
   #define Binding·DEBUG
   #ifdef Binding·DEBUG
     #include <stdio.h>
-    #pragma message( "in #ifndef Binding·TYPE_LIST section" )
+    #pragma message( "in #ifndef Binding_LIST section" )
   #endif
 
   #include "cpp_ext.c"
   #include "Core.lib.c"
-
-  #define Binding·NO_BINDING_FOR(x) BOOLEAN(NOT(CAT2(Binding·TYPE· ,x)))
 
   /*
     usage e.g.: Binding·call(tm, function_name, arg1, arg2, ...)
@@ -46,25 +44,25 @@ Template parameters:
 #endif
 
 
-// once per Binding·TYPE value
-#ifdef Binding·TYPE
-#if Binding·NO_BINDING_FOR(Binding·TYPE)
+// once per Binding value
+#ifdef Binding
+#if BOOLEAN(NOT_IN(Binding·SET ,Binding))
 #ifdef Binding·DEBUG
-  #pragma message( "adding binding for:" STR_VAL(Binding·TYPE) )
+  #pragma message( "adding binding for:" STR_VAL(Binding) )
 #endif
 
-  struct Ξ(Binding·TYPE ,FG);
-  typedef struct Ξ(Binding·TYPE ,FG) Ξ(Binding·TYPE ,FG);
+  struct Ξ(Binding ,FG);
+  typedef struct Ξ(Binding ,FG) Ξ(Binding ,FG);
 
-  struct Ξ(Binding·TYPE ,Tableau);
-  typedef struct Ξ(Binding·TYPE ,Tableau) Ξ(Binding·TYPE ,Tableau); 
+  struct Ξ(Binding ,Tableau);
+  typedef struct Ξ(Binding ,Tableau) Ξ(Binding ,Tableau); 
 
-  typedef struct Ξ(Binding·TYPE){
-    Ξ(Binding·TYPE ,Tableau) *tableau;
-    Ξ(Binding·TYPE ,FG) *fg;
-  } Ξ(Binding·TYPE);
+  typedef struct Ξ(Binding){
+    Ξ(Binding ,Tableau) *tableau;
+    Ξ(Binding ,FG) *fg;
+  } Ξ(Binding);
 
-  static void Binding·wellformed_binding(Ξ(Binding·TYPE) b){
+  static void Binding·wellformed_binding(Ξ(Binding) b){
     #ifdef Binding·DEBUG
       Core·Guard·init_count(chk);
       Core·Guard·fg.check(&chk, 1, b.fg,      "NULL fg table");
@@ -97,5 +95,5 @@ Template parameters:
 //--------------------------------------------------------------------------------
 // undef the template parameters
 //--------------------------------------------------------------------------------
-#undef Binding·TYPE
+#undef Binding
 

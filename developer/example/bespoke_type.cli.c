@@ -19,10 +19,9 @@
   Here by 'type' we mean a Tableau to FG table binding.
 */
 
-  #undef  Binding·TYPE
-  #define Binding·TYPE Bespoke
-  #define Binding·TYPE·Bespoke
+  #define Binding Bespoke
   #include "Binding.lib.c"
+  #define Binding·SET·Bespoke
 
   // This defines the FG table type for Bespoke (aka vtable). Each instance is a different implementation of the type sharing the same interface.
   typedef struct Bespoke·FG{

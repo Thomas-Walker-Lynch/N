@@ -1,11 +1,11 @@
-#+TITLE: C Preprocessor Evaluation Example
+#+TITLE: C Preprocessor Expansion Example
 #+AUTHOR: Thomas Walker Lynch
 #+OPTIONS: toc:nil
 
 1. Macro function definition
 
-   Macro function definitions are not evaluated, so the body (the definition) of the macro remains literal until the time it is called.  Thus macro calls in macro defintion remain
-   literal, unevaluated.
+   Macro function definitions are not expanded, so the body (the definition) of the macro remains literal until the time it is called.  Thus macro calls in macro defintion remain
+   literal, unexpanded.
 
    A macro function has three parts, 1) a name 2) a parameter list  3) body
 
@@ -23,7 +23,10 @@
 
 2. directives
 
-   #ifdef and #ifndef to not evaluate what follows. They expect a full formed
+   #define name is never expanded. body is not expanded when the definition is
+   added to the symbol table, but is expanded through a call to the macro.
+
+   #ifdef and #ifndef do not evaluate what follows. They expect an already formed
    macro name.
 
    #if does evaluate, but expects existence as true, and 0 as false (though zero
@@ -51,11 +54,11 @@
      When the macro is invoked:
 
      1. Each parameter in the macro body is replaced *verbatim* with the
-        corresponding argument. No evaluation is performed at this stage.
+        corresponding argument. No expansion is performed at this stage.
 
      2. The new macro body is a new token stream: the old macro body with arguments pasted in.
 
-  ** 2. Evaluation Phase
+  ** 2. Expansion Phase
 
      The preprocessor then scans the argument substituted macro body *from left to right*,
      evaluating macro calls *as it encounters them*.
@@ -74,7 +77,7 @@
      3. Any parameter or token used with `#`
 
         - `#param` turns the *original* argument text into a string.
-        - Because it stringifies, *the argument is never evaluated*.
+        - Because it stringifies, *the argument is never expanded*.
 
      4. Any parameter or token used with `##`
 
@@ -85,14 +88,14 @@
 
      It is common that macros containing a `#` or a `##` will have an extra call
      layer above them to cause the argument to be first substituted into a macro
-     where it will get evaluated. Large number of Eval calls are typically not needed
+     where it will get expanded. Large number of Eval calls are typically not needed
      for this, rather what is needed is one layer above the layer with the `#` or `##`.
 
   ** 3. Colored blue macro call tokens are taken as literal text.
 
-     During evaluation cpp keeps a list of macros that are actively being expanded.  This includes the macro that has been called, of course, and all the calls that it found during its depth traversal to get to the current point of evaluation. If it sees any calls to the macros on the active expand list, it marks the macro call token itself as unexpandable, and thus to be treated as literal text. It is said that the macro call token "has been colored blue".
+     During expansion cpp keeps a list of macros that are actively being expanded.  This includes the macro that has been called, of course, and all the calls that it found during its depth traversal to get to the current point of expansion. If it sees any calls to the macros on the active expand list, it marks the macro call token itself as unexpandable, and thus to be treated as literal text. It is said that the macro call token "has been colored blue".
 
-     Any subsequent appearance of a colored blue macro call token will be treated as literal text, no matter the context. This includes if the macro result was assigned to a variable, then that variable is evaluated later.  It includes if the macro call token or the expression it is in is sent to another macro, etc.  
+     Any subsequent appearance of a colored blue macro call token will be treated as literal text, no matter the context. This includes if the macro result was assigned to a variable, then that variable is expanded later.  It includes if the macro call token or the expression it is in is sent to another macro, etc.  
 
      Example:
 
@@ -104,7 +107,7 @@
      SHOW(EVAL(RESULT));    // → 1029 * GROW(5) again, never expands
      #+END_SRC
 
-     The macro call token `GROW(x)` which occurs in the body of a macro definition of the same name, gets colored blue, and thus is always treated as literal text. This happens even though an expression containing it is assigned to a variable, then that variable is evaluated in a totally different evaluation context.
+     The macro call token `GROW(x)` which occurs in the body of a macro definition of the same name, gets colored blue, and thus is always treated as literal text. This happens even though an expression containing it is assigned to a variable, then that variable is expanded in a totally different expansion context.
 
     Apparently the designers of cpp do not want people to design recursive structures with cpp. However, there is a trick for getting around it using a confederate in place of the recursive call, then putting back the original call later, as shown in section 6.
       
@@ -119,11 +122,11 @@
 
    A call to ~FORCE_ONE(5)~ will expand to ~1~.
 
-   A call to ~STR(FORCE_ONE(5))~ will expand to the string ~"FORCE_ONE_(5)"~. This is because arguments given to the ~#~ operator are not expanded. The variable gets replaced with its value, but the value it not evaluated.
+   A call to ~STR(FORCE_ONE(5))~ will expand to the string ~"FORCE_ONE_(5)"~. This is because arguments given to the ~#~ operator are not expanded. The variable gets replaced with its value, but the value it not expanded.
 
    A call to ~VAL(FORCE_ONE(5))~ will result in `1`. This is because there is no hash symbol in the VAL macro that is stopping the recursive expansion of ~x~.
 
-5. Cascading evaluation
+5. Cascading expansion
 
    A macro can also fail to evaluate all possible macros, because during the left to right scan, it created a macro call, but during the scan it did not see it.
 
@@ -136,7 +139,7 @@
    When evaluating ~NOT_SO_FAST(5)~, here's what happens:
 
    1. ~NEGATE~ is encountered there is nothing to recur into, so it evaluates to itself.
-      the evaluation moves right.
+      the expansion moves right.
       
    2. ~EMPTY()~ is a macro, so it has no operands, so it is expanded. As it has no
       body, it expands to nothing. CPP then moves to the right.
@@ -156,7 +159,7 @@
 
      #define STR(x) #x
 
-     // `#x` no evaluation of x due to the '#'
+     // `#x` no expansion of x due to the '#'
      // `STR(x)` recurs and does a left to right expansion on the value of `x`
      #define SHOW(x) printf(#x " → %s\\n", STR(x));
 
@@ -190,7 +193,7 @@
    SHOW(BE(NOT_SO_FAST(5)))
    #+END_SRC
 
-   The evaluation process:
+   The expansion process:
 
    - cpp encounters ~BE(NOT_SO_FAST(5))~.
    - It enters ~NOT_SO_FAST(5)~, expands it to ~NEGATE (5)~.
@@ -198,7 +201,7 @@
 
    -------
 
-   The `IF` macro evolves and does three self evaluations, due to new strings
+   The `IF` macro evolves and does three self expansions, due to new strings
    being created which in turn match already defined macros.
 
    <walk through an IF> series of events, explain why the DEFER3, ph
@@ -221,7 +224,7 @@
       
       #include <stdio.h>
       #define STR(x) #x
-      // no evaluation, and one pass of evaluation
+      // no expansion, and one pass of expansion
       #define SHOW(expr) printf("%s --> %s\n", #expr, STR(expr))
 
       #define BE(...) __VA_ARGS__
@@ -256,12 +259,12 @@
 
         // case 4
         /* 
-          `BE` placed on the outside. The idea is that evaluation will return `123 * GROW (15)` and then this will be evaluated resulting in `123 * 123 * GROW(15)`.
+          `BE` placed on the outside. The idea is that expansion will return `123 * GROW (15)` and then this will be expanded resulting in `123 * 123 * GROW(15)`.
 
           However, any time GROW4 literally spells out GROW4(...) inside its own expansion
           it will leave it literally and not expand it. 
 
-          Though it is interesting that here that occurs at a higher level in the evaluation tree than the first ocurrance of the recursive call, but still it is in the tree.
+          Though it is interesting that here that occurs at a higher level in the expansion tree than the first ocurrance of the recursive call, but still it is in the tree.
 
           GROW4(15) --> 123 * GROW4 (15)
         ,*/
@@ -276,9 +279,9 @@
           The original expression is written in terms of a deferred CONDFEDERATE function
           instead of in terms of a recursive call to GROW5. cpp can suspect nothing.
 
-          The result is an expression in terms of the unevaluated CONDFEDERATE function.
+          The result is an expression in terms of the unexpanded CONDFEDERATE function.
 
-          The CONFEDERATE function is defined to return the token GROW5. Hence in a subsequent evaluation, and there must be a subsequent evaluation for this to work,  The CONFEDERATE function will run, return GROW5 which is next to its call parenthesis, so then the
+          The CONFEDERATE function is defined to return the token GROW5. Hence in a subsequent expansion, and there must be a subsequent expansion for this to work,  The CONFEDERATE function will run, return GROW5 which is next to its call parenthesis, so then the
           recursive call will run.
 
           BE(GROW5(21)) --> 541 * 541 * CONFEDERATE () (21)
@@ -292,7 +295,7 @@
 
         // case 6
         /*
-          Once a recursively called function is marked, or 'colored' it can never be expanded, even when passed through to another variable and separately evaluation.
+          Once a recursively called function is marked, or 'colored' it can never be expanded, even when passed through to another variable and separately expansion.
          ,*/
         #define GROW6(x) 1029 * GROW6 EMPTY() (x)
         #define RESULT1 GROW6(51)
@@ -316,19 +319,19 @@
 
 7. Discussion on recursion
 
-  Case 6, and Case 7 above show that once a token is marked as a would-be recursive call token it is marked and can never be evaluated, no matter how hard the programmer
+  Case 6, and Case 7 above show that once a token is marked as a would-be recursive call token it is marked and can never be expanded, no matter how hard the programmer
   might try hide its actual origin. It can be assigned to variables, passed between co-routines, and nothing will help because the macro call token itself is marked.
 
-  Case 5 shows a workaround. Instead of having a recursive call, a deferred call to a confederate is made.  The resulting expression then amounts to a lazy evaluation. The return value from the evaluation will contain unmade calls to the confederate in each and every place that a recursive call was desired.
+  Case 5 shows a workaround. Instead of having a recursive call, a deferred call to a confederate is made.  The resulting expression then amounts to a lazy expansion. The return value from the expansion will contain unmade calls to the confederate in each and every place that a recursive call was desired.
 
-  In order to complete the evaluation, the lazy result must undergo a second evaluation,
+  In order to complete the expansion, the lazy result must undergo a second expansion,
   where the confederate function calls are run, and they return the name of the original
-  function that was to be called, and then those calls are evaluated.
+  function that was to be called, and then those calls are expanded.
 
-  This leads to a trade off. To have recursion we must have two evaluations of expressions so as to replace the confederates.
+  This leads to a trade off. To have recursion we must have two expansions of expressions so as to replace the confederates.
 
-  Repeated evaluation is a consequence of using confederate method to avoid macro calls from being marked not to be evaluated. Deferring the calls is necessary so that the don't get replaced in the first evaluation so that their replacements don't get marked.
+  Repeated expansion is a consequence of using confederate method to avoid macro calls from being marked not to be expanded. Deferring the calls is necessary so that the don't get replaced in the first expansion so that their replacements don't get marked.
 
-  Note that each recursive call, potentially results in ore expressions appearing. Hence, there must be as many evaluations as there are levels of recursion. This is a tell order for list processing.
+  Note that each recursive call, potentially results in ore expressions appearing. Hence, there must be as many expansions as there are levels of recursion. This is a tell order for list processing.
 
   

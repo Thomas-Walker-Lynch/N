@@ -160,6 +160,23 @@ LOGIC
   #define AND2(x ,y) IF(x) (y) ()
   #define  OR2(x ,y) IF(x) (1) (y)
 
+/*===========================================================================
+  Set
+    User must define set members manually:
+
+    #define <set_name>__<member>
+
+    For example a set named TRIP with 1 ,2 ,3 in it:
+
+    #define TRIP__1
+    #define TRIP__2
+    #define TRIP__3
+
+*/
+
+#define IN(set ,x) NOT(CAT3(set ,__ ,x))
+#define NOT_IN(set ,x) CAT3(set ,__ ,x)
+
 
 /*===========================================================================
   Registered Equivalence

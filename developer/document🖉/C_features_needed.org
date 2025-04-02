@@ -6,7 +6,9 @@
 
   Currently definitions remain literal text.
 
-  Also #redefine delayed assignment to macro_name, with evaluation of the body.
+  Also #reassign assignment to a name an definition, possible with expansion and
+  using the same macro name taken with its older definition. Selective expansion
+  in definitions also needed.
 
   Without namespaces I can see the problem with developers stepping on each others's macro ames.  However, with namespaces it seems that #redefine, or #redef is tractable.  
 

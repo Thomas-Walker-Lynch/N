@@ -18,8 +18,8 @@
 //--------------------------------------------------------------------------------
 
 // once per translation unit
-#ifndef TM·CVT_LIST
-#define TM·CVT_LIST
+#ifndef TM·FACE
+#define TM·FACE
 
   #include <stdint.h>
   #include <stddef.h>
@@ -64,18 +64,11 @@
 
 #endif
 
-// once per TM·CVT value
 #ifdef TM·CVT
-#if NOT_CONTAINS( TM·CVT ,TM·CVT_LIST )
-#ifdef Binding·DEBUG
-  #pragma message( STR_VAL(TM·CVT_LIST) )
+#if BOOLEAN(NOT_IN(TM·SET ,TM·CVT))
+#ifdef TM·CVT·DEBUG
+  #pragma message( "adding binding for:" STR_VAL(Binding) )
 #endif
-
-  //this is what it takes to append to a list in cpp ...
-  #undef TEMP
-  #define TEMP TM·CVT_LIST ,TM·CVT
-  #undef TM·CVT_LIST
-  #define TM·CVT_LIST TEMP
 
   // some synonyms to make this section easier to read
   #undef TM
