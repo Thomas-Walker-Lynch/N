@@ -32,32 +32,32 @@
   #endif
 
   typedef enum{
-     TM·Tape·Topo·mu = 0 
-    ,TM·Tape·Topo·empty       = 1
-    ,TM·Tape·Topo·singleton   = 1 << 1
-    ,TM·Tape·Topo·segment     = 1 << 2
-    ,TM·Tape·Topo·circle      = 1 << 3
-    ,TM·Tape·Topo·tail_cyclic = 1 << 4
-    ,TM·Tape·Topo·infinite    = 1 << 5
-  }TM·Tape·Topo;
-  const TM·Tape·Topo TM·Tape·Topo·bounded = 
-    TM·Tape·Topo·singleton 
-    | TM·Tape·Topo·segment
+     TM·Topo·mu = 0 
+    ,TM·Topo·empty       = 1
+    ,TM·Topo·singleton   = 1 << 1
+    ,TM·Topo·segment     = 1 << 2
+    ,TM·Topo·circle      = 1 << 3
+    ,TM·Topo·tail_cyclic = 1 << 4
+    ,TM·Topo·infinite    = 1 << 5
+  }TM·Topo;
+  const TM·Topo TM·Topo·bounded = 
+    TM·Topo·singleton 
+    | TM·Topo·segment
     ;
 
   typedef enum{
-    TM·Head·Status·mu = 0
-    ,TM·Head·Status·dismounted  = 1
-    ,TM·Head·Status·out_of_area = 1 << 1
-    ,TM·Head·Status·leftmost    = 1 << 2
-    ,TM·Head·Status·interim     = 1 << 3
-    ,TM·Head·Status·rightmost   = 1 << 4
-  } TM·Head·Status;
+    TM·Status·mu = 0
+    ,TM·Status·dismounted  = 1
+    ,TM·Status·out_of_area = 1 << 1
+    ,TM·Status·leftmost    = 1 << 2
+    ,TM·Status·interim     = 1 << 3
+    ,TM·Status·rightmost   = 1 << 4
+  } TM·Status;
 
-  const TM·Head·Status TM·Head·Status·on_tape = 
-    TM·Head·Status·leftmost
-    | TM·Head·Status·interim
-    | TM·Head·Status·rightmost
+  const TM·Status TM·Status·on_tape = 
+    TM·Status·leftmost
+    | TM·Status·interim
+    | TM·Status·rightmost
     ;
 
 #endif //#ifndef TM·FACE
@@ -79,15 +79,15 @@
 
   typedef struct ·(TM,_TM·CVT_,FG){
 
-    TM·Tape·Topo         (*Tape·topo)     ( ·(TM,_TM·CVT_) tm );
-    bool                 (*Tape·bounded)  ( ·(TM,_TM·CVT_) tm );
-    ·(extent_t,_TM·CVT_) (*Tape·extent)   ( ·(TM,_TM·CVT_) tm );
+    TM·Topo         (*topo)     ( ·(TM,_TM·CVT_) tm );
+    bool                 (*bounded)  ( ·(TM,_TM·CVT_) tm );
+    ·(extent_t,_TM·CVT_) (*extent)   ( ·(TM,_TM·CVT_) tm );
 
-    TM·Head·Status     (*Head·status)     ( ·(TM,_TM·CVT_) tm );
-    bool               (*Head·dismounted) ( ·(TM,_TM·CVT_) tm );
-    bool               (*Head·on_tape)    ( ·(TM,_TM·CVT_) tm );
-    bool               (*Head·on_leftmost)( ·(TM,_TM·CVT_) tm );
-    bool               (*Head·on_rightmost)( ·(TM,_TM·CVT_) tm );
+    TM·Status     (*status)     ( ·(TM,_TM·CVT_) tm );
+    bool               (*dismounted) ( ·(TM,_TM·CVT_) tm );
+    bool               (*on_tape)    ( ·(TM,_TM·CVT_) tm );
+    bool               (*on_leftmost)( ·(TM,_TM·CVT_) tm );
+    bool               (*on_rightmost)( ·(TM,_TM·CVT_) tm );
 
     // tape machine functions
     void               (*mount)           ( ·(TM,_TM·CVT_) tm );
@@ -168,54 +168,54 @@
       Array implementation with a segment tape
     */
 
-    Local TM·Tape·Topo ·(TM,_TM·CVT_,Array,Tape·topo)( ·(TM,_TM·CVT_) tm ){
+    Local TM·Topo ·(TM,_TM·CVT_,Array,topo)( ·(TM,_TM·CVT_) tm ){
       ·(TM,_TM·CVT_,Array,Tableau) *t = (·(TM,_TM·CVT_,Array,Tableau) *) tm.tableau;
-      if( t->extent == 0 ) return TM·Tape·Topo·singleton;
-      return TM·Tape·Topo·segment;
+      if( t->extent == 0 ) return TM·Topo·singleton;
+      return TM·Topo·segment;
     }
 
-    Local bool ·(TM,_TM·CVT_,Array,Tape·bounded)( ·(TM,_TM·CVT_) tm ){
+    Local bool ·(TM,_TM·CVT_,Array,bounded)( ·(TM,_TM·CVT_) tm ){
       ·(TM,_TM·CVT_,Array,Tableau) *t = (·(TM,_TM·CVT_,Array,Tableau) *) tm.tableau;
-      return ·(TM,_TM·CVT_,Array,Tape·topo)( tm ) & TM·Tape·Topo·bounded;
+      return ·(TM,_TM·CVT_,Array,topo)( tm ) & TM·Topo·bounded;
     }
 
-    Local ·(extent_t,_TM·CVT_) ·(TM,_TM·CVT_,Array,Tape·extent)( ·(TM,_TM·CVT_) tm ){
+    Local ·(extent_t,_TM·CVT_) ·(TM,_TM·CVT_,Array,extent)( ·(TM,_TM·CVT_) tm ){
       ·(TM,_TM·CVT_,Array,Tableau) *t = (·(TM,_TM·CVT_,Array,Tableau) *) tm.tableau;
       return t->extent;
     }
 
 
-    Local TM·Head·Status ·(TM,_TM·CVT_,Array,Head·status)( ·(TM,_TM·CVT_) tm ){
+    Local TM·Status ·(TM,_TM·CVT_,Array,status)( ·(TM,_TM·CVT_) tm ){
       ·(TM,_TM·CVT_,Array,Tableau) *t = (·(TM,_TM·CVT_,Array,Tableau) *) tm.tableau;
-      if( !t->hd ) return TM·Head·Status·dismounted;
-      if( t->hd == t->position ) return TM·Head·Status·leftmost;
+      if( !t->hd ) return TM·Status·dismounted;
+      if( t->hd == t->position ) return TM·Status·leftmost;
 
       _TM·CVT_ *rightmost_pt = t->position + t->extent;
-      if( t->hd == rightmost_pt ) return TM·Head·Status·rightmost;
+      if( t->hd == rightmost_pt ) return TM·Status·rightmost;
       if( t->hd < t->position || t->hd > rightmost_pt )
-        return TM·Head·Status·out_of_area;
+        return TM·Status·out_of_area;
 
-      return TM·Head·Status·interim;
+      return TM·Status·interim;
     }
 
-    Local bool ·(TM,_TM·CVT_,Array,Head·dismounted)( ·(TM,_TM·CVT_) tm ){
+    Local bool ·(TM,_TM·CVT_,Array,dismounted)( ·(TM,_TM·CVT_) tm ){
       ·(TM,_TM·CVT_,Array,Tableau) *t = (·(TM,_TM·CVT_,Array,Tableau) *) tm.tableau;
-      return ·(TM,_TM·CVT_,Array,Head·status)( tm ) & TM·Head·Status·dismounted;
+      return ·(TM,_TM·CVT_,Array,status)( tm ) & TM·Status·dismounted;
     }
 
-    Local bool ·(TM,_TM·CVT_,Array,Head·on_tape)( ·(TM,_TM·CVT_) tm ){
+    Local bool ·(TM,_TM·CVT_,Array,on_tape)( ·(TM,_TM·CVT_) tm ){
       ·(TM,_TM·CVT_,Array,Tableau) *t = (·(TM,_TM·CVT_,Array,Tableau) *) tm.tableau;
-      return ·(TM,_TM·CVT_,Array,Head·status)( tm ) & TM·Head·Status·on_tape;
+      return ·(TM,_TM·CVT_,Array,status)( tm ) & TM·Status·on_tape;
     }
 
-    Local bool ·(TM,_TM·CVT_,Array,Head·on_leftmost)( ·(TM,_TM·CVT_) tm ){
+    Local bool ·(TM,_TM·CVT_,Array,on_leftmost)( ·(TM,_TM·CVT_) tm ){
       ·(TM,_TM·CVT_,Array,Tableau) *t = (·(TM,_TM·CVT_,Array,Tableau) *) tm.tableau;
-      return ·(TM,_TM·CVT_,Array,Head·status)( tm ) & TM·Head·Status·leftmost;
+      return ·(TM,_TM·CVT_,Array,status)( tm ) & TM·Status·leftmost;
     }
 
-    Local bool ·(TM,_TM·CVT_,Array,Head·on_rightmost)( ·(TM,_TM·CVT_) tm ){
+    Local bool ·(TM,_TM·CVT_,Array,on_rightmost)( ·(TM,_TM·CVT_) tm ){
       ·(TM,_TM·CVT_,Array,Tableau) *t = (·(TM,_TM·CVT_,Array,Tableau) *) tm.tableau;
-      return ·(TM,_TM·CVT_,Array,Head·status)( tm ) & TM·Head·Status·rightmost;
+      return ·(TM,_TM·CVT_,Array,status)( tm ) & TM·Status·rightmost;
     }
 
     // does nothing if the hd is already mounted
@@ -242,7 +242,7 @@
 
     Local void ·(TM,_TM·CVT_,Array,rewind)( ·(TM,_TM·CVT_) tm ){
       ·(TM,_TM·CVT_,Array,Tableau) *t = (·(TM,_TM·CVT_,Array,Tableau) *) tm.tableau;
-      if( ·(TM,_TM·CVT_,Array,Head·dismounted)( tm ) ) return;
+      if( ·(TM,_TM·CVT_,Array,dismounted)( tm ) ) return;
       t->hd = t->position;
     }
 
@@ -258,26 +258,26 @@
 
     Local ·(TM,_TM·CVT_,FG) ·(TM,_TM·CVT_,Array,fg) = {
 
-      .Tape·topo         = ·(TM,_TM·CVT_,Array,Tape·topo)
-      ,.Tape·bounded     = ·(TM,_TM·CVT_,Array,Tape·bounded)
-      ,.Tape·extent      = ·(TM,_TM·CVT_,Array,Tape·extent)
+      .topo           = ·(TM,_TM·CVT_,Array,topo)
+      ,.bounded       = ·(TM,_TM·CVT_,Array,bounded)
+      ,.extent        = ·(TM,_TM·CVT_,Array,extent)
 
-      ,.Head·status      = ·(TM,_TM·CVT_,Array,Head·status)
-      ,.Head·dismounted  = ·(TM,_TM·CVT_,Array,Head·dismounted)
-      ,.Head·on_tape     = ·(TM,_TM·CVT_,Array,Head·on_tape)
-      ,.Head·on_leftmost = ·(TM,_TM·CVT_,Array,Head·on_leftmost)
-      ,.Head·on_rightmost= ·(TM,_TM·CVT_,Array,Head·on_rightmost)
+      ,.status        = ·(TM,_TM·CVT_,Array,status)
+      ,.dismounted    = ·(TM,_TM·CVT_,Array,dismounted)
+      ,.on_tape       = ·(TM,_TM·CVT_,Array,on_tape)
+      ,.on_leftmost   = ·(TM,_TM·CVT_,Array,on_leftmost)
+      ,.on_rightmost  = ·(TM,_TM·CVT_,Array,on_rightmost)
 
-      ,.mount            = ·(TM,_TM·CVT_,Array,mount)
-      ,.dismount         = ·(TM,_TM·CVT_,Array,dismount)
+      ,.mount         = ·(TM,_TM·CVT_,Array,mount)
+      ,.dismount      = ·(TM,_TM·CVT_,Array,dismount)
 
-      ,.step             = ·(TM,_TM·CVT_,Array,step)
-      ,.step_right       = ·(TM,_TM·CVT_,Array,step)
-      ,.step_left        = ·(TM,_TM·CVT_,Array,step_left)
-      ,.rewind           = ·(TM,_TM·CVT_,Array,rewind)
+      ,.step          = ·(TM,_TM·CVT_,Array,step)
+      ,.step_right    = ·(TM,_TM·CVT_,Array,step)
+      ,.step_left     = ·(TM,_TM·CVT_,Array,step_left)
+      ,.rewind        = ·(TM,_TM·CVT_,Array,rewind)
 
-      ,.read             = ·(TM,_TM·CVT_,Array,read)
-      ,.write            = ·(TM,_TM·CVT_,Array,write)
+      ,.read          = ·(TM,_TM·CVT_,Array,read)
+      ,.write         = ·(TM,_TM·CVT_,Array,write)
 
     };
 

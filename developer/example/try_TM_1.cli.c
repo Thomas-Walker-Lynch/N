@@ -10,48 +10,25 @@
 #define SET__Binding__TM·AU
 
 int main(){
-  printf("running try_TM.cli.c on %s at %s\n", __DATE__, __TIME__);
+  printf("running try_TM_1.cli.c on %s at %s\n", __DATE__, __TIME__);
 
   // Create a tape with 5 AU values
   AU tape[] = {1 ,2 ,3 ,4 ,5};
-  extent_t·AU extent = sizeof(tape) - 1;
+  extent_t·AU extent = sizeof(tape) / sizeof(AU) - 1;
 
   // Init the tableau
   TM·AU·Array·Tableau t;
   TM·AU tm = TM·AU·Array·init_pe(&t ,tape ,extent);
 
-#if 0
-
-  if( Binding·call(tm ,Head·on_tape) ){
+  if( Binding·call(tm ,on_tape) ){
     do{
-      printf( "%x" ,Binding·call(tm ,read) );
-      if( Binding·call(tm ,)
-
-
+      printf( "%02x" , (unsigned int) Binding·call(tm ,read) );
+      if( Binding·call(tm ,on_rightmost) ) break;
+      Binding·call(tm ,step);
+    }
+    printf("\n");
   }
-   
 
-  AU datum = Binding·call(tm ,read);
-  printf("Initial datum: %u\n", datum);
-
-  // Step and read again
-  Binding·call(tm ,step);
-  datum = Binding·call(tm ,read);
-  printf("After step, datum: %u\n", datum);
-
-  // Write a new value
-  AU value = 99;
-  Binding·call(tm ,write ,&value);
-
-  // Rewind and read again
-  Binding·call(tm ,rewind);
-  datum = Binding·call(tm ,read);
-  
-
-
-  printf("After rewind, datum: %u\n", datum);
-
-#endif
   return 0;
 }
 
