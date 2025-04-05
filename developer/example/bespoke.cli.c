@@ -19,7 +19,7 @@
   Here by 'type' we mean a Tableau to FG table binding.
 */
 
-  #define Binding Bespoke
+  #define _BINDING_ Bespoke
   #include "Binding.lib.c"
   #define SET__Binding__Bespoke
 
@@ -47,12 +47,12 @@ int main(){
 
   printf("running example binding.cli.c on %s at %s\n", __DATE__, __TIME__);
 
-  SHOW(Ξ(Binding·TYPE ,FG));
+  SHOW(·(Binding·TYPE ,FG));
 
   #define A 5
   SHOW(A);
 
-  #define B Ξ(X,Y)
+  #define B ·(X,Y)
   SHOW(B);
 
   // one FG table will be shared by many instances of Bespoke, maybe all of them

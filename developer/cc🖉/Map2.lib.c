@@ -138,23 +138,23 @@
   #if !defined(CVT_read) || !defined(CVT_write)
     typedef struct {
       Map·Completion (*copy_byte_to_byte)(
-        Ξ(TM·Array ,AU) *read_tm
-        ,Ξ(TM·Array ,AU) *write_tm
+        ·(TM·Array ,AU) *read_tm
+        ,·(TM·Array ,AU) *write_tm
       );
 
       Map·Completion (*copy_hex_to_byte)(
-        Ξ(TM·Array ,uint16_t) *read_tm
-        ,Ξ(TM·Array ,AU) *write_tm
+        ·(TM·Array ,uint16_t) *read_tm
+        ,·(TM·Array ,AU) *write_tm
       );
 
       Map·Completion (*copy_byte_to_hex)(
-        Ξ(TM·Array ,AU) *read_tm
-        ,Ξ(TM·Array ,uint16_t) *write_tm
+        ·(TM·Array ,AU) *read_tm
+        ,·(TM·Array ,uint16_t) *write_tm
       );
 
       // Terminate string function
       Map·Completion (*terminate_string)(
-        Ξ(TM·Array ,AU) *write_tm
+        ·(TM·Array ,AU) *write_tm
       );
     }
   #endif
@@ -163,7 +163,7 @@
   #if defined(CVT_read) && defined(CVT_write)
 
     // Function passed to map type signature must be this:
-    typedef Core·Status (*Ξ(Map·fn ,CVT_read ,CVT_write))(
+    typedef Core·Status (*·(Map·fn ,CVT_read ,CVT_write))(
       CVT_read *read_value
       ,CVT_write *write_value
     );
@@ -171,31 +171,31 @@
     typedef struct {
       // Map a function over all elements from read_tm to write_tm
       Map·Completion (*map)(
-        Ξ(TM·Array ,CVT_read) *read_tm
-        ,Ξ(TM·Array ,CVT_write) *write_tm
-        ,Ξ(Map·fn ,CVT_read ,CVT_write) map_fn
+        ·(TM·Array ,CVT_read) *read_tm
+        ,·(TM·Array ,CVT_write) *write_tm
+        ,·(Map·fn ,CVT_read ,CVT_write) map_fn
       );
 
       // Map a function over elements from read_tm to write_tm until a condition is met
       Map·Completion (*map_while)(
-        Ξ(TM·Array ,CVT_read) *read_tm
-        ,Ξ(TM·Array ,CVT_write) *write_tm
-        ,Ξ(Map·fn ,CVT_read ,CVT_write) map_fn
-        ,bool (*condition)(Ξ(TM·Array ,CVT_read) *read_tm)
+        ·(TM·Array ,CVT_read) *read_tm
+        ,·(TM·Array ,CVT_write) *write_tm
+        ,·(Map·fn ,CVT_read ,CVT_write) map_fn
+        ,bool (*condition)(·(TM·Array ,CVT_read) *read_tm)
       );
 
       // Map a function over n elements from read_tm to write_tm
       Map·Completion (*map_extent)(
-        Ξ(TM·Array ,CVT_read) *read_tm
-        ,Ξ(TM·Array ,CVT_write) *write_tm
-        ,Ξ(Map·fn ,CVT_read ,CVT_write) map_fn
-        ,Ξ(extent_t ,CVT_read) extent
+        ·(TM·Array ,CVT_read) *read_tm
+        ,·(TM·Array ,CVT_write) *write_tm
+        ,·(Map·fn ,CVT_read ,CVT_write) map_fn
+        ,·(extent_t ,CVT_read) extent
       );
 
-    } Ξ(Map·FG ,CVT_read ,CVT_write);
+    } ·(Map·FG ,CVT_read ,CVT_write);
 
     // Default function given table
-    Ξ(Map·FG ,CVT_read ,CVT_write) Ξ(Map·fg ,CVT_read ,CVT_write);
+    ·(Map·FG ,CVT_read ,CVT_write) ·(Map·fg ,CVT_read ,CVT_write);
   #endif // !defined(CVT_read) && !defined(CVT_write)
 
 #endif // #ifndef Map·FACE
@@ -257,10 +257,10 @@
       // Map implementation with specific types
 
       // Map a function over all elements from read_tm to write_tm
-      Local Core·Status Ξ(Map ,CVT_read ,CVT_write)·map(
-        Ξ(TM·Array ,CVT_read) *read_tm
-        ,Ξ(TM·Array ,CVT_write) *write_tm
-        ,Ξ(Map·fn ,CVT_read ,CVT_write) map_fn
+      Local Core·Status ·(Map ,CVT_read ,CVT_write)·map(
+        ·(TM·Array ,CVT_read) *read_tm
+        ,·(TM·Array ,CVT_write) *write_tm
+        ,·(Map·fn ,CVT_read ,CVT_write) map_fn
       ){
         #ifdef Map·DEBUG
           Core·Guard·init_count(chk);
@@ -271,11 +271,11 @@
         #endif
 
         // Rewind both tape machines to ensure we start at the beginning
-        Ξ(TM·Array ,CVT_read)·fg.rewind(read_tm);
-        Ξ(TM·Array ,CVT_write)·fg.rewind(write_tm);
+        ·(TM·Array ,CVT_read)·fg.rewind(read_tm);
+        ·(TM·Array ,CVT_write)·fg.rewind(write_tm);
 
         // Initial check if can_read (not part of the loop)
-        if(!Ξ(TM·Array ,CVT_read)·fg.can_read(read_tm)) return Core·Status·on_track;
+        if(!·(TM·Array ,CVT_read)·fg.can_read(read_tm)) return Core·Status·on_track;
 
         // Track completion status
         uint completion = 0;
@@ -284,7 +284,7 @@
         while(1){
           // Read value from source
           CVT_read read_value;
-          Ξ(TM·Array ,CVT_read)·fg.read(read_tm ,&read_value);
+          ·(TM·Array ,CVT_read)·fg.read(read_tm ,&read_value);
 
           // Apply mapping function to get write value
           CVT_write write_value;
@@ -295,16 +295,16 @@
           }
 
           // Write result to destination
-          Ξ(TM·Array ,CVT_write)·fg.write(write_tm ,&write_value);
+          ·(TM·Array ,CVT_write)·fg.write(write_tm ,&write_value);
 
           // Check if we're at the rightmost position for read
-          bool read_rightmost = Ξ(TM·Array ,CVT_read)·fg.on_rightmost(read_tm);
+          bool read_rightmost = ·(TM·Array ,CVT_read)·fg.on_rightmost(read_tm);
           if(read_rightmost) {
             completion |= Core·Map·Completion·rightmost_read;
           }
 
           // Check if we're at the rightmost position for write
-          bool write_rightmost = Ξ(TM·Array ,CVT_write)·fg.on_rightmost(write_tm);
+          bool write_rightmost = ·(TM·Array ,CVT_write)·fg.on_rightmost(write_tm);
           if(write_rightmost) {
             completion |= Core·Map·Completion·rightmost_write;
           }
@@ -313,18 +313,18 @@
           if(read_rightmost || write_rightmost) break;
 
           // Step both machines
-          Ξ(TM·Array ,CVT_read)·fg.step(read_tm);
-          Ξ(TM·Array ,CVT_write)·fg.step(write_tm);
+          ·(TM·Array ,CVT_read)·fg.step(read_tm);
+          ·(TM·Array ,CVT_write)·fg.step(write_tm);
         }
 
         return Core·Status·on_track;
       }
 
       // Map a function over elements from read_tm to write_tm until a condition is met
-      Local Core·Status Ξ(Map ,CVT_read ,CVT_write)·map_while(
-        Ξ(TM·Array ,CVT_read) *read_tm
-        ,Ξ(TM·Array ,CVT_write) *write_tm
-        ,Ξ(Map·fn ,CVT_read ,CVT_write) map_fn
+      Local Core·Status ·(Map ,CVT_read ,CVT_write)·map_while(
+        ·(TM·Array ,CVT_read) *read_tm
+        ,·(TM·Array ,CVT_write) *write_tm
+        ,·(Map·fn ,CVT_read ,CVT_write) map_fn
         ,bool (*condition)(CVT_read *value)
       ){
         #ifdef Map·DEBUG
@@ -337,11 +337,11 @@
         #endif
 
         // Rewind both tape machines to ensure we start at the beginning
-        Ξ(TM·Array ,CVT_read)·fg.rewind(read_tm);
-        Ξ(TM·Array ,CVT_write)·fg.rewind(write_tm);
+        ·(TM·Array ,CVT_read)·fg.rewind(read_tm);
+        ·(TM·Array ,CVT_write)·fg.rewind(write_tm);
 
         // Initial check if can_read (not part of the loop)
-        if(!Ξ(TM·Array ,CVT_read)·fg.can_read(read_tm)) return Core·Status·on_track;
+        if(!·(TM·Array ,CVT_read)·fg.can_read(read_tm)) return Core·Status·on_track;
 
         // Track completion status
         uint completion = 0;
@@ -350,7 +350,7 @@
         while(1){
           // Read value from source
           CVT_read read_value;
-          Ξ(TM·Array ,CVT_read)·fg.read(read_tm ,&read_value);
+          ·(TM·Array ,CVT_read)·fg.read(read_tm ,&read_value);
 
           // Check condition
           if(!condition(&read_value)) break;
@@ -364,16 +364,16 @@
           }
 
           // Write result to destination
-          Ξ(TM·Array ,CVT_write)·fg.write(write_tm ,&write_value);
+          ·(TM·Array ,CVT_write)·fg.write(write_tm ,&write_value);
 
           // Check if we're at the rightmost position for read
-          bool read_rightmost = Ξ(TM·Array ,CVT_read)·fg.on_rightmost(read_tm);
+          bool read_rightmost = ·(TM·Array ,CVT_read)·fg.on_rightmost(read_tm);
           if(read_rightmost) {
             completion |= Core·Map·Completion·rightmost_read;
           }
 
           // Check if we're at the rightmost position for write
-          bool write_rightmost = Ξ(TM·Array ,CVT_write)·fg.on_rightmost(write_tm);
+          bool write_rightmost = ·(TM·Array ,CVT_write)·fg.on_rightmost(write_tm);
           if(write_rightmost) {
             completion |= Core·Map·Completion·rightmost_write;
           }
@@ -382,18 +382,18 @@
           if(read_rightmost || write_rightmost) break;
 
           // Step both machines
-          Ξ(TM·Array ,CVT_read)·fg.step(read_tm);
-          Ξ(TM·Array ,CVT_write)·fg.step(write_tm);
+          ·(TM·Array ,CVT_read)·fg.step(read_tm);
+          ·(TM·Array ,CVT_write)·fg.step(write_tm);
         }
 
         return Core·Status·on_track;
       }
 
       // Map a function over n elements from read_tm to write_tm
-      Local Core·Status Ξ(Map ,CVT_read ,CVT_write)·map_n(
-        Ξ(TM·Array ,CVT_read) *read_tm
-        ,Ξ(TM·Array ,CVT_write) *write_tm
-        ,Ξ(Map·fn ,CVT_read ,CVT_write) map_fn
+      Local Core·Status ·(Map ,CVT_read ,CVT_write)·map_n(
+        ·(TM·Array ,CVT_read) *read_tm
+        ,·(TM·Array ,CVT_write) *write_tm
+        ,·(Map·fn ,CVT_read ,CVT_write) map_fn
         ,size_t n
       ){
         #ifdef Map·DEBUG
@@ -405,11 +405,11 @@
         #endif
 
         // Rewind both tape machines to ensure we start at the beginning
-        Ξ(TM·Array ,CVT_read)·fg.rewind(read_tm);
-        Ξ(TM·Array ,CVT_write)·fg.rewind(write_tm);
+        ·(TM·Array ,CVT_read)·fg.rewind(read_tm);
+        ·(TM·Array ,CVT_write)·fg.rewind(write_tm);
 
         // Initial check if can_read (not part of the loop)
-        if(!Ξ(TM·Array ,CVT_read)·fg.can_read(read_tm)) return Core·Status·on_track;
+        if(!·(TM·Array ,CVT_read)·fg.can_read(read_tm)) return Core·Status·on_track;
         
         // Track completion status
         uint completion = 0;
@@ -419,7 +419,7 @@
         while(count < n){
           // Read value from source
           CVT_read read_value;
-          Ξ(TM·Array ,CVT_read)·fg.read(read_tm ,&read_value);
+          ·(TM·Array ,CVT_read)·fg.read(read_tm ,&read_value);
 
           // Apply mapping function to get write value
           CVT_write write_value;
@@ -430,19 +430,19 @@
           }
 
           // Write result to destination
-          Ξ(TM·Array ,CVT_write)·fg.write(write_tm ,&write_value);
+          ·(TM·Array ,CVT_write)·fg.write(write_tm ,&write_value);
 
           // Increment count
           count++;
 
           // Check if we're at the rightmost position for read
-          bool read_rightmost = Ξ(TM·Array ,CVT_read)·fg.on_rightmost(read_tm);
+          bool read_rightmost = ·(TM·Array ,CVT_read)·fg.on_rightmost(read_tm);
           if(read_rightmost) {
             completion |= Core·Map·Completion·rightmost_read;
           }
 
           // Check if we're at the rightmost position for write
-          bool write_rightmost = Ξ(TM·Array ,CVT_write)·fg.on_rightmost(write_tm);
+          bool write_rightmost = ·(TM·Array ,CVT_write)·fg.on_rightmost(write_tm);
           if(write_rightmost) {
             completion |= Core·Map·Completion·rightmost_write;
           }
@@ -451,18 +451,18 @@
           if(read_rightmost || write_rightmost) break;
 
           // Step both machines
-          Ξ(TM·Array ,CVT_read)·fg.step(read_tm);
-          Ξ(TM·Array ,CVT_write)·fg.step(write_tm);
+          ·(TM·Array ,CVT_read)·fg.step(read_tm);
+          ·(TM·Array ,CVT_write)·fg.step(write_tm);
         }
 
         return Core·Status·on_track;
       }
 
       // Initialize the function given table
-      Ξ(Map·FG ,CVT_read ,CVT_write) Ξ(Map·fg ,CVT_read ,CVT_write) = {
-        .map = Ξ(Map ,CVT_read ,CVT_write)·map
-        ,.map_while = Ξ(Map ,CVT_read ,CVT_write)·map_while
-        ,.map_n = Ξ(Map ,CVT_read ,CVT_write)·map_n
+      ·(Map·FG ,CVT_read ,CVT_write) ·(Map·fg ,CVT_read ,CVT_write) = {
+        .map = ·(Map ,CVT_read ,CVT_write)·map
+        ,.map_while = ·(Map ,CVT_read ,CVT_write)·map_while
+        ,.map_n = ·(Map ,CVT_read ,CVT_write)·map_n
       };
     #endif // defined(CVT_read) && defined(CVT_write)
 
@@ -472,8 +472,8 @@
 
     // Byte to byte copy
     Local Core·Status Map·copy_byte_to_byte(
-      Ξ(TM·Array ,AU) *read_tm
-      ,Ξ(TM·Array ,AU) *write_tm
+      ·(TM·Array ,AU) *read_tm
+      ,·(TM·Array ,AU) *write_tm
     ){
       #ifdef Map·DEBUG
         Core·Guard·init_count(chk);
@@ -482,13 +482,13 @@
         Core·Guard·if_return(chk);
       #endif
 
-      return Ξ(Map ,AU ,AU)·fg.map(read_tm, write_tm, Map·byte_to_byte_fn);
+      return ·(Map ,AU ,AU)·fg.map(read_tm, write_tm, Map·byte_to_byte_fn);
     }
 
     // Hex to byte copy
     Local Core·Status Map·copy_hex_to_byte(
-      Ξ(TM·Array ,uint16_t) *read_tm
-      ,Ξ(TM·Array ,AU) *write_tm
+      ·(TM·Array ,uint16_t) *read_tm
+      ,·(TM·Array ,AU) *write_tm
     ){
       #ifdef Map·DEBUG
         Core·Guard·init_count(chk);

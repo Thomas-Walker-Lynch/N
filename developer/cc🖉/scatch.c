@@ -1,42 +1,42 @@
     // some aliases to make things a little easier to read
     #undef TM
-    #define TM Ξ(TM ,TM·CVT)
+    #define TM ·(TM ,TM·CVT)
     #undef EXTENT_T
-    #define EXTENT_T Ξ(extent_t ,TM·CVT)
+    #define EXTENT_T ·(extent_t ,TM·CVT)
 
     //----------------------------------------
     // TM Array implementation, not TM·CVT differentiated
 
     // some aliases to make things a little easier to read
     #undef TM
-    #define TM Ξ(TM ,TM·CVT)
+    #define TM ·(TM ,TM·CVT)
     #undef EXTENT_T
-    #define EXTENT_T Ξ(extent_t ,TM·CVT)
+    #define EXTENT_T ·(extent_t ,TM·CVT)
     #undef  TM·ARRAY 
-    #define TM·ARRAY Ξ(TM ,ARRAY)
+    #define TM·ARRAY ·(TM ,ARRAY)
 
-    typedef struct Ξ(TM·ARRAY ,Tableau){
+    typedef struct ·(TM·ARRAY ,Tableau){
       TM·CVT *hd;
       TM·CVT position[];
       EXTENT_T extent;
-    } Ξ(TM·ARRAY ,Tableau);
+    } ·(TM·ARRAY ,Tableau);
 
-    Local TM·Tape·Topo Ξ(TM·ARRAY ,Tape·topo)(TM tm){
-      Ξ(TM·ARRAY ,Tableau) *t = (Ξ(TM·ARRAY ,Tableau) *) tm.tableau;
+    Local TM·Tape·Topo ·(TM·ARRAY ,Tape·topo)(TM tm){
+      ·(TM·ARRAY ,Tableau) *t = (·(TM·ARRAY ,Tableau) *) tm.tableau;
       if(t->extent == 0) return TM·Tape·Topo·singleton; 
       return TM·Tape·Topo·segment;
     }
-    Local bool Ξ(TM·ARRAY ,Tape·bounded)(TM tm){
-      Ξ(TM·ARRAY ,Tableau) *t = (Ξ(TM·ARRAY ,Tableau) *) tm.tableau;
-      return Ξ(TM·ARRAY ,Tape·topo)(tm) & TM·Tape·Topo·bounded;
+    Local bool ·(TM·ARRAY ,Tape·bounded)(TM tm){
+      ·(TM·ARRAY ,Tableau) *t = (·(TM·ARRAY ,Tableau) *) tm.tableau;
+      return ·(TM·ARRAY ,Tape·topo)(tm) & TM·Tape·Topo·bounded;
     }
-    Local EXTENT_T Ξ(TM·ARRAY ,Tape·extent)(TM tm){
-      Ξ(TM·ARRAY ,Tableau) *t = (Ξ(TM·ARRAY ,Tableau) *) tm.tableau;
+    Local EXTENT_T ·(TM·ARRAY ,Tape·extent)(TM tm){
+      ·(TM·ARRAY ,Tableau) *t = (·(TM·ARRAY ,Tableau) *) tm.tableau;
       return t->extent;
     }
 
-    Local TM·Head·Status Ξ(TM·ARRAY ,Head·status)(TM tm){
-      Ξ(TM·ARRAY ,Tableau) *t = (Ξ(TM·ARRAY ,Tableau) *) tm.tableau;
+    Local TM·Head·Status ·(TM·ARRAY ,Head·status)(TM tm){
+      ·(TM·ARRAY ,Tableau) *t = (·(TM·ARRAY ,Tableau) *) tm.tableau;
       if(!t->hd) return TM·Head·Status·dismounted;
       if(t->hd == tm->position) return TM·Head·Status·leftmost;
 
@@ -47,83 +47,83 @@
 
       return TM·Head·Status·interim;
     }
-    Local bool Ξ(TM·ARRAY ,Head·dismounted)(TM tm){
-      Ξ(TM·ARRAY ,Tableau) *t = (Ξ(TM·ARRAY ,Tableau) *) tm.tableau;
-      return Ξ(TM·ARRAY ,Head·status)(tm) & TM·Head·Status·dismounted;
+    Local bool ·(TM·ARRAY ,Head·dismounted)(TM tm){
+      ·(TM·ARRAY ,Tableau) *t = (·(TM·ARRAY ,Tableau) *) tm.tableau;
+      return ·(TM·ARRAY ,Head·status)(tm) & TM·Head·Status·dismounted;
     }
-    Local bool Ξ(TM·ARRAY ,Head·on_tape)(TM tm){
-      Ξ(TM·ARRAY ,Tableau) *t = (Ξ(TM·ARRAY ,Tableau) *) tm.tableau;
-      return Ξ(TM·ARRAY ,Head·status)(tm) & TM·Head·Status·on_tape;
+    Local bool ·(TM·ARRAY ,Head·on_tape)(TM tm){
+      ·(TM·ARRAY ,Tableau) *t = (·(TM·ARRAY ,Tableau) *) tm.tableau;
+      return ·(TM·ARRAY ,Head·status)(tm) & TM·Head·Status·on_tape;
     }
-    Local bool Ξ(TM·ARRAY ,Head·on_leftmost)(TM tm){
-      Ξ(TM·ARRAY ,Tableau) *t = (Ξ(TM·ARRAY ,Tableau) *) tm.tableau;
-      return Ξ(TM·ARRAY ,Head·status)(tm) & TM·Head·Status·leftmost;
+    Local bool ·(TM·ARRAY ,Head·on_leftmost)(TM tm){
+      ·(TM·ARRAY ,Tableau) *t = (·(TM·ARRAY ,Tableau) *) tm.tableau;
+      return ·(TM·ARRAY ,Head·status)(tm) & TM·Head·Status·leftmost;
     }
-    Local bool Ξ(TM·ARRAY ,Head·on_rightmost)(TM tm){
-      Ξ(TM·ARRAY ,Tableau) *t = (Ξ(TM·ARRAY ,Tableau) *) tm.tableau;
-      return Ξ(TM·ARRAY ,Head·status)(tm) & TM·Head·Status·rightmost;
+    Local bool ·(TM·ARRAY ,Head·on_rightmost)(TM tm){
+      ·(TM·ARRAY ,Tableau) *t = (·(TM·ARRAY ,Tableau) *) tm.tableau;
+      return ·(TM·ARRAY ,Head·status)(tm) & TM·Head·Status·rightmost;
     }
 
     // does nothing if the hd is already mounted
-    Local void Ξ(TM·ARRAY ,mount)(TM tm){
-      Ξ(TM·ARRAY ,Tableau) *t = (Ξ(TM·ARRAY ,Tableau) *) tm.tableau;
+    Local void ·(TM·ARRAY ,mount)(TM tm){
+      ·(TM·ARRAY ,Tableau) *t = (·(TM·ARRAY ,Tableau) *) tm.tableau;
       if( !t->hd ) t->hd = t->position;
     }
 
-    Local void dismount Ξ(TM·ARRAY ,dismount)(TM tm){
-      Ξ(TM·ARRAY ,Tableau) *t = (Ξ(TM·ARRAY ,Tableau) *) tm.tableau;
+    Local void dismount ·(TM·ARRAY ,dismount)(TM tm){
+      ·(TM·ARRAY ,Tableau) *t = (·(TM·ARRAY ,Tableau) *) tm.tableau;
       t->hd = NULL;
     }
       
     // does nothing if the hd is not mounted
-    Local void Ξ(TM·ARRAY ,step)(TM tm){
-      Ξ(TM·ARRAY ,Tableau) *t = (Ξ(TM·ARRAY ,Tableau) *) tm.tableau;
+    Local void ·(TM·ARRAY ,step)(TM tm){
+      ·(TM·ARRAY ,Tableau) *t = (·(TM·ARRAY ,Tableau) *) tm.tableau;
       t->hd++;
     }
 
-    Local void Ξ(TM·ARRAY ,step_left)(TM tm){
-      Ξ(TM·ARRAY ,Tableau) *t = (Ξ(TM·ARRAY ,Tableau) *) tm.tableau;
+    Local void ·(TM·ARRAY ,step_left)(TM tm){
+      ·(TM·ARRAY ,Tableau) *t = (·(TM·ARRAY ,Tableau) *) tm.tableau;
       t->hd--;
     }
 
-    Local void Ξ(TM·ARRAY ,rewind)(TM tm){
-      Ξ(TM·ARRAY ,Tableau) *t = (Ξ(TM·ARRAY ,Tableau) *) tm.tableau;
-      Ξ(TM·ARRAY ,Head·dismounted)(tm) return;
+    Local void ·(TM·ARRAY ,rewind)(TM tm){
+      ·(TM·ARRAY ,Tableau) *t = (·(TM·ARRAY ,Tableau) *) tm.tableau;
+      ·(TM·ARRAY ,Head·dismounted)(tm) return;
       t->hd = t->position;
     }
 
-    Local TM·CVT Ξ(TM·ARRAY ,read)(TM tm){
-      Ξ(TM·ARRAY ,Tableau) *t = (Ξ(TM·ARRAY ,Tableau) *) tm.tableau;
+    Local TM·CVT ·(TM·ARRAY ,read)(TM tm){
+      ·(TM·ARRAY ,Tableau) *t = (·(TM·ARRAY ,Tableau) *) tm.tableau;
       return *t->hd;
     }
 
-    Local void Ξ(TM·ARRAY ,write)(TM tm ,TM·CVT *remote_pt){
-      Ξ(TM·ARRAY ,Tableau) *t = (Ξ(TM·ARRAY ,Tableau) *) tm.tableau;
+    Local void ·(TM·ARRAY ,write)(TM tm ,TM·CVT *remote_pt){
+      ·(TM·ARRAY ,Tableau) *t = (·(TM·ARRAY ,Tableau) *) tm.tableau;
       *remote_pt = *t->hd;
     }
 
     Local TM·Binding TM·fg = {
 
-      .Tape·topo     = Ξ(TM·ARRAY ,Tape·topo)
-      ,.Tape·bounded = Ξ(TM·ARRAY ,Tape·bounded)
-      ,.Tape·extent  = Ξ(TM·ARRAY ,Tape·extent)
+      .Tape·topo     = ·(TM·ARRAY ,Tape·topo)
+      ,.Tape·bounded = ·(TM·ARRAY ,Tape·bounded)
+      ,.Tape·extent  = ·(TM·ARRAY ,Tape·extent)
 
-      ,.Head·status       = Ξ(TM·ARRAY ,Head·status)
-      ,.Head·dismounted   = Ξ(TM·ARRAY ,Head·dismounted)
-      ,.Head·on_tape      = Ξ(TM·ARRAY ,Head·on_tape)
-      ,.Head·on_leftmost  = Ξ(TM·ARRAY ,Head·on_leftmost)
-      ,.Head·on_rightmost = Ξ(TM·ARRAY ,Head·on_rightmost)
+      ,.Head·status       = ·(TM·ARRAY ,Head·status)
+      ,.Head·dismounted   = ·(TM·ARRAY ,Head·dismounted)
+      ,.Head·on_tape      = ·(TM·ARRAY ,Head·on_tape)
+      ,.Head·on_leftmost  = ·(TM·ARRAY ,Head·on_leftmost)
+      ,.Head·on_rightmost = ·(TM·ARRAY ,Head·on_rightmost)
 
-      ,.mount    = Ξ(TM·ARRAY ,mount)
-      ,.dismount = Ξ(TM·ARRAY ,dismount)
+      ,.mount    = ·(TM·ARRAY ,mount)
+      ,.dismount = ·(TM·ARRAY ,dismount)
 
-      ,.step       = Ξ(TM·ARRAY ,step)
-      ,.step_right = Ξ(TM·ARRAY ,step)
-      ,.step_left  = Ξ(TM·ARRAY ,step_left)
-      ,.rewind     = Ξ(TM·ARRAY ,rewind)
+      ,.step       = ·(TM·ARRAY ,step)
+      ,.step_right = ·(TM·ARRAY ,step)
+      ,.step_left  = ·(TM·ARRAY ,step_left)
+      ,.rewind     = ·(TM·ARRAY ,rewind)
 
-      ,.read  = Ξ(TM·ARRAY ,read)
-      ,.write = Ξ(TM·ARRAY ,write)
+      ,.read  = ·(TM·ARRAY ,read)
+      ,.write = ·(TM·ARRAY ,write)
 
     };
 
@@ -202,7 +202,7 @@
 
   #ifdef TM·CVT
 
-    Local Ξ(extent_t ,TM·CVT) Ξ(TM ,TM·CVT)·extent(TM *tm){
+    Local ·(extent_t ,TM·CVT) ·(TM ,TM·CVT)·extent(TM *tm){
       #ifdef TM·DEBUG
         Core·Guard·init_count(chk);
         Core·Guard·fg.check(&chk ,1 ,TM·Tape·bounded(tm) ,"Tape is not bounded.");
@@ -230,11 +230,11 @@
       return tm->fg.write(tm ,write_pt);
     }
 
-    Local Ξ(TM ,TM·CVT)·Binding Ξ(TM ,TM·CVT)·fg = {
+    Local ·(TM ,TM·CVT)·Binding ·(TM ,TM·CVT)·fg = {
       .parent = TM·fg
-      ,.extent = Ξ(TM ,TM·CVT)·extent
-      ,.read = Ξ(TM ,TM·CVT)·read
-      ,.write = Ξ(TM ,TM·CVT)·write
+      ,.extent = ·(TM ,TM·CVT)·extent
+      ,.read = ·(TM ,TM·CVT)·read
+      ,.write = ·(TM ,TM·CVT)·write
     };
 
   #endif // ifdef TM·CVT
@@ -300,11 +300,11 @@
 
     // check the Tape·topo to make sure tape has extent before calling this
     // `extent·TM·CVT` returns the index to the rightmost cell in the array.
-    Local  Ξ(extent_t ,TM·CVT) Ξ(TM·Array ,TM·CVT)·extent(Ξ(TM·Array ,TM·CVT) *tm){
+    Local  ·(extent_t ,TM·CVT) ·(TM·Array ,TM·CVT)·extent(·(TM·Array ,TM·CVT) *tm){
       #ifdef TM·DEBUG
         Core·Guard·init_count(chk);
         Core·Tape·Topo Tape·topo = Core·Tape·Topo·mu;
-        Core·Status status = Ξ(TM·Array ,TM·CVT)·Tape·topo(tm ,&Tape·topo);
+        Core·Status status = ·(TM·Array ,TM·CVT)·Tape·topo(tm ,&Tape·topo);
         bool good_Tape·topo = 
           (status == Core·Status·on_track) && (Tape·topo & Core·Tape·Topo·finite_nz)
           ;
@@ -319,8 +319,8 @@
     //-----------------------------------
     // TM·Array.area implementation 
 
-    Local Core·Status Ξ(TM·Array ,TM·CVT)·mount_pe(
-      Ξ(TM·Array ,TM·CVT) *tm ,TM·CVT *position ,Ξ(extent_t ,TM·CVT) extent
+    Local Core·Status ·(TM·Array ,TM·CVT)·mount_pe(
+      ·(TM·Array ,TM·CVT) *tm ,TM·CVT *position ,·(extent_t ,TM·CVT) extent
     ){
       #ifdef TM·DEBUG
         Core·Guard·init_count(chk);
@@ -335,8 +335,8 @@
     }
 
     // If size of TM·CVT is not a power of two this can perform a divide
-    Local Core·Status Ξ(TM·Array ,TM·CVT)·mount_pp(
-      Ξ(TM·Array ,TM·CVT) *tm ,TM·CVT *pos_leftmost ,TM·CVT *pos_rightmost
+    Local Core·Status ·(TM·Array ,TM·CVT)·mount_pp(
+      ·(TM·Array ,TM·CVT) *tm ,TM·CVT *pos_leftmost ,TM·CVT *pos_rightmost
     ){
       #ifdef TM·DEBUG
         Core·Guard·init_count(chk);
@@ -350,14 +350,14 @@
         Core·Guard·if_return(chk);
       #endif
 
-      Ξ(extent_t ,TM·CVT) extent = pos_rightmost - pos_leftmost);
-      return Ξ(TM·Array ,TM·CVT)·mount_pe(tm ,pos_leftmost ,extent);
+      ·(extent_t ,TM·CVT) extent = pos_rightmost - pos_leftmost);
+      return ·(TM·Array ,TM·CVT)·mount_pe(tm ,pos_leftmost ,extent);
     }
 
     //-----------------------------------
     // base Tape Machine operations
 
-    Local Core·Status Ξ(TM·Array ,TM·CVT)·mount(Ξ(TM·Array ,TM·CVT) *tm){
+    Local Core·Status ·(TM·Array ,TM·CVT)·mount(·(TM·Array ,TM·CVT) *tm){
       #ifdef TM·DEBUG
         Core·Guard·init_count(chk);
         Core·Guard·fg.check(&chk ,1 ,tm ,TM·Array·Msg·tm);
@@ -370,7 +370,7 @@
       return Core·Status·on_track;
     }
 
-    Local Core·Status Ξ(TM·Array ,TM·CVT)·dismount(Ξ(TM·Array ,TM·CVT) *tm){
+    Local Core·Status ·(TM·Array ,TM·CVT)·dismount(·(TM·Array ,TM·CVT) *tm){
       #ifdef TM·DEBUG
         Core·Guard·init_count(chk);
         Core·Guard·fg.check(&chk ,1 ,tm ,TM·Array·Msg·tm);
@@ -381,7 +381,7 @@
       return Core·Status·on_track;
     }
 
-    Local TM·Head·Status Ξ(TM·Array ,TM·CVT)·head_status(TM *tm){
+    Local TM·Head·Status ·(TM·Array ,TM·CVT)·head_status(TM *tm){
       if(!tm || !tm->position) return TM·Head·Status·mu;
       if(!tm->hd) return TM·Head·Status·dismounted;
       if(tm->hd == tm->position) return TM·Head·Status·leftmost;
@@ -394,16 +394,16 @@
        return TM·Head·Status·interim;
     }
 
-    bool Ξ(TM·Array ,TM·CVT)·can_read(Ξ(TM·Array ,TM·CVT) *tm){
+    bool ·(TM·Array ,TM·CVT)·can_read(·(TM·Array ,TM·CVT) *tm){
       return tm && tm->position && tm->hd;
     }
 
     // can_read was true
-    bool Ξ(TM·Array ,TM·CVT)·on_origin(Ξ(TM·Array ,TM·CVT) *tm){
+    bool ·(TM·Array ,TM·CVT)·on_origin(·(TM·Array ,TM·CVT) *tm){
       #ifdef TM·DEBUG
         Core·Guard·init_count(chk);
         bool flag = true ,s;
-        s = Ξ(TM·Array ,TM·CVT)·head_on_format(tm ,flag) == Core·Status·on_track;
+        s = ·(TM·Array ,TM·CVT)·head_on_format(tm ,flag) == Core·Status·on_track;
         Core·Guard·fg.check(&chk ,1 ,s && flag ,"head off format");
         Core·Guard·assert(chk);
       #endif
@@ -411,44 +411,44 @@
     }
 
     // can_read was true
-    bool Ξ(TM·Array ,TM·CVT)·on_rightmost(Ξ(TM·Array ,TM·CVT) *tm){
+    bool ·(TM·Array ,TM·CVT)·on_rightmost(·(TM·Array ,TM·CVT) *tm){
       #ifdef TM·DEBUG
         Core·Guard·init_count(chk);
         bool flag = true ,s;
-        s = Ξ(TM·Array ,TM·CVT)·head_on_format(tm ,flag) == Core·Status·on_track;
+        s = ·(TM·Array ,TM·CVT)·head_on_format(tm ,flag) == Core·Status·on_track;
         Core·Guard·fg.check(&chk ,1 ,s && flag ,"head off format");
         Core·Guard·assert(chk);
       #endif
       return tm->hd == tm->position;
     }
 
-    void Ξ(TM·Array ,TM·CVT)·step(Ξ(TM·Array ,TM·CVT) *tm){
+    void ·(TM·Array ,TM·CVT)·step(·(TM·Array ,TM·CVT) *tm){
       #ifdef TM·DEBUG
         Core·Guard·init_count(chk);
         bool flag = true ,s;
-        s = Ξ(TM·Array ,TM·CVT)·head_on_format(tm ,flag) == Core·Status·on_track;
+        s = ·(TM·Array ,TM·CVT)·head_on_format(tm ,flag) == Core·Status·on_track;
         Core·Guard·fg.check(&chk ,1 ,s && flag ,"head off format");
         Core·Guard·assert(chk);
       #endif
       tm->hd++;
     }
 
-    void Ξ(TM·Array ,TM·CVT)·step_left(Ξ(TM·Array ,TM·CVT) *tm){
+    void ·(TM·Array ,TM·CVT)·step_left(·(TM·Array ,TM·CVT) *tm){
       #ifdef TM·DEBUG
         Core·Guard·init_count(chk);
         bool flag = true ,s;
-        s = Ξ(TM·Array ,TM·CVT)·head_on_format(tm ,flag) == Core·Status·on_track;
+        s = ·(TM·Array ,TM·CVT)·head_on_format(tm ,flag) == Core·Status·on_track;
         Core·Guard·fg.check(&chk ,1 ,s && flag ,"head off format");
         Core·Guard·assert(chk);
       #endif
       tm->hd--;
     }
 
-    void Ξ(TM·Array ,TM·CVT)·rewind(Ξ(TM·Array ,TM·CVT) *tm){
+    void ·(TM·Array ,TM·CVT)·rewind(·(TM·Array ,TM·CVT) *tm){
       #ifdef TM·DEBUG
         Core·Guard·init_count(chk);
         bool flag = true ,s;
-        s = Ξ(TM·Array ,TM·CVT)·head_on_format(tm ,flag) == Core·Status·on_track;
+        s = ·(TM·Array ,TM·CVT)·head_on_format(tm ,flag) == Core·Status·on_track;
         Core·Guard·fg.check(&chk ,1 ,s && flag ,"head off format");
         Core·Guard·assert(chk);
       #endif
@@ -456,13 +456,13 @@
     }
 
     // tm_can_read must be true for both machines.
-    void Ξ(TM·Array ,TM·CVT)·copy_datum(Ξ(TM·Array ,TM·CVT) *tm_read ,Ξ(TM·Array ,TM·CVT) *tm_write){
+    void ·(TM·Array ,TM·CVT)·copy_datum(·(TM·Array ,TM·CVT) *tm_read ,·(TM·Array ,TM·CVT) *tm_write){
       #ifdef TM·DEBUG
         Core·Guard·init_count(chk);
         bool flag = true ,s;
-        s = Ξ(TM·Array ,TM·CVT)·head_on_format(tm_read ,flag) == Control·Status·on_track;
+        s = ·(TM·Array ,TM·CVT)·head_on_format(tm_read ,flag) == Control·Status·on_track;
         Core·Guard·fg.check(&chk ,1 ,s && flag ,"tm_read head off track");
-        s = Ξ(TM·Array ,TM·CVT)·head_on_format(tm_write ,flag) == Control·Status·on_track;
+        s = ·(TM·Array ,TM·CVT)·head_on_format(tm_write ,flag) == Control·Status·on_track;
         Core·Guard·fg.check(&chk ,1 ,s && flag ,"tm_write head off track");
         Core·Guard·assert(chk);
       #endif
@@ -471,11 +471,11 @@
       return Core·Status·on_track;
     }
 
-    void Ξ(TM·Array ,TM·CVT)·read(Ξ(TM·Array ,TM·CVT) *tm ,TM·CVT *read_pt){
+    void ·(TM·Array ,TM·CVT)·read(·(TM·Array ,TM·CVT) *tm ,TM·CVT *read_pt){
       #ifdef TM·DEBUG
         Core·Guard·init_count(chk);
         bool flag = true ,s;
-        s = Ξ(TM·Array ,TM·CVT)·head_on_format(tm ,flag) == Core·Status·on_track;
+        s = ·(TM·Array ,TM·CVT)·head_on_format(tm ,flag) == Core·Status·on_track;
         Core·Guard·fg.check(&chk ,1 ,s && flag ,"head off format");
         Core·Guard·assert(chk);
       #endif
@@ -488,37 +488,37 @@
 
 
     //----------------------------------------
-    // Initialization for Ξ(TM·Array ,TM·CVT)·fg
+    // Initialization for ·(TM·Array ,TM·CVT)·fg
 
-    Local Ξ(TM·Array ,TM·CVT)·Binding Ξ(TM·Array ,TM·CVT)·fg = {
+    Local ·(TM·Array ,TM·CVT)·Binding ·(TM·Array ,TM·CVT)·fg = {
       .tape = {
-         .Tape·topo   = Ξ(TM·Array ,TM·CVT)·Tape·topo
-         .extent = Ξ(TM·Array ,TM·CVT)·extent
+         .Tape·topo   = ·(TM·Array ,TM·CVT)·Tape·topo
+         .extent = ·(TM·Array ,TM·CVT)·extent
       }
 
       ,.area = {
-         .mount_pe = Ξ(TM·Array ,TM·CVT)·mount_pe
-        ,.mount_pp = Ξ(TM·Array ,TM·CVT)·mount_pp
+         .mount_pe = ·(TM·Array ,TM·CVT)·mount_pe
+        ,.mount_pp = ·(TM·Array ,TM·CVT)·mount_pp
       }
 
-      ,.mount    = Ξ(TM·Array ,TM·CVT)·mount
-      ,.dismount = Ξ(TM·Array ,TM·CVT)·dismount
+      ,.mount    = ·(TM·Array ,TM·CVT)·mount
+      ,.dismount = ·(TM·Array ,TM·CVT)·dismount
 
-      ,.status         = Ξ(TM·Array ,TM·CVT)·status
-      ,.head_on_format = Ξ(TM·Array ,TM·CVT)·head_on_format
+      ,.status         = ·(TM·Array ,TM·CVT)·status
+      ,.head_on_format = ·(TM·Array ,TM·CVT)·head_on_format
 
-      ,.can_read     = Ξ(TM·Array ,TM·CVT)·can_read
-      ,.on_origin    = Ξ(TM·Array ,TM·CVT)·on_origin
-      ,.on_rightmost = Ξ(TM·Array ,TM·CVT)·on_rightmost
+      ,.can_read     = ·(TM·Array ,TM·CVT)·can_read
+      ,.on_origin    = ·(TM·Array ,TM·CVT)·on_origin
+      ,.on_rightmost = ·(TM·Array ,TM·CVT)·on_rightmost
 
-      ,.step = Ξ(TM·Array ,TM·CVT)·step
-      ,.step_left = Ξ(TM·Array ,TM·CVT)·step_left
-      ,.step_right = Ξ(TM·Array ,TM·CVT)·step_right // Synonym for step
-      ,.rewind = Ξ(TM·Array ,TM·CVT)·rewind
+      ,.step = ·(TM·Array ,TM·CVT)·step
+      ,.step_left = ·(TM·Array ,TM·CVT)·step_left
+      ,.step_right = ·(TM·Array ,TM·CVT)·step_right // Synonym for step
+      ,.rewind = ·(TM·Array ,TM·CVT)·rewind
 
-      ,.copy_datum = Ξ(TM·Array ,TM·CVT)·copy_datum
-      ,.read = Ξ(TM·Array ,TM·CVT)·read
-      ,.write = Ξ(TM·Array ,TM·CVT)·write
+      ,.copy_datum = ·(TM·Array ,TM·CVT)·copy_datum
+      ,.read = ·(TM·Array ,TM·CVT)·read
+      ,.write = ·(TM·Array ,TM·CVT)·write
 
     };
 
@@ -528,11 +528,11 @@
 // scrat
 
 
-void Ξ(TM·Array ,TM·CVT)·write(Ξ(TM·Array ,TM·CVT) *tm ,TM·CVT *write_pt){
+void ·(TM·Array ,TM·CVT)·write(·(TM·Array ,TM·CVT) *tm ,TM·CVT *write_pt){
   #ifdef TM·DEBUG
     Core·Guard·init_count(chk);
     bool flag = true ,s;
-    s = Ξ(TM·Array ,TM·CVT)·head_on_format(tm ,flag) == Core·Status·on_track;
+    s = ·(TM·Array ,TM·CVT)·head_on_format(tm ,flag) == Core·Status·on_track;
     Core·Guard·fg.check(&chk ,1 ,s && flag ,"head off format");
     Core·Guard·assert(chk);
   #endif
@@ -544,7 +544,7 @@ void Ξ(TM·Array ,TM·CVT)·write(Ξ(TM·Array ,TM·CVT) *tm ,TM·CVT *write_pt
       // TM struct initializers
 
       Local Core·Status TM·mount_pe(
-        TM *tm ,TM·CVT *position ,Ξ(extent_t ,TM·CVT) extent
+        TM *tm ,TM·CVT *position ,·(extent_t ,TM·CVT) extent
       ){
         #ifdef TM·DEBUG
           Core·Guard·init_count(chk);
@@ -574,7 +574,7 @@ void Ξ(TM·Array ,TM·CVT)·write(Ξ(TM·Array ,TM·CVT) *tm ,TM·CVT *write_pt
           Core·Guard·if_return(chk);
         #endif
 
-        Ξ(extent_t ,TM·CVT) extent = pos_rightmost - pos_leftmost);
+        ·(extent_t ,TM·CVT) extent = pos_rightmost - pos_leftmost);
         return TM·mount_pe(tm ,pos_leftmost ,extent);
       }
 

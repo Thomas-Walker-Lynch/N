@@ -3,39 +3,33 @@
 */
 
 #include "cpp_ext.c"
-#include "Core.lib.c"
-#include "Binding.lib.c"
 #include "TM.lib.c"
 
-#define TM·CVT AU
+#define _TM·CVT_ AU
 #include "TM.lib.c"
 #define SET__Binding__TM·AU
 
 int main(){
   printf("running try_TM.cli.c on %s at %s\n", __DATE__, __TIME__);
 
-  SHOW(Ξ(TM·CVT ,FG));  // TM·AU·FG
-  SHOW(Ξ(TM·CVT ,Tableau));  // TM·AU·Tableau
-
   // Create a tape with 5 AU values
   AU tape[] = {1 ,2 ,3 ,4 ,5};
   extent_t·AU extent = sizeof(tape) - 1;
 
   // Init the tableau
+  TM·AU·Array·Tableau t;
+  TM·AU tm = TM·AU·Array·init_pe(&t ,tape ,extent);
+
 #if 0
 
-  Ξ(TM ,AU)·Tableau t;
-  Ξ(TM ,AU)·init_pe(&t ,tape ,extent);
+  if( Binding·call(tm ,Head·on_tape) ){
+    do{
+      printf( "%x" ,Binding·call(tm ,read) );
+      if( Binding·call(tm ,)
 
 
-  // Allocate a binding
-  TM·AU tm;
-  tm.fg = &Ξ(TM ,AU)·fg;
-  tm.tableau = &t;
-
-  // Call version of the TM status
-  printf("Before any operations:\n");
-  Binding·call(tm ,rewind);
+  }
+   
 
   AU datum = Binding·call(tm ,read);
   printf("Initial datum: %u\n", datum);
@@ -52,6 +46,9 @@ int main(){
   // Rewind and read again
   Binding·call(tm ,rewind);
   datum = Binding·call(tm ,read);
+  
+
+
   printf("After rewind, datum: %u\n", datum);
 
 #endif
@@ -59,6 +56,6 @@ int main(){
 }
 
 #define LOCAL
-#include "Core.lib.c"
-#include "Binding.lib.c"
+#define _TM·CVT_ AU
 #include "TM.lib.c"
+#define SET__TM·LOCAL__TM·AU

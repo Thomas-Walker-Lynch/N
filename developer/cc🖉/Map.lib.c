@@ -86,23 +86,23 @@
 
     typedef struct {
       Map·Completion (*copy_byte_to_byte)(
-        Ξ(TM·Array ,AU) *read_tm
-        ,Ξ(TM·Array ,AU) *write_tm
+        ·(TM·Array ,AU) *read_tm
+        ,·(TM·Array ,AU) *write_tm
       );
 
       Map·Completion (*copy_hex_to_byte)(
-        Ξ(TM·Array ,uint16_t) *read_tm
-        ,Ξ(TM·Array ,AU) *write_tm
+        ·(TM·Array ,uint16_t) *read_tm
+        ,·(TM·Array ,AU) *write_tm
       );
 
       Map·Completion (*copy_byte_to_hex)(
-        Ξ(TM·Array ,AU) *read_tm
-        ,Ξ(TM·Array ,uint16_t) *write_tm
+        ·(TM·Array ,AU) *read_tm
+        ,·(TM·Array ,uint16_t) *write_tm
       );
 
       // Terminate string function
       Map·Completion (*terminate_string)(
-        Ξ(TM·Array ,AU) *write_tm
+        ·(TM·Array ,AU) *write_tm
       );
     } Map·FG;
 
@@ -115,7 +115,7 @@
   #if defined(CVT_read) && defined(CVT_write)
 
     // Function passed to map type signature must be this:
-    typedef Core·Status (*Ξ(Map·fn ,CVT_read ,CVT_write))(
+    typedef Core·Status (*·(Map·fn ,CVT_read ,CVT_write))(
       CVT_read *read_value
       ,CVT_write *write_value
     );
@@ -123,31 +123,31 @@
     typedef struct {
       // Map a function over all elements from read_tm to write_tm
       Map·Completion (*map)(
-        Ξ(TM·Array ,CVT_read) *read_tm
-        ,Ξ(TM·Array ,CVT_write) *write_tm
-        ,Ξ(Map·fn ,CVT_read ,CVT_write) map_fn
+        ·(TM·Array ,CVT_read) *read_tm
+        ,·(TM·Array ,CVT_write) *write_tm
+        ,·(Map·fn ,CVT_read ,CVT_write) map_fn
       );
 
       // Map a function over elements from read_tm to write_tm until a condition is met
       Map·Completion (*map_while)(
-        Ξ(TM·Array ,CVT_read) *read_tm
-        ,Ξ(TM·Array ,CVT_write) *write_tm
-        ,Ξ(Map·fn ,CVT_read ,CVT_write) map_fn
-        ,bool (*condition)(Ξ(TM·Array ,CVT_read) *read_tm)
+        ·(TM·Array ,CVT_read) *read_tm
+        ,·(TM·Array ,CVT_write) *write_tm
+        ,·(Map·fn ,CVT_read ,CVT_write) map_fn
+        ,bool (*condition)(·(TM·Array ,CVT_read) *read_tm)
       );
 
       // Map a function over n elements from read_tm to write_tm
       Map·Completion (*map_extent)(
-        Ξ(TM·Array ,CVT_read) *read_tm
-        ,Ξ(TM·Array ,CVT_write) *write_tm
-        ,Ξ(Map·fn ,CVT_read ,CVT_write) map_fn
-        ,Ξ(extent_t ,CVT_read) extent
+        ·(TM·Array ,CVT_read) *read_tm
+        ,·(TM·Array ,CVT_write) *write_tm
+        ,·(Map·fn ,CVT_read ,CVT_write) map_fn
+        ,·(extent_t ,CVT_read) extent
       );
 
-    } Ξ(Map·FG ,CVT_read ,CVT_write);
+    } ·(Map·FG ,CVT_read ,CVT_write);
 
     // Default function given table
-    Ξ(Map·FG ,CVT_read ,CVT_write) Ξ(Map·fg ,CVT_read ,CVT_write);
+    ·(Map·FG ,CVT_read ,CVT_write) ·(Map·fg ,CVT_read ,CVT_write);
 
   #endif
 

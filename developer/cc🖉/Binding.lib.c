@@ -2,9 +2,9 @@
 Namespace: Binding
 Template parameters:
 
-  Binding - Type used to name the binding struct. Binding struct instances get passed as arguments to functions etc.
+  _BINDING_ - Type used to name the binding struct. Binding struct instances get passed as arguments to functions etc.
 
-This files declares a binding struct named [Binding]. It also provides
+This files declares a binding struct named [_BINDING_]. It also provides
 the macro `call` that uses the binding.
 
 Note this file does not make an instance of the binding, and does not intialize
@@ -48,24 +48,24 @@ fields in an instance.
 
 
 // once per Binding value
-#ifdef Binding
-#if BOOLEAN(NOT_IN(Binding·SET ,Binding))
+#ifdef _BINDING_
+#if BOOLEAN(NOT_IN(Binding·SET ,_BINDING_))
 #ifdef Binding·DEBUG
-  #pragma message( "adding binding for:" STR_VAL(Binding) )
+  #pragma message( "adding binding for:" STR_VAL(_BINDING_) )
 #endif
 
-  struct Ξ(Binding ,FG);
-  typedef struct Ξ(Binding ,FG) Ξ(Binding ,FG);
+  struct ·(_BINDING_ ,FG);
+  typedef struct ·(_BINDING_ ,FG) ·(_BINDING_ ,FG);
 
-  struct Ξ(Binding ,Tableau);
-  typedef struct Ξ(Binding ,Tableau) Ξ(Binding ,Tableau); 
+  struct ·(_BINDING_ ,Tableau);
+  typedef struct ·(_BINDING_ ,Tableau) ·(_BINDING_ ,Tableau); 
 
-  typedef struct Binding{
-    Ξ(Binding ,Tableau) *tableau;
-    Ξ(Binding ,FG) *fg;
-  } Binding;
+  typedef struct _BINDING_{
+    ·(_BINDING_ ,Tableau) *tableau;
+    ·(_BINDING_ ,FG) *fg;
+  } _BINDING_;
 
-  static void Binding·wellformed_binding(Ξ(Binding) b){
+  static void Binding·wellformed_binding(_BINDING_ b){
     #ifdef Binding·DEBUG
       Core·Guard·init_count(chk);
       Core·Guard·fg.check(&chk, 1, b.fg,      "NULL fg table");
@@ -97,5 +97,5 @@ fields in an instance.
 /*--------------------------------------------------------------------------------
  undef the template parameters
 -------------------------------------------------------------------------------*/
-#undef Binding
+#undef _BINDING_
 
