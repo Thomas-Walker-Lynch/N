@@ -2,6 +2,7 @@
   try_TM.cli.c - Example use of TM·AU type with array backend.
 */
 
+#include <stdio.h>
 #include "cpp_ext.c"
 #include "TM.lib.c"
 
@@ -24,8 +25,9 @@ int main(){
     do{
       printf( "%02x" , (unsigned int) Binding·call(tm ,read) );
       if( Binding·call(tm ,on_rightmost) ) break;
+      putchar(' ');
       Binding·call(tm ,step);
-    }
+    }while(1);
     printf("\n");
   }
 
