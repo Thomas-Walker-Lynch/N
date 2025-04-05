@@ -1,29 +1,53 @@
 
-1. C needs namespaces. The '·' notation seems to accomplish most of what is needed, and I'm doing this in existing C.  Scoped 'using' would be nice for shortening the identifiers.
+1. Cpp needs namespaces. The '·' notation seems to accomplish most of what is needed, and I'm doing this in existing C.  Scoped 'using' would be nice for shortening the identifiers.
    This can be done without changing the tool chain.
 
-2. control of evaluation in definitions
+   I am currently using, e.g.:
 
-  Currently definitions remain literal text.
+      Ξ(TM ,TM·CVT ,ARRAY ,Tape·bounded)
 
-  Also #reassign assignment to a name an definition, possible with expansion and
-  using the same macro name taken with its older definition. Selective expansion
-  in definitions also needed.
+  This could be:
 
-  Without namespaces I can see the problem with developers stepping on each others's macro ames.  However, with namespaces it seems that #redefine, or #redef is tractable.  
+      #with Ξ(TM ,TM·CVT ,ARRAY):
+         ...
+         ·Tape·bounded = ...
+         ...
+      #endwith
 
-3. Something should be done about macros having to be on one line and having to account for, format, all those \.  Perhaps an emacs mode similar as used for paragraphs? Anyway something should be done.
+  I.e. set the prefix, then for identifiers starting with · set the prefix.  `with`
+  can be nested.
 
-4. ability to declare a type hierarchy based on struct types having the same field
-   names and format, or extensions thereof.
+  Also native #cat and #Ξ .. perhaps operators
+
+  If the center dot delineated tokens, then we would not need the Ξ function.
+
+2. cpp control of evaluation in definitions
+
+  #assign name·#eval(space) #eval(body)
+
+  Temporal assignment.  Eval, then define.
+
+  Allows defining a macro while using eval in both the name and body. eval happens
+  once, and the name is not available to be used in the body.
+
+3. cpp existence logic
+
+4. Something should be done about macros having to be on one line and having to account for, format, all those \.  Perhaps an emacs mode similar as used for paragraphs? Anyway something should be done.
+
+   #begin
+     #define ...
+     ...
+     ...
+   #end
+   
+5. C type system, ability to declare a type hierarchy based on struct types having the same field names and format, or extensions thereof.
 
    typehier pair -> vector-2d -> complex   
 
    Something like that.
 
-5. compiler switch to put the struct etc. types into the same space with the others. of course.
+6. C type system, put struct, enum types into the same space with the other types. of course.
 
+7. A better emacs C formatter
 
-6. ability to use a macro to define a macro name.  first create a value, then
-   call a function to enter it into the symbol table.
-
+   

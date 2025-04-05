@@ -1,3 +1,131 @@
+    // some aliases to make things a little easier to read
+    #undef TM
+    #define TM Ξ(TM ,TM·CVT)
+    #undef EXTENT_T
+    #define EXTENT_T Ξ(extent_t ,TM·CVT)
+
+    //----------------------------------------
+    // TM Array implementation, not TM·CVT differentiated
+
+    // some aliases to make things a little easier to read
+    #undef TM
+    #define TM Ξ(TM ,TM·CVT)
+    #undef EXTENT_T
+    #define EXTENT_T Ξ(extent_t ,TM·CVT)
+    #undef  TM·ARRAY 
+    #define TM·ARRAY Ξ(TM ,ARRAY)
+
+    typedef struct Ξ(TM·ARRAY ,Tableau){
+      TM·CVT *hd;
+      TM·CVT position[];
+      EXTENT_T extent;
+    } Ξ(TM·ARRAY ,Tableau);
+
+    Local TM·Tape·Topo Ξ(TM·ARRAY ,Tape·topo)(TM tm){
+      Ξ(TM·ARRAY ,Tableau) *t = (Ξ(TM·ARRAY ,Tableau) *) tm.tableau;
+      if(t->extent == 0) return TM·Tape·Topo·singleton; 
+      return TM·Tape·Topo·segment;
+    }
+    Local bool Ξ(TM·ARRAY ,Tape·bounded)(TM tm){
+      Ξ(TM·ARRAY ,Tableau) *t = (Ξ(TM·ARRAY ,Tableau) *) tm.tableau;
+      return Ξ(TM·ARRAY ,Tape·topo)(tm) & TM·Tape·Topo·bounded;
+    }
+    Local EXTENT_T Ξ(TM·ARRAY ,Tape·extent)(TM tm){
+      Ξ(TM·ARRAY ,Tableau) *t = (Ξ(TM·ARRAY ,Tableau) *) tm.tableau;
+      return t->extent;
+    }
+
+    Local TM·Head·Status Ξ(TM·ARRAY ,Head·status)(TM tm){
+      Ξ(TM·ARRAY ,Tableau) *t = (Ξ(TM·ARRAY ,Tableau) *) tm.tableau;
+      if(!t->hd) return TM·Head·Status·dismounted;
+      if(t->hd == tm->position) return TM·Head·Status·leftmost;
+
+      TM·CVT *rightmost_pt = t->position + t->extent;
+      if(t->hd == rightmost_pt) TM·Head·Status·rightmost;
+      if(t->hd < tm->position || tm->hd > rightmost_pt)
+        return TM·Head·Status·out_of_area;
+
+      return TM·Head·Status·interim;
+    }
+    Local bool Ξ(TM·ARRAY ,Head·dismounted)(TM tm){
+      Ξ(TM·ARRAY ,Tableau) *t = (Ξ(TM·ARRAY ,Tableau) *) tm.tableau;
+      return Ξ(TM·ARRAY ,Head·status)(tm) & TM·Head·Status·dismounted;
+    }
+    Local bool Ξ(TM·ARRAY ,Head·on_tape)(TM tm){
+      Ξ(TM·ARRAY ,Tableau) *t = (Ξ(TM·ARRAY ,Tableau) *) tm.tableau;
+      return Ξ(TM·ARRAY ,Head·status)(tm) & TM·Head·Status·on_tape;
+    }
+    Local bool Ξ(TM·ARRAY ,Head·on_leftmost)(TM tm){
+      Ξ(TM·ARRAY ,Tableau) *t = (Ξ(TM·ARRAY ,Tableau) *) tm.tableau;
+      return Ξ(TM·ARRAY ,Head·status)(tm) & TM·Head·Status·leftmost;
+    }
+    Local bool Ξ(TM·ARRAY ,Head·on_rightmost)(TM tm){
+      Ξ(TM·ARRAY ,Tableau) *t = (Ξ(TM·ARRAY ,Tableau) *) tm.tableau;
+      return Ξ(TM·ARRAY ,Head·status)(tm) & TM·Head·Status·rightmost;
+    }
+
+    // does nothing if the hd is already mounted
+    Local void Ξ(TM·ARRAY ,mount)(TM tm){
+      Ξ(TM·ARRAY ,Tableau) *t = (Ξ(TM·ARRAY ,Tableau) *) tm.tableau;
+      if( !t->hd ) t->hd = t->position;
+    }
+
+    Local void dismount Ξ(TM·ARRAY ,dismount)(TM tm){
+      Ξ(TM·ARRAY ,Tableau) *t = (Ξ(TM·ARRAY ,Tableau) *) tm.tableau;
+      t->hd = NULL;
+    }
+      
+    // does nothing if the hd is not mounted
+    Local void Ξ(TM·ARRAY ,step)(TM tm){
+      Ξ(TM·ARRAY ,Tableau) *t = (Ξ(TM·ARRAY ,Tableau) *) tm.tableau;
+      t->hd++;
+    }
+
+    Local void Ξ(TM·ARRAY ,step_left)(TM tm){
+      Ξ(TM·ARRAY ,Tableau) *t = (Ξ(TM·ARRAY ,Tableau) *) tm.tableau;
+      t->hd--;
+    }
+
+    Local void Ξ(TM·ARRAY ,rewind)(TM tm){
+      Ξ(TM·ARRAY ,Tableau) *t = (Ξ(TM·ARRAY ,Tableau) *) tm.tableau;
+      Ξ(TM·ARRAY ,Head·dismounted)(tm) return;
+      t->hd = t->position;
+    }
+
+    Local TM·CVT Ξ(TM·ARRAY ,read)(TM tm){
+      Ξ(TM·ARRAY ,Tableau) *t = (Ξ(TM·ARRAY ,Tableau) *) tm.tableau;
+      return *t->hd;
+    }
+
+    Local void Ξ(TM·ARRAY ,write)(TM tm ,TM·CVT *remote_pt){
+      Ξ(TM·ARRAY ,Tableau) *t = (Ξ(TM·ARRAY ,Tableau) *) tm.tableau;
+      *remote_pt = *t->hd;
+    }
+
+    Local TM·Binding TM·fg = {
+
+      .Tape·topo     = Ξ(TM·ARRAY ,Tape·topo)
+      ,.Tape·bounded = Ξ(TM·ARRAY ,Tape·bounded)
+      ,.Tape·extent  = Ξ(TM·ARRAY ,Tape·extent)
+
+      ,.Head·status       = Ξ(TM·ARRAY ,Head·status)
+      ,.Head·dismounted   = Ξ(TM·ARRAY ,Head·dismounted)
+      ,.Head·on_tape      = Ξ(TM·ARRAY ,Head·on_tape)
+      ,.Head·on_leftmost  = Ξ(TM·ARRAY ,Head·on_leftmost)
+      ,.Head·on_rightmost = Ξ(TM·ARRAY ,Head·on_rightmost)
+
+      ,.mount    = Ξ(TM·ARRAY ,mount)
+      ,.dismount = Ξ(TM·ARRAY ,dismount)
+
+      ,.step       = Ξ(TM·ARRAY ,step)
+      ,.step_right = Ξ(TM·ARRAY ,step)
+      ,.step_left  = Ξ(TM·ARRAY ,step_left)
+      ,.rewind     = Ξ(TM·ARRAY ,rewind)
+
+      ,.read  = Ξ(TM·ARRAY ,read)
+      ,.write = Ξ(TM·ARRAY ,write)
+
+    };
 
 
 
@@ -6,7 +134,7 @@
 
 
 
-
+................................................................................
 
     //-----------------------------------
     // generic call wrappers
@@ -66,24 +194,6 @@
     //----------------------------------------
     // Initialization for TM·fg
 
-    Local TM·Binding TM·fg = {
-      .Tape·topo = TM·Tape·topo
-      ,.Tape·bounded = TM·Tape·bounded
-      ,.Head·status = TM·Head·status
-      ,.Head·on_tape = TM·Head·on_tape
-
-      ,.Head·on_leftmost = TM·Head·on_leftmost
-      ,.Head·on_rightmost = TM·Head·on_rightmost
-
-      ,.mount    = TM·mount
-      ,.dismount = TM·dismount
-
-      ,.step = TM·step
-      ,.step_left = TM·step_left
-      ,.step_right = TM·step // Synonym
-      ,.rewind = TM·rewind
-
-    };
 
   #endif // ifndef TM·CVT
 

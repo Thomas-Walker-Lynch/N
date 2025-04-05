@@ -21,12 +21,12 @@
 
   #define Binding Bespoke
   #include "Binding.lib.c"
-  #define Binding·SET·Bespoke
+  #define SET__Binding__Bespoke
 
   // This defines the FG table type for Bespoke (aka vtable). Each instance is a different implementation of the type sharing the same interface.
   typedef struct Bespoke·FG{
-    void (*version)(Bespoke·Tableau *t);
-    void (*report)(Bespoke·Tableau *t ,char *mess);
+    void (*version)(Bespoke tm);
+    void (*report)(Bespoke tm ,char *mess);
   }Bespoke·FG;
 
   // This defines the Tableau, the data that is given as a first argument of each FG table entry.  
@@ -39,8 +39,8 @@
 
   // these functions will be used for making an instance of the abstract Bespoke type
 
-  void Bespoke·version(Bespoke·Tableau *t){ printf("version 1.0\n"); };
-  void Bespoke·report(Bespoke·Tableau *t ,char *mess){ printf("The report: %s\n" ,mess);};
+  void Bespoke·version(Bespoke tm){ printf("version 1.0\n"); };
+  void Bespoke·report(Bespoke tm ,char *mess){ printf("The report: %s\n" ,mess);};
 
 
 int main(){
@@ -74,18 +74,18 @@ int main(){
   spoke.tableau = &t;
 
   // direct use of the fg table, the user/programmer should not do this
-  fg.version(spoke.tableau);
-  fg.report(spoke.tableau ,"fg.report");
+  fg.version(spoke);
+  fg.report(spoke ,"fg.report");
 
   // does the binding have null pointers?
   printf("fg: %p, tableau: %p\n", (void*)spoke.fg, (void*)spoke.tableau);
 
   // calling though the binding 
-  spoke.fg->version(spoke.tableau);
-  spoke.fg->report(spoke.tableau ,"spoke.fg->report");
+  spoke.fg->version(spoke);
+  spoke.fg->report(spoke ,"spoke.fg->report");
   
   printf("and version again\n");
-  spoke.fg->version(spoke.tableau);
+  spoke.fg->version(spoke);
   printf("before Binding·call to version\n");
   Binding·call(spoke ,version);
   printf("after Binding·call to version.\n");

@@ -29,11 +29,11 @@ Instead of comma separated lists consider instead to make a list with #define:
 #ifndef CPP_EXT_1
 #define CPP_EXT_1
 
-/*===========================================================================
+/*---------------------------------------------------------------------------
   Force extra macro expansion (the EVAL trick)
   This chain of EVAL macros forces the preprocessor to perform many rescans,
   which is necessary to “unroll” recursive macros.
-===========================================================================*/
+---------------------------------------------------------------------------*/
   //#define EVAL(...)            EVAL1024(__VA_ARGS__)
   #define EVAL(...)            EVAL32(__VA_ARGS__)
   #define EVAL1024(...)        EVAL512(EVAL512(__VA_ARGS__))
@@ -48,9 +48,9 @@ Instead of comma separated lists consider instead to make a list with #define:
   #define EVAL2(...)           EVAL1(EVAL1(__VA_ARGS__))
   #define EVAL1(...)           __VA_ARGS__
 
-/*===========================================================================
+/*---------------------------------------------------------------------------
   Defer macros: these help “hide” recursive calls for additional expansion passes.
-===========================================================================*/
+---------------------------------------------------------------------------*/
 // defined in cpp_ext_0: RETURN_NOTHING()
 
   #define DEFER1(m) \
@@ -64,7 +64,7 @@ Instead of comma separated lists consider instead to make a list with #define:
   #define DEFER5(m) \
     m RETURN_NOTHING RETURN_NOTHING RETURN_NOTHING RETURN_NOTHING RETURN_NOTHING()()()()()
 
-/*===========================================================================
+/*---------------------------------------------------------------------------
   List operations
 
   number of EVALs required depends upon length list that is processed
@@ -74,7 +74,7 @@ Instead of comma separated lists consider instead to make a list with #define:
   after the last comma. To assure that a tailing item always gets sent
   to the predicate, even when empty, we append an empty item.
 
-===========================================================================*/
+---------------------------------------------------------------------------*/
   // defined in cpp_ext_0: _FIRST(a ,...) a 
 
   // returns found item or EOL()
@@ -172,9 +172,9 @@ Instead of comma separated lists consider instead to make a list with #define:
   #define _APPEND_ss_CONFEDERATE() _APPEND_ss
 
 
-/*===========================================================================
+/*---------------------------------------------------------------------------
   Quantifiers
-===========================================================================*/
+---------------------------------------------------------------------------*/
 
   // AKA all quantification, returns true or false
   #define AND(...) WHILE(EXISTS ,__VA_ARGS__)
@@ -182,9 +182,9 @@ Instead of comma separated lists consider instead to make a list with #define:
   // AKA existence quantification, returns true or false
   #define OR(...)  NOT( WHILE(NOT ,__VA_ARGS__) )
 
-/*===========================================================================
+/*---------------------------------------------------------------------------
   Access
-===========================================================================*/
+---------------------------------------------------------------------------*/
 
   #define FIRST(...) \
     IF( __VA_ARGS__ ) \

@@ -7,12 +7,11 @@
 #include "Binding.lib.c"
 #include "TM.lib.c"
 
-#define EQ__TM·AU__oo__TM·AU
 #define TM·CVT AU
 #include "TM.lib.c"
+#define SET__Binding__TM·AU
 
 int main(){
-
   printf("running try_TM.cli.c on %s at %s\n", __DATE__, __TIME__);
 
   SHOW(Ξ(TM·CVT ,FG));  // TM·AU·FG
@@ -23,8 +22,11 @@ int main(){
   extent_t·AU extent = sizeof(tape) - 1;
 
   // Init the tableau
+#if 0
+
   Ξ(TM ,AU)·Tableau t;
   Ξ(TM ,AU)·init_pe(&t ,tape ,extent);
+
 
   // Allocate a binding
   TM·AU tm;
@@ -52,6 +54,7 @@ int main(){
   datum = Binding·call(tm ,read);
   printf("After rewind, datum: %u\n", datum);
 
+#endif
   return 0;
 }
 

@@ -1,21 +1,19 @@
 /*
-  TM - Tape Machine Model
-
-  User must define the equivalence template:
-
-      EQ_TM·<TM·CVT>__oo__TM·<TM·CVT>
-
-    While filling in the CVT values of course. For pointers, struct, arrays, etc. use a typedef to reduce the type to an identifier.
-
-  Template parameters
+  Namespace: TM
+  Template parameters:
 
     `TM·CVT` Cell Value Type`.
 
+  TM - Tape Machine Model
+
+  Caller must declare TM set members: 
+     #define SET__Binding__TM·<CVT> // replacing <CVT> with the actual value of CVT
+
 */
 
-//--------------------------------------------------------------------------------
-// Interface 
-//--------------------------------------------------------------------------------
+/*--------------------------------------------------------------------------------
+ Interface 
+--------------------------------------------------------------------------------*/
 
 // once per translation unit
 #ifndef TM·FACE
@@ -62,61 +60,56 @@
     | TM·Head·Status·rightmost
     ;
 
-#endif
+#endif //#ifndef TM·FACE
 
+// once per TM·CVT value
+// Caller must #define SET__Binding__TM·<CVT>, after inclusion, to prevent re-inclusion
 #ifdef TM·CVT
-#if BOOLEAN(NOT_IN(TM·SET ,TM·CVT))
-#ifdef TM·CVT·DEBUG
-  #pragma message( "adding binding for:" STR_VAL(Binding) )
+#if BOOLEAN( NOT_IN(Binding ,Ξ(TM,TM·CVT)) )
+#ifdef TM·DEBUG
+  #pragma message( "Creating TM type with a CVT of:" STR_VAL(TM·CVT) )
 #endif
 
-  // some synonyms to make this section easier to read
-  #undef TM
-  #define TM Ξ(TM ,TM·CVT)
-  #undef EXTENT_T
-  #define EXTENT_T Ξ(extent_t ,TM·CVT)
-
-  // declare 'TM·CVT' as a type 
-  // (or more specifically, make a struct for binding the FG table to the tableau)
-  #undef Binding·Type
-  #define Binding·Type TM
+  #define Binding Ξ(TM,TM·CVT)
   #include "Binding.lib.c"
 
-  // `extent_t` is an index, so element size matters, so I associate it with TM·CVT
-  typedef Ξ(extent_t ,TM·CVT) size_t;
+  typedef size_t Ξ(extent_t,TM·CVT);
 
-  typedef struct Ξ(TM ,FG){
+  typedef struct Ξ(TM,TM·CVT,FG){
 
-    TM·Tape·Topo (*Tape·topo)(TM tm);
-    bool (*Tape·bounded)(TM tm);
+    TM·Tape·Topo       (*Tape·topo)       ( Ξ(TM,TM·CVT) tm );
+    bool               (*Tape·bounded)    ( Ξ(TM,TM·CVT) tm );
+    Ξ(extent_t,TM·CVT) (*Tape·extent)     ( Ξ(TM,TM·CVT) tm );
 
-    TM·Head·Status (*Head·status)(TM tm);
-    bool (*Head·on_tape)(TM tm);
-    bool (*Head·on_leftmost) (TM tm);
-    bool (*Head·on_rightmost)(TM tm);
+    TM·Head·Status     (*Head·status)     ( Ξ(TM,TM·CVT) tm );
+    bool               (*Head·dismounted) ( Ξ(TM,TM·CVT) tm );
+    bool               (*Head·on_tape)    ( Ξ(TM,TM·CVT) tm );
+    bool               (*Head·on_leftmost)( Ξ(TM,TM·CVT) tm );
+    bool               (*Head·on_rightmost)( Ξ(TM,TM·CVT) tm );
 
     // tape machine functions
-    Core·Status (*mount)   (TM tm);
-    Core·Status (*dismount)(TM tm);
+    void               (*mount)           ( Ξ(TM,TM·CVT) tm );
+    void               (*dismount)        ( Ξ(TM,TM·CVT) tm );
 
-    void (*step)      (TM tm);
-    void (*step_left) (TM tm);
-    void (*rewind)    (TM tm);
+    void               (*step)            ( Ξ(TM,TM·CVT) tm );
+    void               (*step_right)      ( Ξ(TM,TM·CVT) tm );
+    void               (*step_left)       ( Ξ(TM,TM·CVT) tm );
+    void               (*rewind)          ( Ξ(TM,TM·CVT) tm );
 
-    EXTENT_T (*extent)(TM tm);
-    TM·CVT   (*read)  (TM tm);
-    void     (*write) (TM tm ,TM·CVT *remote_pt);
+    TM·CVT             (*read)            ( Ξ(TM,TM·CVT) tm );
+    void               (*write)           ( Ξ(TM,TM·CVT) tm ,TM·CVT *remote_pt );
 
-  } Ξ(TM ,FG);
+  } Ξ(TM,TM·CVT,FG);
 
   //----------------------------------------
   // Array interface
 
-  #undef  TM·ARRAY 
-  #define TM·ARRAY Ξ(TM ,ARRAY)
+  #undef  TM·ARRAY
+  #define TM·ARRAY Ξ(TM,TM·CVT,ARRAY)
 
-  struct Ξ(TM·ARRAY ,Tableau);
-    
+  struct Ξ(TM,TM·CVT,ARRAY,Tableau);
+  typedef struct Ξ(TM,TM·CVT,ARRAY,Tableau) Ξ(TM,TM·CVT,ARRAY,Tableau);
+
   /*
     We assume that the binding produced by init is valid. Thus it does not have null pointers to the tableau or the fg table; it points to an initialized tableau; it points to a valid array fg table; and, that the fg table and tableau go together.
 
@@ -125,172 +118,210 @@
     The resulting binding object returned is what the user will call an instance of the
     type.
   */
-    TM Ξ(TM·ARRAY ,init_pe)( 
-       struct Ξ(TM·ARRAY ,Tableau) *t
-       ,TM·CVT position[] 
-       ,EXTENT_T extent 
-     );
+  TM Ξ(TM,TM·CVT,ARRAY,init_pe)(
+     Ξ(TM,TM·CVT,ARRAY,Tableau) *t
+    ,TM·CVT position[]
+    ,Ξ(extent_t,TM·CVT) extent
+  );
 
-     TM Ξ(TM·ARRAY ,init_pp)( 
-       Ξ(TM·ARRAY ,Tableau) *t
-       ,TM·CVT *position_left 
-       ,TM·CVT *position_right 
-     );
+  TM Ξ(TM,TM·CVT,ARRAY,init_pp)(
+     Ξ(TM,TM·CVT,ARRAY,Tableau) *t
+    ,TM·CVT *position_left
+    ,TM·CVT *position_right
+  );
 
-#endif 
+#endif // #if BOOLEAN( NOT_IN(Binding ,TM) )
+#endif // #ifdef TM·CVT
 
-
-//--------------------------------------------------------------------------------
-// Local - at bottom of translation unit, to keep some functions private
-//--------------------------------------------------------------------------------
+/*--------------------------------------------------------------------------------
+  Local 
+--------------------------------------------------------------------------------*/
 #ifdef LOCAL
 
-// once per translation unit
-#ifndef TM·LOCAL·TYPE_LIST
-#define TM·LOCAL·TYPE_LIST
+  // once per translation unit
+  #ifndef TM·LOCAL
+  #define TM·LOCAL
 
-  const char *TM·Msg·tm="given NULL tm";
-  const char *TM·Msg·flag="given NULL flag pointer";
-  const char *TM·Msg·result="given NULL result pointer";
-  const char *TM·Msg·status="bad head status";
+    const char *TM·Msg·tm     = "given NULL tm";
+    const char *TM·Msg·flag   = "given NULL flag pointer";
+    const char *TM·Msg·result = "given NULL result pointer";
+    const char *TM·Msg·status = "bad head status";
 
-#endif
+  #endif
 
-// once per TM·CVT value
-#ifdef TM·CVT
-#if NOT_CONTAINS( TM·CVT ,TM·LOCAL·TYPE_LIST )
-#ifdef Binding·DEBUG
-  #pragma message( STR_VAL(TM·LOCAL·TYPE_LIST) )
-#endif
-
-  //this is what it takes to append to a list in cpp ...
-  #undef TEMP
-  #define TEMP TM·LOCAL·TYPE_LIST ,TM·CVT
-  #undef TM·LOCAL·TYPE_LIST
-  #define TM·LOCAL·TYPE_LIST TEMP
-
-  // some aliases to make things a little easier to read
-  #undef TM
-  #define TM Ξ(TM ,TM·CVT)
-  #undef EXTENT_T
-  #define EXTENT_T Ξ(extent_t ,TM·CVT)
-
-  //----------------------------------------
-  // TM Array implementation, not TM·CVT differentiated
-
-  // some aliases
-  #undef  TM·ARRAY 
-  #define TM·ARRAY Ξ(TM ,ARRAY)
-
-  typedef struct Ξ(TM·ARRAY ,Tableau){
-    TM·CVT *hd;
-    TM·CVT position[];
-    EXTENT_T extent;
-  } Ξ(TM·ARRAY ,Tableau);
+  // once per TM·CVT value
+  // Caller must #define SET__TM·LOCAL__TM·<CVT>, after inclusion, to prevent re-inclusion
+  #ifdef TM·CVT
+  #if BOOLEAN(NOT_IN(TM·LOCAL ,Ξ(TM,TM·CVT)))
+  #ifdef TM·DEBUG
+    #pragma message( "Including LOCAL code for:" STR_VAL(TM·CVT) )
+  #endif
 
 
-  typedef struct Ξ(TM·ARRAY ,Tableau){
-    TM·CVT *hd;
-    TM·CVT *position;
-    Ξ(extent_t ,TM·CVT) extent;
-  } Ξ(TM·Array ,TM·CVT)·Tableau;
+    /*------------------------------------------------------------------------
+      Array implementation with a segment tape
+    */
 
-  // with a direct interface, an array can implement three among the possible tape topologies
-  Local TM·Tape·Topo Ξ(TM·ARRAY ,Tape·topo)(TM tm){
-    Ξ(TM·ARRAY ,Tableau) *t = (Ξ(TM·ARRAY ,Tableau) *) tm.tableau;
-    if(t->extent == 0) return TM·Tape·Topo·singleton; 
-    return TM·Tape·Topo·segment;
-  }
-  Local bool Ξ(TM·ARRAY ,bounded)(TM tm){
-    Ξ(TM·ARRAY ,Tableau) *t = (Ξ(TM·ARRAY ,Tableau) *) tm.tableau;
-    return Ξ(TM·ARRAY ,Tape·topo)(tm) & TM·Tape·Topo·bounded;
-  }
+    typedef struct Ξ(TM,TM·CVT,ARRAY,Tableau){
+      TM·CVT               *hd;
+      TM·CVT                position[];
+      Ξ(extent_t,TM·CVT)    extent;
+    } Ξ(TM,TM·CVT,ARRAY,Tableau);
 
-  Local TM·Head·Status Ξ(TM·ARRAY ,Head·status)(TM tm){
-    Ξ(TM·ARRAY ,Tableau) *t = (Ξ(TM·ARRAY ,Tableau) *) tm.tableau;
-    if(!t->hd) return TM·Head·Status·dismounted;
-    if(t->hd == tm->position) return TM·Head·Status·leftmost;
+    Local TM·Tape·Topo Ξ(TM,TM·CVT,ARRAY,Tape·topo)( Ξ(TM,TM·CVT) tm ){
+      Ξ(TM,TM·CVT,ARRAY,Tableau) *t = (Ξ(TM,TM·CVT,ARRAY,Tableau) *) tm.tableau;
+      if( t->extent == 0 ) return TM·Tape·Topo·singleton;
+      return TM·Tape·Topo·segment;
+    }
 
-    TM·CVT *rightmost_pt = t->position + t->extent;
-    if(t->hd == rightmost_pt) TM·Head·Status·rightmost;
-    if(t->hd < tm->position || tm->hd > rightmost_pt)
-      return TM·Head·Status·out_of_area;
+    Local bool Ξ(TM,TM·CVT,ARRAY,Tape·bounded)( Ξ(TM,TM·CVT) tm ){
+      Ξ(TM,TM·CVT,ARRAY,Tableau) *t = (Ξ(TM,TM·CVT,ARRAY,Tableau) *) tm.tableau;
+      return Ξ(TM,TM·CVT,ARRAY,Tape·topo)( tm ) & TM·Tape·Topo·bounded;
+    }
 
-    return TM·Head·Status·interim;
-  }
-  Local bool Ξ(TM·ARRAY ,Head·on_tape)(TM tm){
-    Ξ(TM·ARRAY ,Tableau) *t = (Ξ(TM·ARRAY ,Tableau) *) tm.tableau;
-    return Ξ(TM·ARRAY ,Head·status)(tm) & TM·Head·Status·on_tape;
-  }
+    Local Ξ(extent_t,TM·CVT) Ξ(TM,TM·CVT,ARRAY,Tape·extent)( Ξ(TM,TM·CVT) tm ){
+      Ξ(TM,TM·CVT,ARRAY,Tableau) *t = (Ξ(TM,TM·CVT,ARRAY,Tableau) *) tm.tableau;
+      return t->extent;
+    }
 
 
-  Ξ(TM ,FG) TM·ARRAY·fg = {
+    Local TM·Head·Status Ξ(TM,TM·CVT,ARRAY,Head·status)( Ξ(TM,TM·CVT) tm ){
+      Ξ(TM,TM·CVT,ARRAY,Tableau) *t = (Ξ(TM,TM·CVT,ARRAY,Tableau) *) tm.tableau;
+      if( !t->hd ) return TM·Head·Status·dismounted;
+      if( t->hd == tm->position ) return TM·Head·Status·leftmost;
 
-  }
+      TM·CVT *rightmost_pt = t->position + t->extent;
+      if( t->hd == rightmost_pt ) return TM·Head·Status·rightmost;
+      if( t->hd < tm->position || t->hd > rightmost_pt )
+        return TM·Head·Status·out_of_area;
+
+      return TM·Head·Status·interim;
+    }
+
+    Local bool Ξ(TM,TM·CVT,ARRAY,Head·dismounted)( Ξ(TM,TM·CVT) tm ){
+      Ξ(TM,TM·CVT,ARRAY,Tableau) *t = (Ξ(TM,TM·CVT,ARRAY,Tableau) *) tm.tableau;
+      return Ξ(TM,TM·CVT,ARRAY,Head·status)( tm ) & TM·Head·Status·dismounted;
+    }
+
+    Local bool Ξ(TM,TM·CVT,ARRAY,Head·on_tape)( Ξ(TM,TM·CVT) tm ){
+      Ξ(TM,TM·CVT,ARRAY,Tableau) *t = (Ξ(TM,TM·CVT,ARRAY,Tableau) *) tm.tableau;
+      return Ξ(TM,TM·CVT,ARRAY,Head·status)( tm ) & TM·Head·Status·on_tape;
+    }
+
+    Local bool Ξ(TM,TM·CVT,ARRAY,Head·on_leftmost)( Ξ(TM,TM·CVT) tm ){
+      Ξ(TM,TM·CVT,ARRAY,Tableau) *t = (Ξ(TM,TM·CVT,ARRAY,Tableau) *) tm.tableau;
+      return Ξ(TM,TM·CVT,ARRAY,Head·status)( tm ) & TM·Head·Status·leftmost;
+    }
+
+    Local bool Ξ(TM,TM·CVT,ARRAY,Head·on_rightmost)( Ξ(TM,TM·CVT) tm ){
+      Ξ(TM,TM·CVT,ARRAY,Tableau) *t = (Ξ(TM,TM·CVT,ARRAY,Tableau) *) tm.tableau;
+      return Ξ(TM,TM·CVT,ARRAY,Head·status)( tm ) & TM·Head·Status·rightmost;
+    }
+
+    // does nothing if the hd is already mounted
+    Local void Ξ(TM,TM·CVT,ARRAY,mount)( Ξ(TM,TM·CVT) tm ){
+      Ξ(TM,TM·CVT,ARRAY,Tableau) *t = (Ξ(TM,TM·CVT,ARRAY,Tableau) *) tm.tableau;
+      if( !t->hd ) t->hd = t->position;
+    }
+
+    Local void Ξ(TM,TM·CVT,ARRAY,dismount)( Ξ(TM,TM·CVT) tm ){
+      Ξ(TM,TM·CVT,ARRAY,Tableau) *t = (Ξ(TM,TM·CVT,ARRAY,Tableau) *) tm.tableau;
+      t->hd = NULL;
+    }
+
+    // does nothing if the hd is not mounted
+    Local void Ξ(TM,TM·CVT,ARRAY,step)( Ξ(TM,TM·CVT) tm ){
+      Ξ(TM,TM·CVT,ARRAY,Tableau) *t = (Ξ(TM,TM·CVT,ARRAY,Tableau) *) tm.tableau;
+      t->hd++;
+    }
+
+    Local void Ξ(TM,TM·CVT,ARRAY,step_left)( Ξ(TM,TM·CVT) tm ){
+      Ξ(TM,TM·CVT,ARRAY,Tableau) *t = (Ξ(TM,TM·CVT,ARRAY,Tableau) *) tm.tableau;
+      t->hd--;
+    }
+
+    Local void Ξ(TM,TM·CVT,ARRAY,rewind)( Ξ(TM,TM·CVT) tm ){
+      Ξ(TM,TM·CVT,ARRAY,Tableau) *t = (Ξ(TM,TM·CVT,ARRAY,Tableau) *) tm.tableau;
+      if( Ξ(TM,TM·CVT,ARRAY,Head·dismounted)( tm ) ) return;
+      t->hd = t->position;
+    }
+
+    Local TM·CVT Ξ(TM,TM·CVT,ARRAY,read)( Ξ(TM,TM·CVT) tm ){
+      Ξ(TM,TM·CVT,ARRAY,Tableau) *t = (Ξ(TM,TM·CVT,ARRAY,Tableau) *) tm.tableau;
+      return *t->hd;
+    }
+
+    Local void Ξ(TM,TM·CVT,ARRAY,write)( Ξ(TM,TM·CVT) tm ,TM·CVT *remote_pt ){
+      Ξ(TM,TM·CVT,ARRAY,Tableau) *t = (Ξ(TM,TM·CVT,ARRAY,Tableau) *) tm.tableau;
+      *remote_pt = *t->hd;
+    }
+
+    Local TM·Binding Ξ(TM,TM·CVT,FG) Ξ(TM,TM·CVT,ARRAY,fg) = {
+
+      .Tape·topo         = Ξ(TM,TM·CVT,ARRAY,Tape·topo)
+      ,.Tape·bounded     = Ξ(TM,TM·CVT,ARRAY,Tape·bounded)
+      ,.Tape·extent      = Ξ(TM,TM·CVT,ARRAY,Tape·extent)
+
+      ,.Head·status      = Ξ(TM,TM·CVT,ARRAY,Head·status)
+      ,.Head·dismounted  = Ξ(TM,TM·CVT,ARRAY,Head·dismounted)
+      ,.Head·on_tape     = Ξ(TM,TM·CVT,ARRAY,Head·on_tape)
+      ,.Head·on_leftmost = Ξ(TM,TM·CVT,ARRAY,Head·on_leftmost)
+      ,.Head·on_rightmost= Ξ(TM,TM·CVT,ARRAY,Head·on_rightmost)
+
+      ,.mount            = Ξ(TM,TM·CVT,ARRAY,mount)
+      ,.dismount         = Ξ(TM,TM·CVT,ARRAY,dismount)
+
+      ,.step             = Ξ(TM,TM·CVT,ARRAY,step)
+      ,.step_right       = Ξ(TM,TM·CVT,ARRAY,step)
+      ,.step_left        = Ξ(TM,TM·CVT,ARRAY,step_left)
+      ,.rewind           = Ξ(TM,TM·CVT,ARRAY,rewind)
+
+      ,.read             = Ξ(TM,TM·CVT,ARRAY,read)
+      ,.write            = Ξ(TM,TM·CVT,ARRAY,write)
+
+    };
+
+    /*
+     tm is up casted from being array specific, to being generic. Later it is downcasted within the array code before being used. This can be seen at the top of each of the array specific function. This is the only loss of static type safety, and it is embedded in the library code.
+    */
+    Ξ(TM,TM·CVT) Ξ(TM,TM·CVT,ARRAY,init_pe)(
+       Ξ(TM,TM·CVT,ARRAY,Tableau) *t
+      ,TM·CVT *position
+      ,Ξ(extent_t,TM·CVT) extent
+    ){
+      t->hd       = position;
+      t->position = position;
+      t->extent   = extent;
+
+      Ξ(TM,TM·CVT) tm = (Ξ(TM,TM·CVT)) {
+         .tableau = t
+        ,.fg      = &Ξ(TM,TM·CVT,ARRAY,fg)
+      };
+
+      return tm;
+    }
+
+    Ξ(TM,TM·CVT) Ξ(TM,TM·CVT,ARRAY,init_pp)(
+       Ξ(TM,TM·CVT,ARRAY,Tableau) *t
+      ,TM·CVT *position_left
+      ,TM·CVT *position_right
+    ){
+      t->hd = position_left;
+      t->position = position_left;
+      t->extent = position_right - position_left;
+    }
 
 
-    TM Ξ(TM·ARRAY ,init_pe)( 
-       struct Ξ(TM·ARRAY ,Tableau) *t
-       ,TM·CVT position[] 
-       ,EXTENT_T extent 
-     );
 
-     TM Ξ(TM·ARRAY ,init_pp)( 
-       Ξ(TM·ARRAY ,Tableau) *t
-       ,TM·CVT *position_left 
-       ,TM·CVT *position_right 
-     );
+  #endif // #if BOOLEAN(NOT_IN(TM·LOCAL ,TM))
+  #endif // #ifdef TM·CVT
 
---
-  TM·Tape·Topo  TM·Array·Tape·mount(TM·Tableau *t){
-    if(!t || !t->position) return T·Tape·Topo·mu;
-    if(t->extent == 0) TM·Tape·Topo·singleton; 
-    return TM·Tape·Topo·segment;
-  }
+#endif // LOCAL
 
-  Local Ξ(extent_t ,TM·CVT) Ξ(TM ,TM·CVT)·extent(TM *tm){
-    #ifdef TM·DEBUG
-      Core·Guard·init_count(chk);
-      Core·Guard·fg.check(&chk ,1 ,TM·Tape·bounded(tm) ,"Tape is not bounded.");
-      Core·Guard·assert(chk);
-    #endif
-    return tm->fg.extent(tm);
-  }
-
-  Local TM·CVT TM·read(TM *tm){
-    #ifdef TM·DEBUG
-      Core·Guard·init_count(chk);
-      Core·Guard·fg.check( &chk ,1 ,TM·head_on_tape(tm) ,TM·Msg·head);
-      Core·Guard·assert(chk);
-    #endif
-    return tm->fg.read(tm);
-  }
-
-  Local void TM·write(TM *tm ,TM·CVT *write_pt){
-    #ifdef TM·DEBUG
-      Core·Guard·init_count(chk); 
-      Core·Guard·fg.check( &chk ,1 ,TM·head_on_tape(tm) ,TM·Msg·head); 
-      Core·Guard·fg.check( &chk ,1 ,write_pt ,"Given NULL write_pt"); 
-      Core·Guard·assert(chk);
-    #endif
-    return tm->fg.write(tm ,write_pt);
-  }
-
-  Local Ξ(TM ,TM·CVT)·Binding Ξ(TM ,TM·CVT)·fg = {
-    .parent = TM·fg
-    ,.extent = Ξ(TM ,TM·CVT)·extent
-    ,.read = Ξ(TM ,TM·CVT)·read
-    ,.write = Ξ(TM ,TM·CVT)·write
-  };
-
-#endif // ifdef TM·CVT
-#undef TM·CVT
-
-
-//--------------------------------------------------------------------------------
-// Library - compiled into a lib.a file by the current make
-//   Core currently has no library components
-//--------------------------------------------------------------------------------
+/*--------------------------------------------------------------------------------
+ Library - compiled into a lib.a file by the current make
+   Core currently has no library components
+--------------------------------------------------------------------------------*/
 #ifdef LIBRARY
 #endif 
 

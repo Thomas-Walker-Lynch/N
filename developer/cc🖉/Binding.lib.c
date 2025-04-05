@@ -1,19 +1,22 @@
 /*
+Namespace: Binding
+Template parameters:
+
+  Binding - Type used to name the binding struct. Binding struct instances get passed as arguments to functions etc.
+
 This files declares a binding struct named [Binding]. It also provides
 the macro `call` that uses the binding.
 
 Note this file does not make an instance of the binding, and does not intialize
 fields in an instance.
 
-Template parameters:
 
-  Binding - Type used to name the binding struct. Binding struct instances get passed as arguments to functions etc.
 
 */
 
-//--------------------------------------------------------------------------------
-// Interface
-//--------------------------------------------------------------------------------
+/*--------------------------------------------------------------------------------
+ Interface
+-------------------------------------------------------------------------------*/
 
 
 // once per translation unit
@@ -38,7 +41,7 @@ Template parameters:
   #define Binding·call(b, fn, ...) \
     ( \
       Binding·wellformed_binding(b) , \
-      b.fg->fn(b.tableau __VA_OPT__(,) __VA_ARGS__) \
+      b.fg->fn(b __VA_OPT__(,) __VA_ARGS__) \
       )
 
 #endif
@@ -57,10 +60,10 @@ Template parameters:
   struct Ξ(Binding ,Tableau);
   typedef struct Ξ(Binding ,Tableau) Ξ(Binding ,Tableau); 
 
-  typedef struct Ξ(Binding){
+  typedef struct Binding{
     Ξ(Binding ,Tableau) *tableau;
     Ξ(Binding ,FG) *fg;
-  } Ξ(Binding);
+  } Binding;
 
   static void Binding·wellformed_binding(Ξ(Binding) b){
     #ifdef Binding·DEBUG
@@ -75,25 +78,24 @@ Template parameters:
 #endif 
 
 
-//--------------------------------------------------------------------------------
-// Local - at bottom of translation unit, to keep some functions private
-//   Binding currently has no local component
-//--------------------------------------------------------------------------------
-
+/*--------------------------------------------------------------------------------
+ Local - at bottom of translation unit, to keep some functions private
+   Binding currently has no local component
+--------------------------------------------------------------------------------*/
 #ifdef LOCAL
 
 #endif
 
-//--------------------------------------------------------------------------------
-// Library - compiled into a lib.a file by the current make
-//   Binding has no library component
-//--------------------------------------------------------------------------------
+/*--------------------------------------------------------------------------------
+ Library - compiled into a lib.a file by the current make
+   Binding has no library component
+--------------------------------------------------------------------------------*/
 #ifdef LIBRARY
 
 #endif 
 
-//--------------------------------------------------------------------------------
-// undef the template parameters
-//--------------------------------------------------------------------------------
+/*--------------------------------------------------------------------------------
+ undef the template parameters
+-------------------------------------------------------------------------------*/
 #undef Binding
 

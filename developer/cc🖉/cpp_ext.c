@@ -15,6 +15,6 @@
 
   */
  
-  #define Ξ(...)  CAT(· ,__VA_ARGS__)
+  #define ·(...)  CAT(· ,__VA_ARGS__)
 
 #endif 
