@@ -1,0 +1,4 @@
+running try_TM_6.cli.c on Apr  5 2025 at 15:54:08
+Initial value: 3f
+After stepping, value: a5
+After remount, value: a5

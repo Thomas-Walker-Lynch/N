@@ -1,0 +1,7 @@
+running try_TM_3.cli.c on Apr  5 2025 at 15:51:22
+Initial TM·AU tape:
+aa 55 c2 01
+Initial TM·Str tape:
+"hello" "world" "Calderis" "(null)"
+After dismount/remount, AU read: aa
+After step to right and left again: aa

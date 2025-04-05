@@ -38,11 +38,17 @@ fields in an instance.
 
     note the use of the comma operator to return the result from the b.fg->fn call
   */
-  #define Binding·call(b, fn, ...) \
-    ( \
-      Binding·wellformed_binding(b) , \
-      b.fg->fn(b __VA_OPT__(,) __VA_ARGS__) \
+  #ifdef Binding·DEBUG
+    #include <assert.h>
+    #define Binding·call(b ,fn ,...) ( \
+       assert((b).fg != NULL) \
+      ,assert((b).tableau != NULL) \
+      ,(b).fg->fn(b __VA_OPT__(,) __VA_ARGS__) \
       )
+  #else
+    #define Binding·call(b ,fn ,...) \
+      (b).fg->fn(b __VA_OPT__(,) __VA_ARGS__)
+  #endif
 
 #endif
 
@@ -64,15 +70,6 @@ fields in an instance.
     ·(_BINDING_ ,Tableau) *tableau;
     ·(_BINDING_ ,FG) *fg;
   } _BINDING_;
-
-  static void Binding·wellformed_binding(_BINDING_ b){
-    #ifdef Binding·DEBUG
-      Core·Guard·init_count(chk);
-      Core·Guard·fg.check(&chk, 1, b.fg,      "NULL fg table");
-      Core·Guard·fg.check(&chk, 1, b.tableau, "NULL tableau");
-      Core·Guard·assert(chk);
-    #endif
-  }
 
 #endif 
 #endif 

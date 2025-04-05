@@ -1,5 +1,5 @@
 /*
-  try_TM.cli.c - Example use of TM·AU type with array backend.
+  try_TM_1.cli.c - Example use of TM·AU type with array backend.
 */
 
 #include <stdio.h>
