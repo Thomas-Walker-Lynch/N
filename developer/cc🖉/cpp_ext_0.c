@@ -168,14 +168,14 @@ LOGIC
 
     For example a set named TRIP with 1 ,2 ,3 in it:
 
-    #define SET__TRIP__1
-    #define SET__TRIP__2
-    #define SET__TRIP__3
+    #define SET_TRIP__1
+    #define SET_TRIP__2
+    #define SET_TRIP__3
 
 */
 
-#define IN(name ,x) NOT(CAT4(SET__ ,name ,__ ,x))
-#define NOT_IN(name ,x) CAT4(SET__ ,name ,__ ,x)
+#define IN(name ,x) NOT(CAT4(SET_ ,name ,__ ,x))
+#define NOT_IN(name ,x) CAT4(SET_ ,name ,__ ,x)
 
 
 /*---------------------------------------------------------------------------

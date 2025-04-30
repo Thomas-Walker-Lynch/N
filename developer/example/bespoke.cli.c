@@ -21,7 +21,7 @@
 
   #define _BINDING_ Bespoke
   #include "Binding.lib.c"
-  #define SET__Binding__Bespoke
+  #define SET_Binding__Bespoke
 
   // This defines the FG table type for Bespoke (aka vtable). Each instance is a different implementation of the type sharing the same interface.
   typedef struct Bespoke·FG{

@@ -41,9 +41,9 @@ Despite these limitations, this convention provides many of the organizational b
 
 C lacks built-in support for templates or generics, unlike C++ or modern languages like Java or Rust. However, we can implement template-like functionality using the C preprocessor. This section explains the template system used throughout this document.
 
-** The Xi (Ξ) Macro System
+** The center dot '·' Macro System
 
-The cpp macro `Ξ` is used for putting identifiers into a namespace. Consider these variables within a namespace.
+The cpp macro `·` is used for putting identifiers into a namespace. Consider these variables within a namespace.
 
 #+BEGIN_SRC c
 TM·x        // variable x in namespace TM
@@ -52,8 +52,8 @@ TM·Array·i  // variable i in namespace TM·Array
 
 
 ,#+BEGIN_SRC c
-Ξ(TM ,x)  // variable x in namespace TM
-Ξ(TM·Array ,i)  // variable i in namespace TM·Array
+·(TM ,x)  // variable x in namespace TM
+·(TM·Array ,i)  // variable i in namespace TM·Array
 #+END_SRC
 
 The reason the macro is needed is that cpp will not replace a macro that is embedded in an identifier. With this macro we can do the following:
@@ -61,23 +61,23 @@ The reason the macro is needed is that cpp will not replace a macro that is embe
 #+BEGIN_SRC c
   #define CVT uint32_t
   CVT i;                     // -> uint32_t i
-  typedef struct Ξ(TM ,CVT)  // -> typedef struct TM·uint32_t
+  typedef struct ·(TM ,CVT)  // -> typedef struct TM·uint32_t
   #undef CVT
   #define CVT string
   typedef string char *;
   CVT ch;                    // -> string ch;
-  typedef struct Ξ(TM ,CVT)  // -> typedef struct TM·string
+  typedef struct ·(TM ,CVT)  // -> typedef struct TM·string
 #+END_SRC
 
 This allows us to create type and function names that are specialized for specific types, while maintaining a consistent naming convention.
 
 *** Implementation Details
 
-The Ξ macro was initially defined for two operands, as shown below, though now it will take between zero and ten operands. With zero operands it expands to nothing, with one it echos the operand with no center dots, with more than that the operands are appended with a prior center dot.
+The · macro was initially defined for two operands, as shown below, though now it will take between zero and ten operands. With zero operands it expands to nothing, with one it echos the operand with no center dots, with more than that the operands are appended with a prior center dot.
 
 #+BEGIN_SRC c
-#define _Ξ2(a, b) a##·##b
-#define Ξ2(a, b) _Ξ2(a, b)
+#define _·2(a, b) a##·##b
+#define ·2(a, b) _·2(a, b)
 #+END_SRC
 
 ** CVT: Cell Value Type
@@ -132,8 +132,8 @@ For example, the tableau for an array-based tape machine might look like:
 struct {
   CVT *hd;           // Current head position
   CVT *position;     // Base position for the tape (leftmost cell)
-  Ξ(extent_t, CVT) extent;  // Largest index that can be used for accessing the tape
-} Ξ(TM·Array, CVT);
+  ·(extent_t, CVT) extent;  // Largest index that can be used for accessing the tape
+} ·(TM·Array, CVT);
 #+END_SRC
 
 Notice this struct is templated on `CVT`. Suppose it were in the file `tape.lib.c`, then:
@@ -178,10 +178,10 @@ When specialized for a specific cell value type (CVT), we might then have:
 #+BEGIN_SRC c
 typedef struct {
   TM·FG *fg;  // Base function table
-  Ξ(extent_t, CVT) (*extent)(TM *tm);
+  ·(extent_t, CVT) (*extent)(TM *tm);
   CVT (*read)(TM *tm);
   void (*write)(TM *tm, CVT *remote_pt);
-} Ξ(TM, CVT)·FG;
+} ·(TM, CVT)·FG;
 #+END_SRC
 
 ** The Relationship Between Tableaux and FG Tables
@@ -199,9 +199,9 @@ This pattern allows us to achieve polymorphic behavior in C while maintaining ty
 
 The template system generates several types of identifiers:
 
-1. **Type names**: `Ξ(TM, CVT)` becomes `TM·int` when CVT is defined as `int`
-2. **Function names**: `Ξ(TM·Array, CVT)·init_pe` can become `TM·Array·int·init_pe`
-3. **Variable names**: `Ξ(extent_t, CVT)` can become `extent_t·int`
+1. **Type names**: `·(TM, CVT)` becomes `TM·int` when CVT is defined as `int`
+2. **Function names**: `·(TM·Array, CVT)·init_pe` can become `TM·Array·int·init_pe`
+3. **Variable names**: `·(extent_t, CVT)` can become `extent_t·int`
 
 ** Function Given (FG) Tables
 
@@ -212,10 +212,10 @@ The FG tables are specialized based on the CVT:
 #+BEGIN_SRC c
 typedef struct {
   TM·FG *fg;  // Base function table
-  Ξ(extent_t, CVT) (*extent)(TM *tm);
+  ·(extent_t, CVT) (*extent)(TM *tm);
   CVT (*read)(TM *tm);
   void (*write)(TM *tm, CVT *remote_pt);
-} Ξ(TM, CVT)·FG;
+} ·(TM, CVT)·FG;
 #+END_SRC
 
 This allows for type-safe operations while maintaining a consistent interface.
@@ -224,7 +224,7 @@ This allows for type-safe operations while maintaining a consistent interface.
 
 1. **Type safety**: The compiler checks that the correct types are used with each specialized function
 2. **Code reuse**: Common functionality is defined once and specialized for different types
-3. **Consistent naming**: The Ξ macro ensures a consistent naming convention
+3. **Consistent naming**: The · macro ensures a consistent naming convention
 4. **Modularity**: Different implementations can share the same interface
 
 ** Limitations
@@ -441,7 +441,7 @@ An FG table with template variabes, will expand out to one or more FG tables (wi
 
 There can be multiple instances of an FG table.  Each instance will consists of pointers to functions that have the type signature specified in the FG table. However, though all instances of the FG table share the same interface, their implementations can be completely different.
 
-Each template variable  binding, and each FG table instance can have a different Tableau type as the given argument. For the Tape Machine, we give each tableau struct the name Ξ(TM·<implementation>, CVT), where <iimplementation> is the FG instance table type. For example, Ξ(TM·Array, CVT) is a struct of state variables for an Array implementation of the TM.
+Each template variable  binding, and each FG table instance can have a different Tableau type as the given argument. For the Tape Machine, we give each tableau struct the name ·(TM·<implementation>, CVT), where <iimplementation> is the FG instance table type. For example, ·(TM·Array, CVT) is a struct of state variables for an Array implementation of the TM.
 
 -------------------------------------------------------------------
 
@@ -452,36 +452,36 @@ The TM model has functions that are independent of the CVT parameter.
 
 ** One for all FG table
 
-The "TM.lib.c" file defines an FG type called Ξ(TM, CVT)·FG. Note that CVT is a template
+The "TM.lib.c" file defines an FG type called ·(TM, CVT)·FG. Note that CVT is a template
 parameter. Hence, giving different CVT bindings, there will be different FG tables.
 
-For each Ξ(TM, CVT)·FG, there can be a number of Ξ(TM·<implementation>, CVT)·fg instances. For
-example, Ξ(TM·Array, CVT)·fg. Each of these is a parameterized table.
+For each ·(TM, CVT)·FG, there can be a number of ·(TM·<implementation>, CVT)·fg instances. For
+example, ·(TM·Array, CVT)·fg. Each of these is a parameterized table.
 
 A user has an fg table to call functions from. This is either passed in or, more
 likely, found at global scope after including "TM.lib.c", and then including it again for
 each value of the CVT variable to be used.
 
-For each implementation type, there is a struct defined called Ξ(TM·<implementation>, CVT),
+For each implementation type, there is a struct defined called ·(TM·<implementation>, CVT),
 note the lack of further suffix. Instances of this type are said to be instances of the tape
-machine. `FG` stands for `function given`, and what each said function is given is one or more arguments of the Ξ(TM·<implementation>, CVT) type.
+machine. `FG` stands for `function given`, and what each said function is given is one or more arguments of the ·(TM·<implementation>, CVT) type.
 
-When a user wants a tape machine, the user makes an instance of a Ξ(TM·<implementation>, CVT).
-This is then handed to a function called Ξ(TM·<implementation>, CVT)·init(). The init function is given whatever parameters are needed for initializing the instance, and it returns a more generalized pointer of type `Ξ(TM, CVT) *`.
+When a user wants a tape machine, the user makes an instance of a ·(TM·<implementation>, CVT).
+This is then handed to a function called ·(TM·<implementation>, CVT)·init(). The init function is given whatever parameters are needed for initializing the instance, and it returns a more generalized pointer of type `·(TM, CVT) *`.
 
-After initialization, the Ξ(TM·<implementation>, CVT) instance will have a first field value that points to the Ξ(TM·<implementation>, CVT)·fg table. However, the pointer to this instance will be of the type returned by init, which is `Ξ(TM, CVT) *` (notice it lost the implementation). This more generic pointer can now be used with the generic instance of the
-Ξ(TM, CVT)·FG table, Ξ(TM, CVT)·fg, which holds wrapper functions that make use of the
+After initialization, the ·(TM·<implementation>, CVT) instance will have a first field value that points to the ·(TM·<implementation>, CVT)·fg table. However, the pointer to this instance will be of the type returned by init, which is `·(TM, CVT) *` (notice it lost the implementation). This more generic pointer can now be used with the generic instance of the
+·(TM, CVT)·FG table, ·(TM, CVT)·fg, which holds wrapper functions that make use of the
 first field value to find the real fg table and to call those functions.
 
 Hence, after the user calls the correct init for the specific instance made, the resulting pointer points to the same type object independent of the implementation of the functions. Thus, code written to manipulate TMs can be written in a manner that is agnostic to the implementation of those TMs.
 
-When a function is called, say Ξ(TM, CVT)·fg.step(tm), it is passed the generic type `Ξ(TM, CVT) *`, tm. This will call the step wrapper function, which will in turn pass the same arguments (in this case, only `tm`) to the step function found in the fg table pointed to by the first member of the tm struct.
+When a function is called, say ·(TM, CVT)·fg.step(tm), it is passed the generic type `·(TM, CVT) *`, tm. This will call the step wrapper function, which will in turn pass the same arguments (in this case, only `tm`) to the step function found in the fg table pointed to by the first member of the tm struct.
 
 ** Separate FG tables
 
-In the flat fg table approach described in the prior section, each wrapper function table of the form Ξ(TM, CVT)·fg, obtained by setting the CVT template to a type value, will have a full set of wrapper function pointers. When a wrapper function is the same independent of the CVT variable, it still has a pointer copied into each fg table. Thus, there will be a lot of redundancy in the tables if many functions are not CVT-specific.
+In the flat fg table approach described in the prior section, each wrapper function table of the form ·(TM, CVT)·fg, obtained by setting the CVT template to a type value, will have a full set of wrapper function pointers. When a wrapper function is the same independent of the CVT variable, it still has a pointer copied into each fg table. Thus, there will be a lot of redundancy in the tables if many functions are not CVT-specific.
 
-For the layered fg table, there are separate wrapper function tables for the wrappers that are independent of CVT and those that are CVT-differentiated. The user then calls functions from the CVT-independent table when invoking those functions and from the CVT-differentiated functions table when calling those. So, for example, the user would call TM·fg.step(tm) to do a step, as that is CVT-independent, but call Ξ(TM, CVT)·fg.read(tm) to do a read, as the read value is CVT-differentiated.
+For the layered fg table, there are separate wrapper function tables for the wrappers that are independent of CVT and those that are CVT-differentiated. The user then calls functions from the CVT-independent table when invoking those functions and from the CVT-differentiated functions table when calling those. So, for example, the user would call TM·fg.step(tm) to do a step, as that is CVT-independent, but call ·(TM, CVT)·fg.read(tm) to do a read, as the read value is CVT-differentiated.
 
 ** Direct access through instance field (Orrin suggestion)
 
@@ -491,7 +491,7 @@ Instead of calling fg functions through a globally visible table such as:
 fg->step(tm); // Wrapper style
 #+END_SRC
 
-where fg is of type Ξ(TM, CVT)·FG and calls to it require globally accessible wrapper functions,
+where fg is of type ·(TM, CVT)·FG and calls to it require globally accessible wrapper functions,
 
 we can use the instance's first field directly:
 
@@ -499,7 +499,7 @@ we can use the instance's first field directly:
 tm->fg->step(tm);
 #+END_SRC
 
-Here, tm is a Ξ(TM, CVT) * — the generic type returned by init — and fg is the first field of the instance pointing to the correct FG table.
+Here, tm is a ·(TM, CVT) * — the generic type returned by init — and fg is the first field of the instance pointing to the correct FG table.
 
 This style removes the need for wrapper functions entirely. Each TM implementation embeds its corresponding FG table pointer directly in the instance. Thus, no global wrapper needs to be referenced, and function type-checking is preserved at compile time.
 

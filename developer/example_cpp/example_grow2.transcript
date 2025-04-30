@@ -1,0 +1,16 @@
+2025-04-25T04:31:47Z[developer]
+Thomas-developer@StanleyPark§/home/Thomas/subu_data/developer/N/developer/example_cpp§
+> gcc example_grow2.c 
+
+2025-04-25T04:32:50Z[developer]
+Thomas-developer@StanleyPark§/home/Thomas/subu_data/developer/N/developer/example_cpp§
+> ./a.out
+One-trampoline minimal example:
+
+GROW(7) --> 19 * _GROW ()(7)
+BE(GROW(7)) --> 19 * 19 * _GROW ()(7)
+BE(BE(GROW(7))) --> 19 * 19 * 19 * _GROW ()(7)
+
+2025-04-25T04:32:53Z[developer]
+Thomas-developer@StanleyPark§/home/Thomas/subu_data/developer/N/developer/example_cpp§
+> 

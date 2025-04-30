@@ -1,0 +1,19 @@
+2025-04-25T04:26:16Z[developer]
+Thomas-developer@StanleyPark§/home/Thomas/subu_data/developer/N/developer/example_cpp§
+> gcc example_A.c 
+
+2025-04-25T04:28:46Z[developer]
+Thomas-developer@StanleyPark§/home/Thomas/subu_data/developer/N/developer/example_cpp§
+> ./a.out
+    I like the number 123
+    A (123)
+A (123) --> I like the number 123
+A NULL_FN() (123) --> A (123)
+
+    I like the number 123
+EVAL1(A NULL_FN() (123)) --> I like the number 123
+
+
+2025-04-25T04:28:50Z[developer]
+Thomas-developer@StanleyPark§/home/Thomas/subu_data/developer/N/developer/example_cpp§
+> 

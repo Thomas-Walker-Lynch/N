@@ -1,0 +1,27 @@
+2025-04-25T04:32:53Z[developer]
+Thomas-developer@StanleyPark§/home/Thomas/subu_data/developer/N/developer/example_cpp§
+> gcc example_recurse.c 
+
+2025-04-25T04:33:40Z[developer]
+Thomas-developer@StanleyPark§/home/Thomas/subu_data/developer/N/developer/example_cpp§
+> ./a.out
+No EVAL:
+    RECURSE()
+RECURSE() --> I am recursive, look: _RECURSE ()()
+
+With EVAL1:
+    EVAL1(RECURSE())
+EVAL1(RECURSE()) --> I am recursive, look: I am recursive, look: _RECURSE ()()
+
+With EVAL2:
+    EVAL2(RECURSE())
+EVAL2(RECURSE()) --> I am recursive, look: I am recursive, look: I am recursive, look: I am recursive, look: _RECURSE ()()
+
+With EVAL32:
+    EVAL32(RECURSE())
+EVAL32(RECURSE()) --> I am recursive, look: I am recursive, look: I am recursive, look: I am recursive, look: I am recursive, look: I am recursive, look: I am recursive, look: I am recursive, look: I am recursive, look: I am recursive, look: I am recursive, look: I am recursive, look: I am recursive, look: I am recursive, look: I am recursive, look: I am recursive, look: I am recursive, look: I am recursive, look: I am recursive, look: I am recursive, look: I am recursive, look: I am recursive, look: I am recursive, look: I am recursive, look: I am recursive, look: I am recursive, look: I am recursive, look: I am recursive, look: I am recursive, look: I am recursive, look: I am recursive, look: I am recursive, look: I am recursive, look: I am recursive, look: I am recursive, look: I am recursive, look: I am recursive, look: I am recursive, look: I am recursive, look: I am recursive, look: I am recursive, look: I am recursive, look: I am recursive, look: I am recursive, look: I am recursive, look: I am recursive, look: I am recursive, look: I am recursive, look: I am recursive, look: I am recursive, look: I am recursive, look: I am recursive, look: I am recursive, look: I am recursive, look: I am recursive, look: I am recursive, look: I am recursive, look: I am recursive, look: I am recursive, look: I am recursive, look: I am recursive, look: I am recursive, look: I am recursive, look: I am recursive, look: _RECURSE ()()
+
+
+2025-04-25T04:33:43Z[developer]
+Thomas-developer@StanleyPark§/home/Thomas/subu_data/developer/N/developer/example_cpp§
+> 

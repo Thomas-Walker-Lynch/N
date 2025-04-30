@@ -4,11 +4,11 @@
 
 #include <stdio.h>
 #include "cpp_ext.c"
-#include "TM.lib.c"
+#include "TM·Array.lib.c"
 
 #define _TM·CVT_ AU
-#include "TM.lib.c"
-#define SET__Binding__TM·AU
+#include "TM·Array.lib.c"
+#define SET_Binding__TM·Array·AU
 
 int main(){
   printf("running try_TM_1.cli.c on %s at %s\n", __DATE__, __TIME__);
@@ -36,5 +36,5 @@ int main(){
 
 #define LOCAL
 #define _TM·CVT_ AU
-#include "TM.lib.c"
-#define SET__TM·LOCAL__TM·AU
+#include "TM·Array.lib.c"
+#define SET_TM·Array·LOCAL__TM·AU

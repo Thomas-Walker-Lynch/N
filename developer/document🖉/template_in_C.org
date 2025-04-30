@@ -1,0 +1,83 @@
+* Minimal Templating in RT C: The Box Example
+:PROPERTIES:
+:AUTHOR: Sorein
+:DATE: 2025-04-25
+:END:
+
+This document presents a minimal and idiomatic example of **templating in RT C**, using a generic "box" type.
+
+We follow the RT convention for template macros:
+- Template parameters are named with **leading and trailing underscores**, e.g. `_Box_T_`.
+- A **set macro** (e.g. `SET__Box__int`) must be defined after inclusion to prevent duplicate instantiations.
+
+This example avoids FG tables, tableaux, or polymorphism—it exists purely to show type reuse through macro-based inclusion.
+
+* Template Logic: box_template.h
+
+This header is included multiple times, once per type. It expects `_Box_T_` to be defined.
+
+#+BEGIN_SRC c
+#ifndef _Box_T_
+#error "_Box_T_ must be defined before including box_template.h"
+#endif
+
+#if !defined(·(SET__Box,_Box_T_))
+#define ·(SET__Box,_Box_T_)
+
+typedef struct{
+  _Box_T_ value;
+} ·(Box_Box,_Box_T_);
+
+void ·(Box_set,_Box_T_)( ·(Box_Box,_Box_T_)* b ,_Box_T_ x ){
+  b->value = x;
+}
+
+_Box_T_ ·(Box_get,_Box_T_)( ·(Box_Box,_Box_T_)* b ){
+  return b->value;
+}
+
+#endif
+#+END_SRC
+
+* Instantiating the Template
+
+You instantiate the template by defining `_Box_T_` before inclusion. Afterward, define the `SET__...` macro to guard against repeat.
+
+#+BEGIN_SRC c
+#define _Box_T_ int
+#include "box_template.h"
+#define SET__Box__int
+
+#define _Box_T_ char*
+#include "box_template.h"
+#define SET__Box__char_ptr
+#+END_SRC
+
+* Example Usage
+
+Once the template is instantiated, you can use the generated types and functions.
+
+#+BEGIN_SRC c
+#include <stdio.h>
+
+int main(){
+  ·(Box_Box,int) a;
+  ·(Box_set,int)(&a ,42);
+  printf("a = %d\n", ·(Box_get,int)(&a));
+
+  ·(Box_Box,char*) b;
+  ·(Box_set,char*)(&b ,"hello");
+  printf("b = %s\n", ·(Box_get,char*)(&b));
+
+  return 0;
+}
+#+END_SRC
+
+* Summary
+
+This "box" example demonstrates the foundation of RT C templating:
+- Code is included once per type with a unique `_Template_Var_`.
+- `SET__...` guards prevent duplicate instantiation.
+- Type-specific names (`Box_set,int`) are generated using token pasting macros like `·(...)`.
+
+From here, this pattern scales naturally to complex modules like `TM·AU`, while retaining clarity, reusability, and full type safety.

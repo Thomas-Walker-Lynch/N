@@ -1,0 +1,120 @@
+* Parameterized Functions
+  Author: Thomas Walker Lynch / Drafted by Caerith
+
+* 1. Parameterization in Mathematics
+In mathematics, **parameters** are used to define structured families of functions. For example, consider the family:
+
+#+BEGIN_SRC
+{ f_t(x) = t * x,  g_t(y) = y + t^2,  h_t(z) = sin(tz) }
+#+END_SRC
+
+Each function in this family shares a symbolic parameter `t`, which organizes the family and distinguishes its members. The functions differ in behavior based on the fixed value of `t`, even though they operate on different primary arguments (`x`, `y`, `z`).
+
+This reveals the core role of a parameter in mathematics: it does not merely serve as an argument to a single function, but rather defines **a space of functions** — a higher-order structure from which individual functions can be selected by fixing the parameter.
+
+In this context, we say:
+> A parameter is an external symbolic structure that appears as an argument in each function, but whose true role is to *coordinate or classify* the family of functions as a whole.
+
+Once a value is chosen for the parameter, it becomes fixed, and the resulting function behaves purely in terms of the remaining arguments. The collection \( \{f_t, g_t, h_t\} \) for varying `t` forms a **parameterized family**, and the parameter gives it structure.
+
+* 2. The Confusion in Computer Science
+In computer science, the term "parameter" is typically conflated with what are more properly called arguments. One speaks of a "parameter list" when defining a function, but these are just **argument symbols**, and at runtime, **argument values** are supplied.
+
+To clarify:
+- An **argument symbol** is a variable used in a function definition.
+- An **argument value** is an input supplied at invocation.
+
+We reserve **parameter** to mean: *a symbolic value that organizes or shapes a function or function family*. This returns us to the mathematical intent.
+
+Seen from this angle, **object-oriented programming** is a way of constructing **families of parameterized functions** — each method implicitly taking the object (`this`) as a shared structure. That object acts as a **fixed symbolic input** across many functions: it is the parameter. The set of methods thus defines a family.
+
+- For one parameter (i.e., one receiver object), the system is straightforward.
+- For two, ambiguity emerges: whose methods govern? This gives rise to multiple dispatch, traits, and other formal structures.
+
+Thus, **object-orientation is a particular implementation of parameterized function families**, where the parameter is embedded as implicit context.
+
+* 3. When Parameters Can Change: Machines
+In pure mathematics, the parameter is fixed during evaluation. But when a function can *modify* its parameter — i.e., mutate the context it depends on — then we are no longer dealing with functions in the mathematical sense.
+
+> When the parameter is no longer constant, but mutable, it becomes **state**.
+
+A function family with a mutable parameter is not a function family at all — it is a **machine**. The state evolves over time, and each function application may affect future behavior.
+
+This is a transition from **functional** to **stateful** systems. The parameter becomes a **tableau**: a symbolic structure that holds state, arguments, results, and evolves during execution. It is the parameter made writable, and the environment through which computational interaction unfolds.
+
+A tableau is not limited to a single function family — it may participate in multiple. It is both an input/output workspace and a memory of prior execution.
+
+In this view, TTCA and similar systems operate not just with functions, but with machines — bundles of callable behaviors that mutate their shared tableau.
+
+* 4. Our Terminology
+To capture these distinctions, we adopt the following terminology:
+
+- **PFT<T>**: A *Parameterized Function Table* over carrier type `T`. This is a symbolic table of functions that each expect a `T` as their first argument.
+- **M** or **Machine<T>**: A special case of PFT<T> where `T` is not constant but a **tableau**, and may be mutated during evaluation.
+- **Tableau**: A symbolic structure that accumulates inputs, stores return values, and evolves during execution. It is both interface and state — a writable parameter and a staging area for symbolic computation. It generalizes a stack frame and may serve multiple function families simultaneously.
+
+This language aligns our system with mathematical clarity while preserving the structural richness of the tableau concept.
+
+* 5. The Parameter Connector: Binding Parameters to Function Families
+In mathematics, writing a subscript such as `f_t(x)` indicates that a function family `f` has been **partially applied** by fixing its parameter `t`. This is called **partial application** — and it represents the act of creating a specific instance of a function from a broader, parameterized family.
+
+In our system, we reflect this idea using a symbolic structure called the **Parameter Connector**.
+
+> A **Parameter Connector** is a type that declares how a specific parameter (e.g., a `Tableau`) is to be coupled with a Parameterized Function Table (PFT). It is the symbolic form that supports partial application and prepares the ground for dispatch.
+
+The macro:
+
+#+BEGIN_SRC c
+DECLARE_PARAMETER_CONNECTOR(MyType)
+#+END_SRC
+
+declares a `struct` named `MyType`, which contains:
+- a pointer to a `MyType_Tableau` (the parameter value)
+- a pointer to a `MyType_PFT` (the function table)
+
+This struct is the **parameter connector**. It does not yet perform binding, but defines the shape of a pairing. Once an instance is created — with the parameter value assigned — we may dispatch calls via:
+
+#+BEGIN_SRC c
+call(connector, fn_name, args...);
+#+END_SRC
+
+This pattern reflects the subscripting act in mathematics. The `connector` serves as the **parameter-binding context**: it is what affixes the symbolic `t` to the `f` in `f_t(x)`.
+
+In this way:
+- **The connector is to `call()` what a subscript is to a function name**.
+- It allows partial application of parameterized function tables.
+- It forms the bridge from symbolic family to concrete callable form.
+
+Thus, the **parameter connector** is the central structure that enables meaningful dispatch in a system of parameterized functions — faithful both to mathematical abstraction and to C's structural constraints.
+
+
+
+
+#+BEGIN_SRC
+            ┌──────────────────────┐
+            │  Function Family     │
+            └────────┬─────────────┘
+                     │
+     ┌───────────────┼───────────────┐
+     ▼                               ▼
+┌──────────────┐             ┌────────────────────┐
+│ Parameter t  │             │ Parameterized      │
+│ (symbolic)   │             │ Function Table PFT │
+└──────┬───────┘             └────────┬───────────┘
+       ▼                              ▼
+         ┌───────────────────────────────────┐
+         │     Partial Application Step      │
+         └──────────────┬────────────────────┘
+                        ▼
+             ┌────────────────────────┐
+             │  Parameter Connector   │
+             └────────────┬───────────┘
+                          ▼
+                   ┌─────────────┐
+                   │   call()    │
+                   └────┬────────┘
+                        ▼
+                ┌───────────────┐
+                │  Machine<T>   │
+                └───────────────┘
+#+END_SRC

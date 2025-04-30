@@ -1,0 +1,145 @@
+#+TITLE: How to Use a TM: Tape Machine Structure and Semantics
+#+AUTHOR: Sorein
+#+DATE: 2025-04-25
+
+* 1. Introduction
+
+The `TM` module in RT C implements a **Tape Machine** abstraction—a generic, forward/backward traversable sequence with a *head*, *bounded extent*, and *cell value type* (CVT).
+
+Each instantiated TM (e.g. `TM·AU`, `TM·Str`) is a **binding** that combines:
+- A `tableau` — the backing data or representation (e.g. array, singleton, zero-length)
+- An `FG table` — the dispatch logic defining how the head behaves
+
+TM is not a container. It is a *lens* or *state machine* for traversing memory in a structured way.
+
+* 2. Constructing a TM
+
+To construct a TM instance, you typically:
+1. Define the tape data (e.g. an array of AU or Str)
+2. Define its extent
+3. Allocate a `Tableau` struct (e.g. `TM·AU·Array·Tableau`)
+4. Initialize the TM using `init_pe` or `init_pp`
+
+#+BEGIN_SRC c
+AU tape1[] = {0xAA ,0x55 ,0xC2};
+extent_t·AU extent1 = sizeof(tape1) / sizeof(AU) - 1;
+
+TM·AU·Array·Tableau t1;
+TM·AU tm1 = TM·AU·Array·init_pe(&t1 ,tape1 ,extent1);
+#+END_SRC
+
+The resulting `tm1` is a **binding**—you pass it to functions via `Binding·call` or `TM·AU·call`.
+
+* 3. TM Method Overview
+
+The key methods in the TM FG table are:
+
+| Method             | Description                                      |
+|--------------------+--------------------------------------------------|
+| `mount`            | Reattach head to the tape if dismounted         |
+| `dismount`         | Detach the head (mark as inactive)              |
+| `status`           | Returns the full head status bitmask            |
+| `on_tape`          | True if the head is on a valid cell             |
+| `on_leftmost`      | True if head is at the leftmost cell            |
+| `on_rightmost`     | True if head is at the rightmost cell           |
+| `step`, `step_left`| Move head forward or backward                   |
+| `rewind`           | Move head back to its starting position         |
+| `read`             | Return the cell value under the head            |
+| `write`            | Overwrite the cell under the head               |
+
+* 4. Loop Structure: Prefix, Separator, Postfix
+
+Traversal is typically done with **guarded middle-exit loops**, allowing for insertion of:
+
+- A **prefix** (runs before loop)
+- A **separator** (runs between each item)
+- A **postfix** (runs after loop)
+
+Example pattern (printing a tape with separators):
+#+BEGIN_SRC c
+if( Binding·call(tm ,on_tape) ){
+  // Prefix
+  do{
+    // Body
+    printf("%02x", (unsigned int) Binding·call(tm ,read));
+
+    // Guarded middle exit
+    if( Binding·call(tm ,on_rightmost) ) break;
+
+    // Separator
+    putchar(' ');
+
+    // Step
+    Binding·call(tm ,step);
+  }while(1);
+  // Postfix
+  putchar('\n');
+}
+#+END_SRC
+
+This avoids the need for counter variables, array indexing, or special cases for first/last iteration.
+
+* 5. Example: Nested TM Traversal
+
+The following example demonstrates two tapes—`tm1` of bytes, and `tm2` of strings—printing a byte followed by the full string tape on each outer step.
+
+#+BEGIN_SRC c
+if( Binding·call(tm1 ,on_tape) && Binding·call(tm2 ,on_tape) ){
+  do{
+    // Prefix of outer loop
+    printf("%02x\n", (unsigned int) Binding·call(tm1 ,read));
+    putchar(' ');
+    putchar(' ');
+
+    // Inner loop: iterate over strings
+    do{
+      printf("%s", Binding·call(tm2 ,read));
+      if( Binding·call(tm2 ,on_rightmost) ) break;
+      putchar(' ');
+      Binding·call(tm2 ,step);
+    }while(1);
+
+    // Postfix of inner loop
+    putchar('\n');
+
+    // Guarded exit
+    if( Binding·call(tm1 ,on_rightmost) ) break;
+
+    // Advance outer head
+    Binding·call(tm1 ,step);
+
+    // Reset inner head
+    Binding·call(tm2 ,rewind);
+  }while(1);
+
+  // Final postfix
+  printf("\n");
+}
+#+END_SRC
+
+This structure supports:
+- Interleaved traversal of coextensive tapes
+- Mid-line formatting
+- Reusable subroutines for iteration
+
+* 6. Debugging Tips
+
+- Use `on_tape`, `on_rightmost`, and `status` to check head validity before reading.
+- `rewind` is always safe to call, even on a dismounted tape.
+- `dismount` prevents accidental traversal if a tape becomes invalid or externally reallocated.
+
+* 7. Summary
+
+The Tape Machine abstraction supports:
+- Generic data traversal
+- Separation of structure (tableau) from behavior (FG table)
+- Elegant loop patterns with predictable control flow
+- Multi-instance coexistence via templated bindings
+
+By adopting TMs, RT C code gains clarity and uniformity when working over ranges, buffers, or token streams—without abandoning type safety or performance.
+
+For detailed reference on bindings and FG tables, see:
+
+**📎 [[file:fg_bindings_and_tableaux.org][FG Tables and Bindings in RT C]]**
+
+**📎 [[file:fg_tables_core.org][FG Tables — Core Module Example]]**

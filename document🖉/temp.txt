@@ -1,0 +1,90 @@
+#+TITLE: Proposed TM Bulk Methods for Multi-Cell Copy
+#+AUTHOR: Sorein
+#+DATE: 2025-04-25
+
+* 1. Motivation: Efficient Copy Needs Bulk Cell Access
+
+The standard `read` and `write` methods in TM operate on **one cell at a time**, which is:
+- Clear
+- Safe
+- Sufficient for most loops
+
+However, when implementing **bit-for-bit stream copy** between TMs, we want to:
+- **Copy multiple cells at once**, where possible
+- Use the largest available unit per cell
+- Avoid stepping repeatedly through the same control path
+
+To support this, TM needs **bulk methods** for cell span access.
+
+* 2. What Is a Span?
+
+A **span** is a run of **N contiguous cells** available from the current tape head.
+
+A TM can only offer a span if:
+- The head is *on tape*
+- At least `N` cells are accessible to the right
+- The memory layout is contiguous
+
+Not all TM types (e.g. cyclic or zero-length) support spans. For others, it's an optimization.
+
+* 3. Proposed TM Methods
+
+Each method is defined per CVT type. For example, `TM·AU` would add:
+
+#+BEGIN_SRC c
+bool TM·AU·can_span(TM·AU tm ,size_t count);
+AU const* TM·AU·peek_span(TM·AU tm ,size_t count);
+AU* TM·AU·claim_span(TM·AU tm ,size_t count);
+void TM·AU·commit_span(TM·AU tm ,size_t count);
+size_t TM·AU·remaining(TM·AU tm);
+#+END_SRC
+
+* 4. Semantics
+
+| Method           | Purpose                                                      |
+|------------------+--------------------------------------------------------------|
+| `can_span(n)`    | Returns true if N contiguous cells can be read or written    |
+| `peek_span(n)`   | Returns a read-only pointer to N contiguous cells, or NULL   |
+| `claim_span(n)`  | Returns a writable pointer to N cells, or NULL               |
+| `commit_span(n)` | Advances the head right by N cells (must follow claim)       |
+| `remaining()`    | Returns the number of cells remaining from head to end       |
+
+* 5. Guarded Use Pattern
+
+A `Copy` implementation might use:
+
+#+BEGIN_SRC c
+while( TM·AU·can_span(src ,n) && TM·AU·can_span(dst ,n) ){
+  AU const* s = TM·AU·peek_span(src ,n);
+  AU* d = TM·AU·claim_span(dst ,n);
+  memcpy(d ,s ,n * sizeof(AU));
+  TM·AU·commit_span(src ,n);
+  TM·AU·commit_span(dst ,n);
+}
+#+END_SRC
+
+This avoids looping through `read`/`write` per cell and reduces dispatch overhead.
+
+* 6. Optional Implementation and Capability Flag
+
+Not all TM types can support spans. We can:
+
+- Add a `supports_span` method to the FG table
+- Or define a `TM·Capability` bitfield:
+
+#+BEGIN_SRC c
+typedef enum{
+  TM·Caps·none = 0,
+  TM·Caps·span = 1 << 0
+} TM·Caps;
+#+END_SRC
+
+* 7. Summary
+
+Bulk cell access enhances TM's ability to support:
+- Efficient copy
+- Block-based streaming
+- Memory-mapped operations
+- Potential SIMD and vectorization later
+
+By introducing the five methods above, TM becomes *not*

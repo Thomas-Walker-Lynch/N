@@ -1,0 +1,274 @@
+
+2025-04-25T04:43:48Z[developer]
+Thomas-developer@StanleyPark§/home/Thomas/subu_data/developer/N/developer§
+> make clean
++ cd /home/Thomas/subu_data/developer/N/developer
++ /bin/make -f tool🖉/makefile clean
+rm -f scratchpad/makefile-cc.deps scratchpad/libN.a
+for obj in   scratchpad/bespoke.cli.o  scratchpad/try_TM_1.cli.o  scratchpad/try_TM_2.cli.o  scratchpad/try_TM_3.cli.o  scratchpad/try_TM_4.cli.o  scratchpad/try_TM_5.cli.o  scratchpad/try_TM_6.cli.o; do rm -f $obj || true; done
+for i in  machine/bespoke  machine/try_TM_1  machine/try_TM_2  machine/try_TM_3  machine/try_TM_4  machine/try_TM_5  machine/try_TM_6; do [ -e $i ] && rm $i || true; done 
++ set +x
+make done.
+
+2025-04-25T04:43:57Z[developer]
+Thomas-developer@StanleyPark§/home/Thomas/subu_data/developer/N/developer§
+> make dependency
++ cd /home/Thomas/subu_data/developer/N/developer
++ /bin/make -f tool🖉/makefile dependency
+gcc -Icc🖉 -include "/home/Thomas/subu_data/developer/N/tool_shared/third_party/RT-project-share/release/make/RT_0.h"  -I example -MM     example/bespoke.cli.c example/try_TM_1.cli.c example/try_TM_2.cli.c example/try_TM_3.cli.c example/try_TM_4.cli.c example/try_TM_5.cli.c example/try_TM_6.cli.c \
+  | sed 's|^.*\.o|scratchpad/&|' >> scratchpad/makefile-cc.deps;\
+echo "deps for C linking";\
+        # build library:\
+for i in bespoke try_TM_1 try_TM_2 try_TM_3 try_TM_4 try_TM_5 try_TM_6; do\
+  echo -e >> scratchpad/makefile-cc.deps;\
+  echo -e "machine/$i : scratchpad/$i.cli.o scratchpad/libN.a" >> scratchpad/makefile-cc.deps;\
+  echo -e "	gcc -o machine/$i scratchpad/$i.cli.o -Lscratchpad -L/lib64 -L/lib -lN" >> scratchpad/makefile-cc.deps;\
+done;
+deps for C linking
+make: Nothing to be done for 'dependency'.
++ set +x
+make done.
+
+2025-04-25T04:44:01Z[developer]
+Thomas-developer@StanleyPark§/home/Thomas/subu_data/developer/N/developer§
+> make library
++ cd /home/Thomas/subu_data/developer/N/developer
++ /bin/make -f tool🖉/makefile library
+ar rcs scratchpad/libN.a 
++ set +x
+make done.
+
+2025-04-25T04:44:07Z[developer]
+Thomas-developer@StanleyPark§/home/Thomas/subu_data/developer/N/developer§
+> make cli
++ cd /home/Thomas/subu_data/developer/N/developer
++ /bin/make -f tool🖉/makefile cli
+make sub_cli
++ cd /home/Thomas/subu_data/developer/N/developer
++ /bin/make -f tool🖉/makefile sub_cli
+make[1]: Entering directory '/home/Thomas/subu_data/developer/N/developer'
+gcc -Icc🖉 -include "/home/Thomas/subu_data/developer/N/tool_shared/third_party/RT-project-share/release/make/RT_0.h"  -I example -o scratchpad/bespoke.cli.o -c example/bespoke.cli.c
+In file included from example/bespoke.cli.c:14:
+cc🖉/Binding.lib.c:29:13: note: ‘#pragma message: in #ifndef Binding_LIST section’
+   29 |     #pragma message( "in #ifndef Binding_LIST section" )
+      |             ^~~~~~~
+In file included from example/bespoke.cli.c:23:
+cc🖉/Binding.lib.c:60:11: note: ‘#pragma message: adding binding for:_BINDING_ -> Bespoke’
+   60 |   #pragma message( "adding binding for:" STR_VAL(_BINDING_) )
+      |           ^~~~~~~
+gcc -o machine/bespoke scratchpad/bespoke.cli.o -Lscratchpad -L/lib64 -L/lib -lN
+gcc -Icc🖉 -include "/home/Thomas/subu_data/developer/N/tool_shared/third_party/RT-project-share/release/make/RT_0.h"  -I example -o scratchpad/try_TM_1.cli.o -c example/try_TM_1.cli.c
+In file included from cc🖉/TM.lib.c:27,
+                 from example/try_TM_1.cli.c:7:
+cc🖉/Binding.lib.c:29:13: note: ‘#pragma message: in #ifndef Binding_LIST section’
+   29 |     #pragma message( "in #ifndef Binding_LIST section" )
+      |             ^~~~~~~
+In file included from example/try_TM_1.cli.c:10:
+cc🖉/TM.lib.c:70:11: note: ‘#pragma message: Creating TM type with a CVT of:_TM·CVT_ -> AU’
+   70 |   #pragma message( "Creating TM type with a CVT of:" STR_VAL(_TM·CVT_) )
+      |           ^~~~~~~
+In file included from cc🖉/TM.lib.c:74:
+cc🖉/Binding.lib.c:60:11: note: ‘#pragma message: adding binding for:_BINDING_ -> TM·AU’
+   60 |   #pragma message( "adding binding for:" STR_VAL(_BINDING_) )
+      |           ^~~~~~~
+In file included from example/try_TM_1.cli.c:39:
+cc🖉/TM.lib.c:200:13: note: ‘#pragma message: Including LOCAL code for:_TM·CVT_ -> AU’
+  200 |     #pragma message( "Including LOCAL code for:" STR_VAL(_TM·CVT_) )
+      |             ^~~~~~~
+gcc -o machine/try_TM_1 scratchpad/try_TM_1.cli.o -Lscratchpad -L/lib64 -L/lib -lN
+gcc -Icc🖉 -include "/home/Thomas/subu_data/developer/N/tool_shared/third_party/RT-project-share/release/make/RT_0.h"  -I example -o scratchpad/try_TM_2.cli.o -c example/try_TM_2.cli.c
+In file included from cc🖉/TM.lib.c:27,
+                 from example/try_TM_2.cli.c:7:
+cc🖉/Binding.lib.c:29:13: note: ‘#pragma message: in #ifndef Binding_LIST section’
+   29 |     #pragma message( "in #ifndef Binding_LIST section" )
+      |             ^~~~~~~
+In file included from example/try_TM_2.cli.c:10:
+cc🖉/TM.lib.c:70:11: note: ‘#pragma message: Creating TM type with a CVT of:_TM·CVT_ -> AU’
+   70 |   #pragma message( "Creating TM type with a CVT of:" STR_VAL(_TM·CVT_) )
+      |           ^~~~~~~
+In file included from cc🖉/TM.lib.c:74:
+cc🖉/Binding.lib.c:60:11: note: ‘#pragma message: adding binding for:_BINDING_ -> TM·AU’
+   60 |   #pragma message( "adding binding for:" STR_VAL(_BINDING_) )
+      |           ^~~~~~~
+In file included from example/try_TM_2.cli.c:15:
+cc🖉/TM.lib.c:70:11: note: ‘#pragma message: Creating TM type with a CVT of:_TM·CVT_ -> Str’
+   70 |   #pragma message( "Creating TM type with a CVT of:" STR_VAL(_TM·CVT_) )
+      |           ^~~~~~~
+In file included from cc🖉/TM.lib.c:74:
+cc🖉/Binding.lib.c:60:11: note: ‘#pragma message: adding binding for:_BINDING_ -> TM·Str’
+   60 |   #pragma message( "adding binding for:" STR_VAL(_BINDING_) )
+      |           ^~~~~~~
+In file included from example/try_TM_2.cli.c:64:
+cc🖉/TM.lib.c:200:13: note: ‘#pragma message: Including LOCAL code for:_TM·CVT_ -> AU’
+  200 |     #pragma message( "Including LOCAL code for:" STR_VAL(_TM·CVT_) )
+      |             ^~~~~~~
+In file included from example/try_TM_2.cli.c:68:
+cc🖉/TM.lib.c:200:13: note: ‘#pragma message: Including LOCAL code for:_TM·CVT_ -> Str’
+  200 |     #pragma message( "Including LOCAL code for:" STR_VAL(_TM·CVT_) )
+      |             ^~~~~~~
+gcc -o machine/try_TM_2 scratchpad/try_TM_2.cli.o -Lscratchpad -L/lib64 -L/lib -lN
+gcc -Icc🖉 -include "/home/Thomas/subu_data/developer/N/tool_shared/third_party/RT-project-share/release/make/RT_0.h"  -I example -o scratchpad/try_TM_3.cli.o -c example/try_TM_3.cli.c
+In file included from cc🖉/TM.lib.c:27,
+                 from example/try_TM_3.cli.c:7:
+cc🖉/Binding.lib.c:29:13: note: ‘#pragma message: in #ifndef Binding_LIST section’
+   29 |     #pragma message( "in #ifndef Binding_LIST section" )
+      |             ^~~~~~~
+In file included from example/try_TM_3.cli.c:11:
+cc🖉/TM.lib.c:70:11: note: ‘#pragma message: Creating TM type with a CVT of:_TM·CVT_ -> AU’
+   70 |   #pragma message( "Creating TM type with a CVT of:" STR_VAL(_TM·CVT_) )
+      |           ^~~~~~~
+In file included from cc🖉/TM.lib.c:74:
+cc🖉/Binding.lib.c:60:11: note: ‘#pragma message: adding binding for:_BINDING_ -> TM·AU’
+   60 |   #pragma message( "adding binding for:" STR_VAL(_BINDING_) )
+      |           ^~~~~~~
+In file included from example/try_TM_3.cli.c:16:
+cc🖉/TM.lib.c:70:11: note: ‘#pragma message: Creating TM type with a CVT of:_TM·CVT_ -> Str’
+   70 |   #pragma message( "Creating TM type with a CVT of:" STR_VAL(_TM·CVT_) )
+      |           ^~~~~~~
+In file included from cc🖉/TM.lib.c:74:
+cc🖉/Binding.lib.c:60:11: note: ‘#pragma message: adding binding for:_BINDING_ -> TM·Str’
+   60 |   #pragma message( "adding binding for:" STR_VAL(_BINDING_) )
+      |           ^~~~~~~
+In file included from example/try_TM_3.cli.c:22:
+cc🖉/TM.lib.c:200:13: note: ‘#pragma message: Including LOCAL code for:_TM·CVT_ -> AU’
+  200 |     #pragma message( "Including LOCAL code for:" STR_VAL(_TM·CVT_) )
+      |             ^~~~~~~
+In file included from example/try_TM_3.cli.c:27:
+cc🖉/TM.lib.c:200:13: note: ‘#pragma message: Including LOCAL code for:_TM·CVT_ -> Str’
+  200 |     #pragma message( "Including LOCAL code for:" STR_VAL(_TM·CVT_) )
+      |             ^~~~~~~
+gcc -o machine/try_TM_3 scratchpad/try_TM_3.cli.o -Lscratchpad -L/lib64 -L/lib -lN
+gcc -Icc🖉 -include "/home/Thomas/subu_data/developer/N/tool_shared/third_party/RT-project-share/release/make/RT_0.h"  -I example -o scratchpad/try_TM_4.cli.o -c example/try_TM_4.cli.c
+In file included from cc🖉/TM.lib.c:27,
+                 from example/try_TM_4.cli.c:7:
+cc🖉/Binding.lib.c:29:13: note: ‘#pragma message: in #ifndef Binding_LIST section’
+   29 |     #pragma message( "in #ifndef Binding_LIST section" )
+      |             ^~~~~~~
+In file included from example/try_TM_4.cli.c:10:
+cc🖉/TM.lib.c:70:11: note: ‘#pragma message: Creating TM type with a CVT of:_TM·CVT_ -> AU’
+   70 |   #pragma message( "Creating TM type with a CVT of:" STR_VAL(_TM·CVT_) )
+      |           ^~~~~~~
+In file included from cc🖉/TM.lib.c:74:
+cc🖉/Binding.lib.c:60:11: note: ‘#pragma message: adding binding for:_BINDING_ -> TM·AU’
+   60 |   #pragma message( "adding binding for:" STR_VAL(_BINDING_) )
+      |           ^~~~~~~
+In file included from example/try_TM_4.cli.c:15:
+cc🖉/TM.lib.c:70:11: note: ‘#pragma message: Creating TM type with a CVT of:_TM·CVT_ -> Str’
+   70 |   #pragma message( "Creating TM type with a CVT of:" STR_VAL(_TM·CVT_) )
+      |           ^~~~~~~
+In file included from cc🖉/TM.lib.c:74:
+cc🖉/Binding.lib.c:60:11: note: ‘#pragma message: adding binding for:_BINDING_ -> TM·Str’
+   60 |   #pragma message( "adding binding for:" STR_VAL(_BINDING_) )
+      |           ^~~~~~~
+In file included from example/try_TM_4.cli.c:61:
+cc🖉/TM.lib.c:200:13: note: ‘#pragma message: Including LOCAL code for:_TM·CVT_ -> AU’
+  200 |     #pragma message( "Including LOCAL code for:" STR_VAL(_TM·CVT_) )
+      |             ^~~~~~~
+In file included from example/try_TM_4.cli.c:65:
+cc🖉/TM.lib.c:200:13: note: ‘#pragma message: Including LOCAL code for:_TM·CVT_ -> Str’
+  200 |     #pragma message( "Including LOCAL code for:" STR_VAL(_TM·CVT_) )
+      |             ^~~~~~~
+gcc -o machine/try_TM_4 scratchpad/try_TM_4.cli.o -Lscratchpad -L/lib64 -L/lib -lN
+gcc -Icc🖉 -include "/home/Thomas/subu_data/developer/N/tool_shared/third_party/RT-project-share/release/make/RT_0.h"  -I example -o scratchpad/try_TM_5.cli.o -c example/try_TM_5.cli.c
+In file included from cc🖉/TM.lib.c:27,
+                 from example/try_TM_5.cli.c:8:
+cc🖉/Binding.lib.c:29:13: note: ‘#pragma message: in #ifndef Binding_LIST section’
+   29 |     #pragma message( "in #ifndef Binding_LIST section" )
+      |             ^~~~~~~
+In file included from example/try_TM_5.cli.c:11:
+cc🖉/TM.lib.c:70:11: note: ‘#pragma message: Creating TM type with a CVT of:_TM·CVT_ -> AU’
+   70 |   #pragma message( "Creating TM type with a CVT of:" STR_VAL(_TM·CVT_) )
+      |           ^~~~~~~
+In file included from cc🖉/TM.lib.c:74:
+cc🖉/Binding.lib.c:60:11: note: ‘#pragma message: adding binding for:_BINDING_ -> TM·AU’
+   60 |   #pragma message( "adding binding for:" STR_VAL(_BINDING_) )
+      |           ^~~~~~~
+In file included from example/try_TM_5.cli.c:65:
+cc🖉/TM.lib.c:200:13: note: ‘#pragma message: Including LOCAL code for:_TM·CVT_ -> AU’
+  200 |     #pragma message( "Including LOCAL code for:" STR_VAL(_TM·CVT_) )
+      |             ^~~~~~~
+gcc -o machine/try_TM_5 scratchpad/try_TM_5.cli.o -Lscratchpad -L/lib64 -L/lib -lN
+gcc -Icc🖉 -include "/home/Thomas/subu_data/developer/N/tool_shared/third_party/RT-project-share/release/make/RT_0.h"  -I example -o scratchpad/try_TM_6.cli.o -c example/try_TM_6.cli.c
+In file included from cc🖉/TM.lib.c:27,
+                 from example/try_TM_6.cli.c:7:
+cc🖉/Binding.lib.c:29:13: note: ‘#pragma message: in #ifndef Binding_LIST section’
+   29 |     #pragma message( "in #ifndef Binding_LIST section" )
+      |             ^~~~~~~
+In file included from example/try_TM_6.cli.c:10:
+cc🖉/TM.lib.c:70:11: note: ‘#pragma message: Creating TM type with a CVT of:_TM·CVT_ -> AU’
+   70 |   #pragma message( "Creating TM type with a CVT of:" STR_VAL(_TM·CVT_) )
+      |           ^~~~~~~
+In file included from cc🖉/TM.lib.c:74:
+cc🖉/Binding.lib.c:60:11: note: ‘#pragma message: adding binding for:_BINDING_ -> TM·AU’
+   60 |   #pragma message( "adding binding for:" STR_VAL(_BINDING_) )
+      |           ^~~~~~~
+In file included from example/try_TM_6.cli.c:46:
+cc🖉/TM.lib.c:200:13: note: ‘#pragma message: Including LOCAL code for:_TM·CVT_ -> AU’
+  200 |     #pragma message( "Including LOCAL code for:" STR_VAL(_TM·CVT_) )
+      |             ^~~~~~~
+gcc -o machine/try_TM_6 scratchpad/try_TM_6.cli.o -Lscratchpad -L/lib64 -L/lib -lN
+make[1]: Leaving directory '/home/Thomas/subu_data/developer/N/developer'
++ set +x
+make done.
++ set +x
+make done.
+
+2025-04-25T04:44:15Z[developer]
+Thomas-developer@StanleyPark§/home/Thomas/subu_data/developer/N/developer§
+> ls machine
+.  ..  bespoke	.gitignore  try_TM_1  try_TM_2	try_TM_3  try_TM_4  try_TM_5  try_TM_6
+
+2025-04-25T04:44:51Z[developer]
+Thomas-developer@StanleyPark§/home/Thomas/subu_data/developer/N/developer§
+> ./machine/try_TM_1
+running try_TM_1.cli.c on Apr 25 2025 at 04:44:14
+01 02 03 04 05
+
+2025-04-25T04:45:18Z[developer]
+Thomas-developer@StanleyPark§/home/Thomas/subu_data/developer/N/developer§
+> ./machine/try_TM_2
+running try_TM_2.cli.c on Apr 25 2025 at 04:44:14
+TM·AU tape: aa 55 c2
+TM·Str tape: "hello" "world" "Calderis"
+
+2025-04-25T04:45:25Z[developer]
+Thomas-developer@StanleyPark§/home/Thomas/subu_data/developer/N/developer§
+> ./machine/try_TM_3 
+running try_TM_3.cli.c on Apr 25 2025 at 04:44:14
+Initial TM·AU tape:
+aa 55 c2 01
+Initial TM·Str tape:
+"hello" "world" "Calderis" "(null)"
+After dismount/remount, AU read: aa
+After step to right and left again: aa
+
+2025-04-25T04:45:32Z[developer]
+Thomas-developer@StanleyPark§/home/Thomas/subu_data/developer/N/developer§
+> ./machine/try_TM_4 
+running try_TM_2.cli.c on Apr 25 2025 at 04:44:14
+aa
+  hello world Calderis
+55
+  hello world Calderis
+c2
+  hello world Calderis
+
+
+2025-04-25T04:45:40Z[developer]
+Thomas-developer@StanleyPark§/home/Thomas/subu_data/developer/N/developer§
+> ./machine/try_TM_5
+running try_TM_5.cli.c on Apr 25 2025 at 04:44:14
+Verifying written tape:
+10 11 12 13
+
+2025-04-25T04:45:48Z[developer]
+Thomas-developer@StanleyPark§/home/Thomas/subu_data/developer/N/developer§
+> ./machine/try_TM_6
+running try_TM_6.cli.c on Apr 25 2025 at 04:44:15
+Initial value: 3f
+After stepping, value: a5
+After remount, value: a5
+
+2025-04-25T04:45:55Z[developer]
+Thomas-developer@StanleyPark§/home/Thomas/subu_data/developer/N/developer§
+> 

@@ -8,12 +8,12 @@
 
 #define _TM·CVT_ AU
 #include "TM.lib.c"
-#define SET__Binding__TM·AU
+#define SET_Binding__TM·AU
 
 typedef char* Str;
 #define _TM·CVT_ Str
 #include "TM.lib.c"
-#define SET__Binding__TM·Str
+#define SET_Binding__TM·Str
 
 int main(){
   printf("running try_TM_2.cli.c on %s at %s\n", __DATE__, __TIME__);
@@ -62,9 +62,9 @@ int main(){
 
 #define _TM·CVT_ AU
 #include "TM.lib.c"
-#define SET__TM·LOCAL__TM·AU
+#define SET_TM·LOCAL__TM·AU
 
 #define _TM·CVT_ Str
 #include "TM.lib.c"
-#define SET__TM·LOCAL__TM·Str
+#define SET_TM·LOCAL__TM·Str
 

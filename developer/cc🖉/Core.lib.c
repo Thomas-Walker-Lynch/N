@@ -12,7 +12,7 @@
  
   `AU` `Addressable Unit for the machine`. The C standard leaves this open to definition by the architecture and calls it `char`. On most all machines today it is uint8_t;
 
-  We use structs to group functions into a namespace. When all the functions that have a specific type of given argument are group together ,we call the table a 'Functions Given Type X table' ,or 'FG table' for short. A specific instance of an FG table is an `fg` table.
+  We use structs to group functions into a namespace. When all the functions that have a specific type of given argument are group together ,we call the table a 'Functions Given Type X table' ,or 'PFT table' for short. A specific instance of an PFT table is an `pft` table.
 
 */
 
@@ -23,7 +23,7 @@
 #define Core·FACE
 
   #define Core·DEBUG
-  #ifdef FG·DEBUG
+  #ifdef PFT·DEBUG
     #include <stdio.h>
   #endif
 
@@ -99,19 +99,19 @@
         ,bool condition
         ,char *message
       );
-    } Core·Guard·FG;
+    } Core·Guard·PFT;
 
     // Default guard function table
     // initialized in the implementation section below
-    Local Core·Guard·FG Core·Guard·fg;
+    Local Core·Guard·PFT Core·Guard·pft;
 
     #define Core·Guard·init_count(chk) \
       Core·Guard chk; \
-      Core·Guard·fg.init(&chk ,__func__ ,Core·Flag·count);
+      Core·Guard·pft.init(&chk ,__func__ ,Core·Flag·count);
 
     #define Core·Guard·init_collect(chk) \
       Core·Guard chk; \
-      Core·Guard·fg.init(&chk ,__func__ ,Core·Flag·collect);
+      Core·Guard·pft.init(&chk ,__func__ ,Core·Flag·collect);
 
     #define Core·Guard·if_return(chk) if( chk.flag ) return Core·Status·derailed;
     #define Core·Guard·return(chk)\
@@ -172,7 +172,7 @@
       chk->flag_function(&chk->flag ,err);
     }
 
-    Local Core·Guard·FG Core·Guard·fg = {
+    Local Core·Guard·PFT Core·Guard·pft = {
        .init = Core·Guard·init
       ,.reset = Core·Guard·reset
       ,.check = Core·Guard·check
@@ -187,8 +187,8 @@
     Local Core·Status Core·is_aligned(AU *p ,extent_t·AU alignment ,bool *flag){
       #ifdef Core·DEBUG
         Core·Guard·init_count(chk);
-        Core·Guard·fg.check(&chk ,1 ,p ,"given NULL p");
-        Core·Guard·fg.check(&chk ,1 ,flag ,"flag is NULL, so nowhere to write result");
+        Core·Guard·pft.check(&chk ,1 ,p ,"given NULL p");
+        Core·Guard·pft.check(&chk ,1 ,flag ,"flag is NULL, so nowhere to write result");
         Core·Guard·if_return(chk);
       #endif
       *flag = ( (uintptr_t)p & alignment ) == 0;
@@ -198,8 +198,8 @@
     Local Core·Status Core·round_down(AU *p ,extent_t·AU alignment ,AU **result){
       #ifdef Core·DEBUG
         Core·Guard·init_count(chk);
-        Core·Guard·fg.check(&chk ,1 ,p ,"given NULL p to round");
-        Core·Guard·fg.check(&chk ,1 ,result ,"result is NULL, so nowhere to write result");
+        Core·Guard·pft.check(&chk ,1 ,p ,"given NULL p to round");
+        Core·Guard·pft.check(&chk ,1 ,result ,"result is NULL, so nowhere to write result");
         Core·Guard·if_return(chk);
       #endif
       *result = (AU *)( (uintptr_t)p & ~(uintptr_t)alignment );
@@ -209,8 +209,8 @@
     Local Core·Status Core·round_up(AU *p ,extent_t·AU alignment ,AU **result){
       #ifdef Core·DEBUG
         Core·Guard·init_count(chk);
-        Core·Guard·fg.check(&chk ,1 ,p ,"given NULL p to round");
-        Core·Guard·fg.check(&chk ,1 ,result ,"result is NULL, so nowhere to write result");
+        Core·Guard·pft.check(&chk ,1 ,p ,"given NULL p to round");
+        Core·Guard·pft.check(&chk ,1 ,result ,"result is NULL, so nowhere to write result");
         Core·Guard·if_return(chk);
       #endif
       *result = (AU *)( ( (uintptr_t)p + alignment ) & ~(uintptr_t)alignment );

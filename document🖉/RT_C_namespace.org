@@ -1,21 +1,174 @@
 #+TITLE: RT C Namespace Convention
-#+AUTHOR: Thomas
+#+AUTHOR: Sorein
+#+DATE: 2025-04-25
 
 * 1. Namespaces in RT C
 
-C does not provide a built-in mechanism for namespaces, so RT C adopts a *prefix plus scoping operator* convention. The part before the “·” (for example, “N32”) is treated as the namespace name, and the “·” symbol is a stand-in for an (as yet) unofficial scoping operator.
+C has no formal namespace system, so RT C introduces a **middle-dot namespace convention** to provide **clarity, collision avoidance, and modular structure** in large, macro-heavy codebases.
 
-For instance, in “N32·allocate_array=”:
-- “N32” is the namespace prefix.
-- “·” (the middle dot) is our ad hoc scoping operator.
-- “=allocate_array=” is the actual function name.
+The `·` symbol (U+00B7, **middle dot**) is used as a visual and semantic scoping operator between **namespace components**, similar to how `::` is used in C++ or `.` in Java.
 
-** Advantages of the “Project·Name” Convention
-1. **Collision Avoidance**: Prefixing everything with “N32·” (or another module name) ensures identifiers do not collide with those from other libraries or system headers.
-2. **Clarity**: Readers can see at a glance which library an identifier belongs to.
-3. **Easy to Evolve**: If a future version of C introduces formal namespaces, the “=N32=” prefix and “·” operator could map directly into that syntax.
-4. **Organized Reusability**: In large codebases with multiple modules, each module has a unique prefix (“N8·”, “N16·”, “N32·”, etc.), making it straightforward to locate definitions and references in a text search.
+This convention applies uniformly to:
+- Function names
+- Type names
+- Structs
+- Macros (especially templated forms)
+- Dispatch tables
 
-** Example Namespace Prefix
-When building a 32-bit numeric library, all its public symbols are prefixed with `N32·`. Private/internal symbols (seen only within the file) may also use the prefix but are marked with `Local` or guarded by `#ifdef LOCAL` so they do not pollute the global symbol table.
+Example:
+#+BEGIN_SRC c
+N32·allocate_array
+Core·round_up
+TM·AU·Array·init_pe
+#+END_SRC
 
+Here, each `·` separates conceptual scopes:
+- `TM·AU·Array·init_pe` means: `init_pe` function, inside `Array` implementation, for the `AU` cell type, inside the `TM` module.
+
+* 1.5 The Middle Dot: Syntactic Sugar and Token Trickery
+
+The character `·` (U+00B7, **middle dot**) is **not** special in the C language. To the C preprocessor and compiler, it's simply a valid identifier character—just like `A_Z` or `foo42`.
+
+That means:
+
+#+BEGIN_SRC c
+TM·AU·Array·init_pe
+#+END_SRC
+
+is **just one long identifier**. The compiler doesn't see it as hierarchical—only as a single symbol. The visual segmentation is entirely for the *reader's* benefit, not the *compiler's*.
+
+> For now, the middle dot is syntactic sugar. But someday, perhaps, a future C or C++ might embrace it as a real scoping operator. We prepare the ground.
+
+However, when we want to *construct* identifiers programmatically via macros, `·` by itself is not enough. **The C preprocessor does not treat `·` as an operator**, so it won't concatenate tokens with it unless we explicitly instruct it.
+
+To solve this, RT C defines the following macro in `cpp_ext.c`:
+
+#+BEGIN_SRC c
+#define ·(A,B) A##·##B
+#+END_SRC
+
+This turns:
+
+#+BEGIN_SRC c
+·(TM,AU) → TM·AU
+#+END_SRC
+
+And can be chained:
+
+#+BEGIN_SRC c
+·(·(TM,AU),Array) → TM·AU·Array
+#+END_SRC
+
+For convenience and clarity, template variable values must be defined *before* expansion. For instance:
+
+#+BEGIN_SRC c
+#define _Box_T_ int
+#define _TM·CVT_ AU
+#+END_SRC
+
+When these are defined in this manner, the macro `·(...)` allows us to produce the following expansions:
+
+| Macro Invocation               | Resulting Identifier         |
+|--------------------------------+-------------------------------|
+| `·(Box_Box,_Box_T_)`           | `Box_Box·int`                |
+| `·(Box_set,_Box_T_)`           | `Box_set·int`                |
+| `·(TM,_TM·CVT_)`               | `TM·AU`                      |
+| `·(TM,_TM·CVT_,Array)`         | `TM·AU·Array`                |
+| `·(TM,_TM·CVT_,Array,init_pe)` | `TM·AU·Array·init_pe`        |
+
+This macro-based approach makes template expansion **predictable, readable, and modular**—while preserving the middle dot as a **structural visual** and a **join point** for layered namespaces.
+
+In summary:
+
+- As a **literal**, `·` is a harmless identifier character.
+- As a **macro call**, `·(...)` is a *token concatenator* that inserts middle dots between parts.
+- This duality is key to templating and namespacing in RT C.
+
+* 2. Purpose of the Middle Dot
+
+**The `·` is not just cosmetic**—it encodes structured meaning:
+
+| Position | Meaning                          |
+|----------+----------------------------------|
+| Leftmost | Module namespace (e.g. `TM`)     |
+| Middle   | Type or submodule scoping        |
+| Rightmost| Symbol or function identifier    |
+
+This gives the illusion of *semantic depth* within a flat C symbol space. It also facilitates:
+- Greppable identifiers
+- Predictable naming for macros, typedefs, and tables
+- Avoidance of conflicts in shared headers
+
+* 3. Template Variable Convention: `_Var_`
+
+Template variables are identified with **leading and trailing underscores**, e.g. `_TM·CVT_`. These are used to parameterize includes and define generic logic.
+
+When a template is instantiated:
+- The value of `_Var_` is set (e.g. `_TM·CVT_ = AU`)
+- The file is included
+- A guard macro (e.g. `SET__TM·AU`) is defined
+
+This ensures one instantiation per type per translation unit.
+
+Example:
+#+BEGIN_SRC c
+#define _TM·CVT_ AU
+#include "TM.lib.c"
+#define SET__TM·AU
+
+#define _TM·CVT_ Str
+#include "TM.lib.c"
+#define SET__TM·Str
+#+END_SRC
+
+* 4. Guard Macros: SET__Module__Type
+
+To prevent multiple expansions of the same template with the same argument, we define a sentinel macro after inclusion:
+
+#+BEGIN_SRC c
+#if !defined(SET__TM·AU)
+#define SET__TM·AU
+...
+#endif
+#+END_SRC
+
+These guards allow repeated template includes in a single TU, and avoid the fragile workaround of modifying headers manually.
+
+* 5. Practical Naming Examples
+
+| Symbol                            | Meaning                                           |
+|----------------------------------+---------------------------------------------------|
+| `Core·FG`                        | Function dictionary for the Core module           |
+| `TM·AU·FG`                       | Function dictionary for TM with AU cell type      |
+| `TM·Str·Array·init_pe`           | Init function for TM with Str cell type, Array impl |
+| `SET__Binding__TM·AU`            | One-time expansion guard for Binding of TM·AU     |
+| `extent_t·AU`                    | Type alias for extent of AU array                 |
+| `FG·Type`                        | Template variable name for FG expansion           |
+
+* 6. Why Not Use Underscores or CamelCase?
+
+While underscores (`_`) are idiomatic in C, they don't offer visual scoping in the same way, especially when chained deeply. Middle dots provide:
+
+- **Visual segmentation** across layered modules
+- **Improved grepability**: `grep TM·` finds all TM-related symbols
+- **Avoidance of macro clashes**: underscores often clash with system headers, especially when using `__NAME__` forms
+- **Harmony with macro join operations** like `·(...)`
+
+* 7. Future Compatibility
+
+If C ever adopts formal module systems or namespaces, the `·` syntax can be systematically translated into official syntax, e.g.:
+
+- `TM·AU·Array·init_pe` → `TM::AU::Array::init_pe`
+- Greppable → parseable → mappable
+
+For now, `·` is an elegant compromise between form, function, and forward-compatibility.
+
+* 8. Summary
+
+RT C namespaces provide:
+- Scoped, composable identifiers
+- Greppable structure for large projects
+- Seamless macro templating and type specialization
+- Collision resistance without verbosity
+
+By adopting `Module·Type·Submodule·Function` naming, your C code remains modular, clean, and scalable.

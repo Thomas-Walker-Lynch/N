@@ -1,0 +1,93 @@
+#+TITLE: TM Bulk Methods Using Area and Extent
+#+AUTHOR: Sorein
+#+DATE: 2025-04-25
+
+* 1. Motivation: Copying Over Areas, Not Just Cells
+
+In TTCA, a **cell** is the basic unit of memory or tape, and a **Tape Machine (TM)** traverses such cells with a movable head.
+
+For high-throughput operations like `Copy`, operating on one cell at a time is inefficient. Instead, we want to operate over an **area**: a concrete, contiguous **sequence of cells**, defined by:
+
+- A **starting address** (typically the current head position)
+- An **extent** — the **inclusive upper bound** of the area
+
+This gives the TM enough structure to reason about **bulk memory access** safely and efficiently.
+
+TTCA terminology distinguishes:
+- **Area**: A sequence of cells between a starting point and an extent.
+- **Extent**: The highest address within that area.
+- **Distance**: The difference between the head and the extent (extent − head), used internally but not exposed as API input.
+
+We avoid using “length” as it is ambiguous and may overflow (`distance + 1`).
+
+* 2. Proposed TM Methods for Bulk Area Access
+
+Each TM instantiated over a Cell Value Type (CVT) can optionally support the following methods:
+
+#+BEGIN_SRC c
+bool TM·AU·can_area(TM·AU tm ,uintptr_t extent);
+AU const* TM·AU·peek_area(TM·AU tm ,uintptr_t extent);
+AU* TM·AU·claim_area(TM·AU tm ,uintptr_t extent);
+void TM·AU·commit_area(TM·AU tm ,uintptr_t extent);
+uintptr_t TM·AU·extent_right(TM·AU tm);
+#+END_SRC
+
+* 3. Method Semantics
+
+| Method                  | Meaning                                                                 |
+|-------------------------+-------------------------------------------------------------------------|
+| `can_area(extent)`      | True if the tape has a contiguous area from head up to this extent     |
+| `peek_area(extent)`     | Returns a const pointer to the area [head … extent], or NULL            |
+| `claim_area(extent)`    | Returns a writable pointer to the area [head … extent], or NULL         |
+| `commit_area(extent)`   | Advances the head from current position to `extent` (inclusive)         |
+| `extent_right()`        | Returns the extent (inclusive upper bound) of the tape                  |
+
+All returned areas are assumed to be **concrete**—that is, the TM guarantees:
+- All cells in the area are physically allocated
+- Their memory layout is contiguous
+- They can be safely accessed as an array of CVT values
+
+If these conditions are not met (e.g. for cyclic or segmented tapes), the TM returns `false` or `NULL`.
+
+* 4. Area-Based Copy Example
+
+Using these methods, an efficient `Copy` routine becomes:
+
+#+BEGIN_SRC c
+while( TM·AU·can_area(src ,e) && TM·AU·can_area(dst ,e) ){
+  AU const* from = TM·AU·peek_area(src ,e);
+  AU* to = TM·AU·claim_area(dst ,e);
+  uintptr_t count = e - src_index + 1;
+  memcpy(to ,from ,count * sizeof(AU));
+  TM·AU·commit_area(src ,e);
+  TM·AU·commit_area(dst ,e);
+}
+#+END_SRC
+
+Note:
+- `e` is the intended extent (inclusive).
+- `count = extent − head + 1` is used internally, but not exposed as "length".
+
+* 5. Capability Declaration
+
+Not all TMs support contiguous areas. To indicate whether a TM supports these methods, we may define:
+
+#+BEGIN_SRC c
+typedef enum{
+  TM·Caps·none = 0,
+  TM·Caps·area = 1 << 0
+} TM·Caps;
+#+END_SRC
+
+This allows dispatchers to check if area-based methods are available for a given tape.
+
+* 6. Summary
+
+- We operate on **areas**, defined as `[head … extent]`, where `extent` is inclusive.
+- We avoid using "length" in API design, since it implies `distance + 1`, which may overflow.
+- **Area methods** allow batch reading or writing with fewer dispatches and better memory performance.
+- These methods align TM with TTCA's formal model, supporting structured, efficient, and correct stream operations.
+
+This sets the foundation for writing `Copy`, `Map`, and other stream-based transformations using TMs as high-level iterators over cell areas.
+
+Would you like a matching `.org` draft for the FACE section of `Copy.lib.c`, now assuming the availability of these `area` methods?

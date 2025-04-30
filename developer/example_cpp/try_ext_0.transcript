@@ -1,0 +1,75 @@
+2025-04-25T04:18:38Z[developer]
+Thomas-developer@StanleyPark§/home/Thomas/subu_data/developer/N/developer/example_cpp§
+> gcc try_ext_0.c
+
+2025-04-25T04:24:48Z[developer]
+Thomas-developer@StanleyPark§/home/Thomas/subu_data/developer/N/developer/example_cpp§
+> ./a.out
+_FIRST(1) -> 1
+_FIRST() -> 
+_SECOND(1,2) -> 2
+_SECOND(1,) -> 
+
+RETURN_NOTHING() -> 
+
+_OR() -> 
+_OR(1) -> RETURN_NOTHING 1 ()
+_OR(1,2,3) -> RETURN_NOTHING 1
+
+T(x) -> 7
+_NOT_ITEM() -> _NOT_ITEM()
+_NOT_ITEM(1) -> _NOT_ITEM(1)
+_NOT_ITEM(T(x)) -> _NOT_ITEM(7)
+
+NOT() -> 1
+NOT(1) -> 
+NOT(T(x)) -> 
+NOT(1,2,3) -> 
+
+BOOL() -> BOOL()
+CAT2(_IF_ ,BOOL()) -> _IF_BOOL()
+
+TO_1_OR_0() -> TO_1_OR_0()
+TO_1_OR_0(1) -> TO_1_OR_0(1)
+TO_1_OR_0(x) -> TO_1_OR_0(x)
+TO_1_OR_0(1.2.3) -> TO_1_OR_0(1.2.3)
+
+EXISTS() -> 
+EXISTS(0) -> 1
+EXISTS(x,y,z) -> 1
+
+LEQ2( , ) -> 1
+LEQ2( , 1 ) -> 
+LEQ2( 1, ) -> 
+LEQ2( 1, 0 ) -> 0
+
+XOR2( , ) -> 
+XOR2( , 0 ) -> 0
+XOR2( 0, 0 ) -> 
+
+AND2( , 0 ) -> 
+AND2( 0, 1 ) -> 1
+
+OR2( , ) -> 
+OR2( , 0 ) -> 0
+
+EQ(APPLE ,APPLE) -> 1
+EQ(APPLE ,PEAR) -> 
+EQ(PEAR ,PEAR) -> 1
+EQ(,) -> 1
+EQ(,PEAR) -> 
+EQ(PEAR ,) -> 
+
+BOOLEAN() -> 0
+BOOLEAN(0) -> 1
+BOOLEAN(foo) -> 1
+BOOLEAN(1,2,3) -> 1
+
+REST() -> 
+REST(1) -> 
+REST(1,2) -> 2
+REST(1,2,3) -> 2,3
+
+2025-04-25T04:24:52Z[developer]
+Thomas-developer@StanleyPark§/home/Thomas/subu_data/developer/N/developer/example_cpp§
+> 

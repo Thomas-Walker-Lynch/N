@@ -1,0 +1,6 @@
+mv print_id_letters.c     letters_legal_all.c
+mv try_letter_lm_rm_2.c   letter_lm_rm_1.c
+mv try_letter_mu.c        letter_mu.c
+mv try_letters_delta.c    letter_delta.c
+mv try_letters_lm_rm.c    letter_lm_rm_2.c
+mv try_letters_theta.c    letter_theta.c

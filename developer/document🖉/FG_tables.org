@@ -1,0 +1,113 @@
+* Function-Given (FG) Tables in RT C
+:PROPERTIES:
+:AUTHOR: Sorein
+:DATE: 2025-04-25
+:END:
+
+This document introduces **FG Tables**—Function-Given tables, a structured method in RT C for grouping related functions that operate on a common type or binding. We use the `Core` module as a canonical example, as it contains no template variables or tableaux and thus provides the cleanest view.
+
+**FG Tables** serve a purpose similar to vtables or method dictionaries: they allow operations to be defined once and called generically, using a consistent interface. Unlike C++ vtables, FG tables are explicit, statically defined, and layered via macros in a readable, extensible style.
+
+**Key concepts:**
+- All function signatures take a common first argument (usually a pointer to a "binding" struct).
+- The table itself is a `struct` of function pointers.
+- The module defines:
+  - The **type** (e.g. `Core`)
+  - The **binding struct** (`Core·Binding`)
+  - The **table definition** (`Core·FG`)
+  - The **table instance** (`Core·Tableau`)
+  - Helper macros for calling (`Core·call(...)`) and checking (`Core·wellformed_binding(...)`)
+
+* Example: Core
+Core provides utilities that are always available to the RT system. It defines an FG table without templates or specializations.
+
+**Declaration (in the FACE section)**:
+#+BEGIN_SRC c
+#ifndef Core·FACE
+#define Core·FACE
+
+typedef struct Core·Binding Core;
+
+typedef struct{
+  void(*Free)(Core*);
+  bool(*is_aligned)(Core* ,void const*,uint ,bool*);
+  void const*(*round_up)(Core* ,void const*,uint);
+  void const*(*round_down)(Core* ,void const*,uint);
+} Core·FG;
+
+bool Core·wellformed_binding(Core*);
+#define Core·call(B ,f ,...) ((Core·wellformed_binding(B)) ,(B)->FG->f(B ,__VA_ARGS__))
+
+#endif
+#+END_SRC
+
+**Explanation of Functions:**
+
+- `Free(Core*)`: Frees the binding and sets its pointer to `NULL`. This follows the `Free(pt) = free(pt); pt = NULL;` idiom defined in RT.
+- `is_aligned(Core* ,void const* p ,uint alignment ,bool* result)`: Determines whether `p` is aligned to `alignment`. Writes result to `*result`, returns false if `p == NULL`.
+- `round_up(Core* ,void const* p ,uint alignment)`: Returns the smallest aligned address ≥ `p`.
+- `round_down(Core* ,void const* p ,uint alignment)`: Returns the largest aligned address ≤ `p`.
+
+All alignment operations use address logic with explicit alignments passed at runtime, rather than compile-time constants.
+
+* Implementation
+The FG table instance is defined in the `Core·IMPLEMENTATION` section:
+
+#+BEGIN_SRC c
+#ifdef Core·IMPLEMENTATION
+
+bool Core·wellformed_binding(Core* B){
+  return B && B->FG == &Core·Tableau;
+}
+
+Local void Core·Free(Core* B){
+  Free(B);
+}
+
+Local bool Core·is_aligned(Core* B ,void const* p ,uint alignment ,bool* result){
+  if(!p){ *result = false; return false; }
+  uintptr_t up = (uintptr_t)p;
+  *result = (up % alignment) == 0;
+  return true;
+}
+
+Local void const* Core·round_up(Core* B ,void const* p ,uint alignment){
+  if(!p) return (void const*)(uintptr_t)alignment;
+  uintptr_t up = (uintptr_t)p;
+  return (void const*)((up + alignment - 1)/alignment*alignment);
+}
+
+Local void const* Core·round_down(Core* B ,void const* p ,uint alignment){
+  if(!p) return NULL;
+  uintptr_t up = (uintptr_t)p;
+  return (void const*)(up / alignment * alignment);
+}
+
+Core·FG const Core·Tableau = {
+  .Free = Core·Free,
+  .is_aligned = Core·is_aligned,
+  .round_up = Core·round_up,
+  .round_down = Core·round_down
+};
+
+#endif
+#+END_SRC
+
+* Usage Example
+#+BEGIN_SRC c
+Core* B = malloc(sizeof(Core));
+B->FG = &Core·Tableau;
+
+bool aligned;
+Core·call(B ,is_aligned ,(void*)0x1000 ,16 ,&aligned);
+
+void const* r = Core·call(B ,round_up ,(void*)0x1003 ,16);
+#+END_SRC
+
+* Summary
+- FG Tables provide modular polymorphism in pure C.
+- The `Core` FG is the simplest: no template variables, no tableaux layers.
+- The FG naming convention (`Module·FG`) and `call(...)` wrapper provide safety and convenience.
+- FG patterns scale to support templated modules with `FG·Type`, `FG·Tableau`, and dispatch guards.
+
+FG tables are foundational to the RT C architecture, forming the dispatch layer behind modular, template-like polymorphism in a static language.

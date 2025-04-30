@@ -1,0 +1,26 @@
+2025-03-27T10:45:39Z[developer]
+Thomas-developer@Stanley§/home/Thomas-masu/developer/N/developer/example§
+> gcc example_grow.c
+
+2025-03-27T11:43:19Z[developer]
+Thomas-developer@Stanley§/home/Thomas-masu/developer/N/developer/example§
+> ./a.out 
+example_grow.c
+
+GROW(7) --> 17 * GROW(7)
+GROW(GROW(5)) --> 17 * GROW(17 * GROW(5))
+
+GROW2(11) --> 19 * GROW2 (11)
+
+GROW3(13) --> 119 * 19 * GROW2 (13)
+
+GROW4(15) --> 123 * GROW4 (15)
+
+BE(GROW5(21)) --> 541 * 541 * CONFEDERATE () (21)
+BE(BE(GROW5(57))) --> 541 * 541 * 541 * CONFEDERATE () (57)
+
+RESULT1 --> 1029 * GROW6 (51)
+BE(RESULT1) --> 1029 * GROW6 (51)
+
+RESULT2 --> 1029 * GROW6 (151)
+BE(RESULT2) --> 1029 * GROW6 (151)

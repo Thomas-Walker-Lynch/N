@@ -1,0 +1,170 @@
+#+TITLE: FG Tables and Bindings in RT C
+#+AUTHOR: Sorein
+#+DATE: 2025-04-25
+
+* 1. Overview: FG Tables Revisited
+
+RT C uses **Function-Given (FG) Tables** to group related functions that all take a **common first argument**. This enables flexible polymorphism and modular encapsulation in pure C.
+
+For a full explanation of FG tables and an example based on `Core`, see:
+
+**📎 [[file:fg_tables_core.org][FG Tables in RT C — The Core Example]]**
+
+In this model:
+- Each module defines a **binding struct** (e.g. `TM·AU`, `Core`, etc).
+- All methods take the binding as their first argument.
+- A function pointer table (FG table) is associated with the binding.
+- A macro `Module·call(binding ,method ,...)` expands to safe, type-dispatched function calls.
+
+* 2. The Tableau: Abstract Identity of the Binding
+
+In the FG model, we say that functions are *given* a binding. The binding is always a `struct` that pairs:
+
+1. A **tableau** (a pointer to the module-specific state)
+2. An **FG table** (function dispatch table)
+
+The **tableau** is the key abstraction.
+
+- It is typically **only ever passed to the functions** in the FG table.
+- Therefore, the FG table **defines the meaning** of the tableau: it specifies what functions expect and how they interpret the tableau pointer.
+- The tableau has a *type in memory* (e.g. `TM·AU·Array·Tableau`), but also an **abstract type**, as defined by the FG table itself.
+
+In that sense, the FG table acts as **the type descriptor for the tableau**.
+
+* 3. Binding.lib.c
+
+The module `Binding.lib.c` defines the canonical layout of an FG-style binding.
+
+Below is the full source (excluding comments), organized by section.
+
+**FACE:**
+#+BEGIN_SRC c
+#ifndef Binding·FACE
+#define Binding·FACE
+
+typedef struct{
+  void *tableau;
+  void *FG;
+} Binding;
+
+#endif
+#+END_SRC
+
+This is the public interface. The type `Binding` is a generic struct that holds two pointers:
+- `tableau`: the implementation-specific data (tape, buffer, object, etc)
+- `FG`: pointer to a module-specific function table
+
+**IMPLEMENTATION:**
+#+BEGIN_SRC c
+#ifdef Binding·IMPLEMENTATION
+#endif
+#+END_SRC
+
+No definitions are required here—the binding struct has no behavior of its own.
+
+**LOCAL:**
+#+BEGIN_SRC c
+#ifdef LOCAL
+#ifndef Binding·LOCAL
+#define Binding·LOCAL
+
+#include <stdint.h>
+#include <stdbool.h>
+
+#endif
+#endif
+#+END_SRC
+
+These are the headers required to define the structure and the environment. It also follows the **RT C sectioning model** described in:
+
+**📎 [[file:sections.org][RT C File Structure and Sectioning]]**
+
+* 4. Template Use
+
+Although `Binding.lib.c` does not directly use template parameters, it is often **included repeatedly** in templated modules to create per-instance bindings.
+
+For example:
+#+BEGIN_SRC c
+#define _TM·CVT_ AU
+#include "TM.lib.c"
+#define SET__Binding__TM·AU
+#+END_SRC
+
+The template name `_TM·CVT_` is used to create:
+- `typedef struct TM·AU TM·AU;`
+- `typedef struct TM·AU·Array·Tableau TM·AU·Array·Tableau;`
+- `TM·AU` instances, each of which is a `Binding` with layout and dispatch tied to a particular tableau type.
+
+See:
+
+**📎 [[file:template_box_example.org][Templating in RT C — The Box Example]]**
+
+* 5. The Binding Struct
+
+Here’s the struct that every FG-style binding uses:
+
+#+BEGIN_SRC c
+typedef struct{
+  void *tableau;
+  void *FG;
+} Binding;
+#+END_SRC
+
+The tableau and FG pointers are opaque to the caller. They are interpreted by the functions in the FG table.
+
+**The binding is the concrete object passed around the system.**
+
+In most modules, this struct is **re-wrapped** in a typedef, e.g.:
+
+#+BEGIN_SRC c
+typedef Binding TM·AU;
+#+END_SRC
+
+This means that in function signatures and argument lists, the **binding is visible under its module-specific name**, even though all bindings have the same physical layout.
+
+This separation allows:
+- Static type safety at the source level (per module)
+- Shared representation at the binary level
+
+* 6. Example Usage
+
+Suppose we define a tape machine `TM·AU` over a byte array. The setup might look like:
+
+#+BEGIN_SRC c
+AU tape[] = {0x01 ,0x02 ,0x03};
+extent_t·AU extent = 2;
+
+TM·AU·Array·Tableau t;
+TM·AU tm = TM·AU·Array·init_pe(&t ,tape ,extent);
+
+if( TM·AU·call(tm ,on_tape) ){
+  uchar x = TM·AU·call(tm ,read);
+  printf("Head reads: %02x\n", x);
+}
+#+END_SRC
+
+Here:
+- `tm` is a `TM·AU` binding — a `struct` with `.tableau = &t`, and `.FG = &TM·AU·Array·fg`.
+- The functions in the FG table dereference `tm.tableau` into the expected type.
+- `TM·AU·call` wraps method access, validating the binding under debug builds.
+
+* 7. Summary
+
+A **binding** in RT C is:
+- A pair of `(tableau pointer, FG table pointer)`
+- Constructed per module or template instantiation
+- Passed around as the first argument to all FG methods
+- Given a distinct *type name* (like `TM·AU`) to encode its role
+
+A **tableau** is:
+- The backing data storage (often a `struct`)
+- Interpreted only by the FG methods that operate on it
+- Abstractly defined by the FG table it's paired with
+
+This design gives RT C the benefits of:
+- Polymorphism
+- Type encapsulation
+- Dispatch
+- Template instantiation
+
+All in a clean, structured C style, without runtime type metadata or compiler extensions.

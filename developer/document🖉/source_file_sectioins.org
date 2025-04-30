@@ -1,0 +1,107 @@
+#+TITLE: RT Library Structure Guide
+#+AUTHOR: Sorein (on request by Thomas)
+#+DATE: 2025-04-25
+
+* Purpose
+This document describes the architectural sections in `*.lib.c` files of the RT codebase.
+It explains the use of `#if`-guarded blocks including `FACE`, `LOCAL`, `LIBRARY`, and template instantiations.
+
+* Section Overview
+
+** FACE :: Public Interface and Template Declaration
+#+BEGIN_SRC c
+#ifndef Module·FACE
+#define Module·FACE
+...
+#endif
+#+END_SRC
+
+- Declares types, enums, constants, and FG tables.
+- Includes other modules (`Core.lib.c`, `cpp_ext.c`).
+- Safe to include multiple times.
+- No runtime state or implementation logic.
+
+** LOCAL :: Private Implementations and Table Initialization
+#+BEGIN_SRC c
+#ifdef LOCAL
+#ifndef Module·LOCAL
+#define Module·LOCAL
+...
+#endif
+#endif
+#+END_SRC
+
+- Defines functions, local constants, and FG table initializations.
+- Only included when `LOCAL` is defined.
+- Hidden from consumers.
+- Use guards to prevent duplicate inclusion.
+
+** LIBRARY :: Compiled Static Library Content
+#+BEGIN_SRC c
+#ifdef LIBRARY
+...
+#endif
+#+END_SRC
+
+- Reserved for future components to be compiled into a `.a` archive.
+- Currently unused in `Core`, `TM`, or `Binding`.
+- Separates linkable components from inline-included ones.
+
+** Template Parameters :: Type-Specific Inclusion Guards
+#+BEGIN_SRC c
+#ifdef _TM·CVT_
+#if BOOLEAN( NOT_IN(Binding ,TM·<CVT>) )
+...
+#endif
+#endif
+#+END_SRC
+
+- Allows per-type instantiation (e.g. `TM·AU`, `TM·Str`).
+- Ensures that each instantiation happens only once.
+- Guards must be defined by the *caller*, e.g.:
+  #+BEGIN_SRC c
+  #define _TM·CVT_ AU
+  #include "TM.lib.c"
+  #define SET__Binding__TM·AU
+  #+END_SRC
+
+** Undef Section :: Template Parameter Cleanup
+#+BEGIN_SRC c
+#undef _TM·CVT_
+#+END_SRC
+
+- Prevents leakage of template macros between inclusions.
+
+* Summary Table
+
+#+ATTR_LATEX: :environment tabular :align |l|l|l|l|
+| *Section*       | *Guard Macro*           | *Purpose*                                      | *Include Frequency*        |
+|-----------------+-------------------------+------------------------------------------------+-----------------------------|
+| FACE            | #ifndef Module·FACE     | Public declarations, typedefs, constants       | Once per TU or header       |
+| LOCAL           | #ifdef LOCAL            | Function definitions, internal state           | Only in .cli.c or test file |
+| LIBRARY         | #ifdef LIBRARY          | Static linkable content (future use)           | Optional                    |
+| Template Block  | #ifdef _TEMPLATE_...    | Per-template instantiation                     | Once per unique value       |
+| Undef Section   | #undef _TEMPLATE_...    | Cleanup template identifiers                   | Always                      |
+
+* Best Practices
+
+- **Order matters:** Include `FACE` before defining templates or using macros.
+- **Avoid leakage:** Always `#undef` template variables after instantiation.
+- **Limit `FACE` to declarations:** Do not define runtime behavior in `FACE`.
+- **Use `LOCAL` in a single TU:** Only one translation unit should include `LOCAL` per template.
+- **Separate compile/link concerns:** Use `LIBRARY` only for code compiled outside `cli`.
+
+* Example
+
+To use `TM·AU` and `TM·Str` in the same translation unit:
+#+BEGIN_SRC c
+#define _TM·CVT_ AU
+#include "TM.lib.c"
+#define SET__Binding__TM·AU
+
+#define _TM·CVT_ Str
+#include "TM.lib.c"
+#define SET__Binding__TM·Str"
+#+END_SRC
+
+* End
