@@ -34,10 +34,10 @@
   typedef struct{
     bool     hd;
     _TM·CVT_ value;
-  } ·(TM,_TM·CVT_,SingletonSegment,Tableau);
+  } ·(TM,_TM·CVT_,SingletonSegment,StateParameter);
 
   ·(TM,_TM·CVT_) ·(TM,_TM·CVT_,SingletonSegment,init)(
-     ·(TM,_TM·CVT_,SingletonSegment,Tableau) *t
+     ·(TM,_TM·CVT_,SingletonSegment,StateParameter) *t
     ,_TM·CVT_ initial_value
   );
 
@@ -73,12 +73,12 @@
       return 0;
     }
     Local TM·Status ·(TM,_TM·CVT_,SingletonSegment,status)( ·(TM,_TM·CVT_) tm ){
-      ·(TM,_TM·CVT_,SingletonSegment,Tableau) *t = (·(TM,_TM·CVT_,SingletonSegment,Tableau) *) tm.tableau;
+      ·(TM,_TM·CVT_,SingletonSegment,StateParameter) *t = (·(TM,_TM·CVT_,SingletonSegment,StateParameter) *) tm.state_parameter;
       if( !t->hd ) return TM·Status·dismounted;
       return TM·Status·leftmost | TM·Status·rightmost;
     }
     Local bool ·(TM,_TM·CVT_,SingletonSegment,dismounted)( ·(TM,_TM·CVT_) tm ){
-      ·(TM,_TM·CVT_,SingletonSegment,Tableau) *t = (·(TM,_TM·CVT_,SingletonSegment,Tableau) *) tm.tableau;
+      ·(TM,_TM·CVT_,SingletonSegment,StateParameter) *t = (·(TM,_TM·CVT_,SingletonSegment,StateParameter) *) tm.state_parameter;
       return !t->hd;
     }
 
@@ -95,11 +95,11 @@
 
     // does nothing if tape is already mounted
     Local void ·(TM,_TM·CVT_,SingletonSegment,mount)( ·(TM,_TM·CVT_) tm ){
-      ·(TM,_TM·CVT_,SingletonSegment,Tableau) *t = (·(TM,_TM·CVT_,SingletonSegment,Tableau) *) tm.tableau;
+      ·(TM,_TM·CVT_,SingletonSegment,StateParameter) *t = (·(TM,_TM·CVT_,SingletonSegment,StateParameter) *) tm.state_parameter;
       t->hd = true;
     }
     Local void ·(TM,_TM·CVT_,SingletonSegment,dismount)( ·(TM,_TM·CVT_) tm ){
-      ·(TM,_TM·CVT_,SingletonSegment,Tableau) *t = (·(TM,_TM·CVT_,SingletonSegment,Tableau) *) tm.tableau;
+      ·(TM,_TM·CVT_,SingletonSegment,StateParameter) *t = (·(TM,_TM·CVT_,SingletonSegment,StateParameter) *) tm.state_parameter;
       t->hd = false;
     }
 
@@ -114,11 +114,11 @@
     }
 
     Local _TM·CVT_ ·(TM,_TM·CVT_,SingletonSegment,r)( ·(TM,_TM·CVT_) tm ){
-      ·(TM,_TM·CVT_,SingletonSegment,Tableau) *t = (·(TM,_TM·CVT_,SingletonSegment,Tableau) *) tm.tableau;
+      ·(TM,_TM·CVT_,SingletonSegment,StateParameter) *t = (·(TM,_TM·CVT_,SingletonSegment,StateParameter) *) tm.state_parameter;
       return t->value;
     }
     Local void ·(TM,_TM·CVT_,SingletonSegment,w)( ·(TM,_TM·CVT_) tm ,_TM·CVT_ *remote_pt ){
-      ·(TM,_TM·CVT_,SingletonSegment,Tableau) *t = (·(TM,_TM·CVT_,SingletonSegment,Tableau) *) tm.tableau;
+      ·(TM,_TM·CVT_,SingletonSegment,StateParameter) *t = (·(TM,_TM·CVT_,SingletonSegment,StateParameter) *) tm.state_parameter;
       t->value = *remote_pt;
     }
 
@@ -150,14 +150,14 @@
      tm is up casted from being array specific, to being generic. Later it is downcasted within the array code before being used. This can be seen at the top of each of the array specific function. This is the only loss of static type safety, and it is embedded in the library code.
     */
     ·(TM,_TM·CVT_) ·(TM,_TM·CVT_,SingletonSegment,init)(
-        ·(TM,_TM·CVT_,SingletonSegment,Tableau) *t
+        ·(TM,_TM·CVT_,SingletonSegment,StateParameter) *t
        ,_TM·CVT_ initial_value
     ){
       t->hd    = true;
       t->value = initial_value;
 
       ·(TM,_TM·CVT_) tm = {
-         .tableau = (·(TM,_TM·CVT_,Tableau) *)t
+         .state_parameter = (·(TM,_TM·CVT_,StateParameter) *)t
         ,.pft      = &·(TM,_TM·CVT_,SingletonSegment,pft)
       };
 

@@ -33,10 +33,10 @@
 
   typedef struct{
     bool hd;
-  } ·(TM,_TM·CVT_,ZeroLength,Tableau);
+  } ·(TM,_TM·CVT_,ZeroLength,StateParameter);
 
   ·(TM,_TM·CVT_) ·(TM,_TM·CVT_,ZeroLength,init)(
-     ·(TM,_TM·CVT_,ZeroLength,Tableau) *t
+     ·(TM,_TM·CVT_,ZeroLength,StateParameter) *t
   );
 
 #endif
@@ -74,13 +74,13 @@
       }
 
       Local TM·Status ·(TM,_TM·CVT_,ZeroLength,status)( ·(TM,_TM·CVT_) tm ){
-        ·(TM,_TM·CVT_,ZeroLength,Tableau) *t = (·(TM,_TM·CVT_,ZeroLength,Tableau) *) tm.tableau;
+        ·(TM,_TM·CVT_,ZeroLength,StateParameter) *t = (·(TM,_TM·CVT_,ZeroLength,StateParameter) *) tm.state_parameter;
         if( !t->hd ) return TM·Status·dismounted;
         return TM·Status·out_of_area;
       }
 
       Local bool ·(TM,_TM·CVT_,ZeroLength,dismounted)( ·(TM,_TM·CVT_) tm ){
-        ·(TM,_TM·CVT_,ZeroLength,Tableau) *t = (·(TM,_TM·CVT_,ZeroLength,Tableau) *) tm.tableau;
+        ·(TM,_TM·CVT_,ZeroLength,StateParameter) *t = (·(TM,_TM·CVT_,ZeroLength,StateParameter) *) tm.state_parameter;
         return !t->hd;
       }
 
@@ -98,12 +98,12 @@
 
       // does nothing if tape is already mounted
       Local void ·(TM,_TM·CVT_,ZeroLength,mount)( ·(TM,_TM·CVT_) tm ){
-        ·(TM,_TM·CVT_,ZeroLength,Tableau) *t = (·(TM,_TM·CVT_,ZeroLength,Tableau) *) tm.tableau;
+        ·(TM,_TM·CVT_,ZeroLength,StateParameter) *t = (·(TM,_TM·CVT_,ZeroLength,StateParameter) *) tm.state_parameter;
         if( !t->hd ) t->hd = true;
       }
 
       Local void ·(TM,_TM·CVT_,ZeroLength,dismount)( ·(TM,_TM·CVT_) tm ){
-        ·(TM,_TM·CVT_,ZeroLength,Tableau) *t = (·(TM,_TM·CVT_,ZeroLength,Tableau) *) tm.tableau;
+        ·(TM,_TM·CVT_,ZeroLength,StateParameter) *t = (·(TM,_TM·CVT_,ZeroLength,StateParameter) *) tm.state_parameter;
         t->hd = false;
       }
 
@@ -117,7 +117,7 @@
 
       // rewind does nothing if the tape is dismounted
       Local void ·(TM,_TM·CVT_,ZeroLength,rewind)( ·(TM,_TM·CVT_) tm ){
-        ·(TM,_TM·CVT_,ZeroLength,Tableau) *t = (·(TM,_TM·CVT_,ZeroLength,Tableau) *) tm.tableau;
+        ·(TM,_TM·CVT_,ZeroLength,StateParameter) *t = (·(TM,_TM·CVT_,ZeroLength,StateParameter) *) tm.state_parameter;
         if( ·(TM,_TM·CVT_,ZeroLength,dismounted)( tm ) ) return;
         assert(0);
       }
@@ -155,11 +155,11 @@
       };
 
       ·(TM,_TM·CVT_) ·(TM,_TM·CVT_,ZeroLength,init)(
-         ·(TM,_TM·CVT_,ZeroLength,Tableau) *t
+         ·(TM,_TM·CVT_,ZeroLength,StateParameter) *t
       ){
         t->hd       = true;
         ·(TM,_TM·CVT_) tm = {
-           .tableau = (·(TM,_TM·CVT_,Tableau) *)t
+           .state_parameter = (·(TM,_TM·CVT_,StateParameter) *)t
           ,.pft      = &·(TM,_TM·CVT_,ZeroLength,pft)
         };
         return tm;

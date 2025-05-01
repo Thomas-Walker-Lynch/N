@@ -1,15 +1,9 @@
-----------------------------------------
-RT-project-share 
-
-  lrwxrwxrwx. 1 Thomas-developer Thomas-developer  41 2025-01-22 06:29 emacs_30.0.92 -> /home/Thomas-masu/developer/emacs_30.0.92
-  lrwxrwxrwx. 1 Thomas-developer Thomas-developer  45 2025-01-22 06:29 RT-project-share -> /home/Thomas-masu/developer/RT-project-share/
-
 
 ----------------------------------------
-# for downloads of tar files etc. for third party tools :
+for downloads of tar files etc. for third party tools :
+
   drwx------. 1 Thomas-developer Thomas-developer 354 2024-12-09 02:45 upstream
      
-
 ----------------------------------------
 generally when installing third party tools from a repo
 
@@ -17,3 +11,55 @@ generally when installing third party tools from a repo
   cd tools_shared/third_party
   git clone <project>
   cd project
+
+----------------------------------------
+RT-project-share 
+
+  lrwxrwxrwx. 1 Thomas-developer Thomas-developer  45 2025-01-22 06:29 RT-project-share -> /home/Thomas-masu/developer/RT-project-share/
+
+  lrwxrwxrwx. 1 Thomas-developer Thomas-developer  41 2025-01-22 06:29 emacs_30.0.92 -> /home/Thomas-masu/developer/emacs_30.0.92
+
+----------------------------------------
+emacs
+
+  lrwxrwxrwx. 1 Thomas-developer Thomas-developer  41 2025-01-22 06:29 emacs_30.0.92 -> /home/Thomas-masu/developer/emacs_30.0.92
+
+  Usually I'm running a shell inside of emacs, so I have already run
+  emacs before arriving at the project.
+
+  There was a reason for the local project version of emacs, but I forget what it was.
+  Perhaps need for a newer version?  It is not otherwise integrated into the project.
+
+----------------------------------------
+gcc
+  
+  I modified cpp to add #pragma macro(name ,body)
+
+    Where `name` is expanded and the fist token used as the nane of the macro.
+
+    `body` is also expanded. If 'name' appears in it, then it will be expanded with
+    its old definition (prior to running `#pragma macro(name ,body).
+
+    If name already exists in the symbol table, it is updated with the new macro definition.
+
+  To install:
+ 
+    make sure `pragma_macro` project is installed and built. This provides gcc
+    to multiple projects, so it is at the top level   ~/pragma_macro.
+
+    gcc_16=/home/Thomas/subu_data/developer/N/tool_shared/customized/gcc_16
+
+    cd $REPO_HOME/tool_shared/customized
+    ln -s /home/Thomas/subu_data/developer/pragma_macro/install $gcc_16
+
+    place in bespoke🖉/env:
+      export PATH=$gcc_16:$PATH
+      export LIBRARY_PATH=$gcc_16/lib
+      export C_INCLUDE_PATH=$gcc_16/include
+      export LD_LIBRARY_PATH=$gcc_16/lib
+
+
+
+
+
+  

@@ -30,24 +30,27 @@ Declares a parameter connector, does not initialize it.
     Expands to: (tm.pft->function_name)(tm ,arg1 ,arg2, ...)
 
     note the use of the comma operator to return the result from the b.pft->fn call
+
+    pc - parameter connector
+    PC - generic parameter connector type, though as the parameter connector is the entry point for dispatch, we give it the name of Model/Machine type.
   */
   #ifdef ParameterConnector·DEBUG
     #include <assert.h>
-    #define ParameterConnector·call(pc_instance ,fn ,...) ( \
-       assert((pc_instance).pft != NULL) \
-      ,assert((pc_instance).tableau != NULL) \
-      ,(b).pft->fn(b __VA_OPT__(,) __VA_ARGS__) \
+    #define ParameterConnector·call(pc ,fn ,...) ( \
+       assert((pc).pft != NULL) \
+      ,assert((pc).state_parameter != NULL) \
+      ,(pc).pft->fn(pc __VA_OPT__(,) __VA_ARGS__) \
       )
   #else
-    #define ParameterConnector·call(pc_instance ,fn ,...) \
-      (pc_instance).pft->fn(pc_instance __VA_OPT__(,) __VA_ARGS__)
+    #define ParameterConnector·call(pc ,fn ,...) \
+      (pc).pft->fn(pc __VA_OPT__(,) __VA_ARGS__)
   #endif
 
   #define ParameterConnector·DECLARE(type)                \
     typedef struct ·(type ,PFT) ·(type ,PFT);               \
-    typedef struct ·(type ,Tableau) ·(type ,Tableau);     \
+    typedef struct ·(type ,StateParameter) ·(type ,StateParameter);     \
     typedef struct type {                                 \
-      ·(type ,Tableau) *tableau;                          \
+      ·(type ,StateParameter) *state_parameter;                          \
       ·(type ,PFT) *pft;                                    \
     } type;
 

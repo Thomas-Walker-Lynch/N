@@ -23,12 +23,13 @@
 
 #endif
 
-// once per _TM·CVT_ value
-// Caller must #define SET_TM·Array·<CVT>, after inclusion, to prevent re-inclusion
+// only include this file once per _TM·CVT_ value
 #ifdef _TM·CVT_
-#if BOOLEAN( NOT_IN(TM·Array ,_TM·CVT_) )
 
-  #include "TM.Lib.c"
+  #if BOOLEAN( NOT_IN(TM ,_TM·CVT_) )
+    #include "TM.Lib.c"
+    #define SET__
+  #endif
 
   #pragma push(T)
   #pragma push(TA)
@@ -46,16 +47,16 @@
        _TM·CVT_  *hd;
        _TM·CVT_  *position;
        TE extent;
-     } ·(TA,Tableau);
+     } ·(TA,StateParameter);
 
      //  call signatures for the initialization functions
      //
      T ·(TA,init_pe)(
-       ·(TA,Tableau) *t ,_TM·CVT_ position[] ,TE extent
+       ·(TA,StateParameter) *t ,_TM·CVT_ position[] ,TE extent
      );
 
      T ·(TA,init_pp)(
-        ·(TA,Tableau) *t ,_TM·CVT_ *position_left ,_TM·CVT_ *position_right
+        ·(TA,StateParameter) *t ,_TM·CVT_ *position_left ,_TM·CVT_ *position_right
      );
 
   #pragma pop(T)
@@ -95,21 +96,21 @@
     #endif
 
       Local TM·Topo ·(TA,topo)(T tm){
-        ·(TM,_TM·CVT_,Array,Tableau) *t = (·(TM,_TM·CVT_,Array,Tableau) *) tm.tableau;
+        ·(TA,StateParameter) *t = (·(TA,StateParameter) *) tm.state_parameter;
         if( t->extent == 0 ) return TM·Topo·singleton;
         return TM·Topo·segment;
       }
       Local bool ·(TA,bounded)(T tm){
-        ·(TA,Tableau) *t = (·(TA,Tableau) *) tm.tableau;
+        ·(TA,StateParameter) *t = (·(TA,StateParameter) *) tm.state_parameter;
         return ·(TA,topo)(tm) & TM·Topo·bounded;
       }
       Local TE ·(TA,extent)(T tm){
-        ·(TA,Tableau) *t = (·(TA,Tableau) *) tm.tableau;
+        ·(TA,StateParameter) *t = (·(TA,StateParameter) *) tm.state_parameter;
         return t->extent;
       }
 
       Local TM·Status ·(TA,status)(T tm){
-        ·(TA,Tableau) *t = (·(TA,Tableau) *) tm.tableau;
+        ·(TA,StateParameter) *t = (·(TA,StateParameter) *) tm.state_parameter;
         if( !t->hd ) return TM·Status·dismounted;
         if( t->hd == t->position ) return TM·Status·leftmost;
 
@@ -139,39 +140,39 @@
 
       // does nothing if tape is already mounted
       Local void ·(TA,mount)(T tm){
-        ·(TA,Tableau) *t = (·(TA,Tableau) *) tm.tableau;
+        ·(TA,StateParameter) *t = (·(TA,StateParameter) *) tm.state_parameter;
         if( !t->hd ) t->hd = t->position;
       }
 
       Local void ·(TA,dismount)(T tm){
-        ·(TA,Tableau) *t = (·(TA,Tableau) *) tm.tableau;
+        ·(TA,StateParameter) *t = (·(TA,StateParameter) *) tm.state_parameter;
         t->hd = NULL;
       }
 
       Local void ·(TA,step)(T tm){
-        ·(TA,Tableau) *t = (·(TA,Tableau) *) tm.tableau;
+        ·(TA,StateParameter) *t = (·(TA,StateParameter) *) tm.state_parameter;
         t->hd++;
       }
 
       Local void ·(TA,step_left)(T tm){
-        ·(TA,Tableau) *t = (·(TA,Tableau) *) tm.tableau;
+        ·(TA,StateParameter) *t = (·(TA,StateParameter) *) tm.state_parameter;
         t->hd--;
       }
 
       // rewind does nothing if the tape is dismounted
       Local void ·(TA,rewind)(T tm){
-        ·(TA,Tableau) *t = (·(TA,Tableau) *) tm.tableau;
+        ·(TA,StateParameter) *t = (·(TA,StateParameter) *) tm.state_parameter;
         if( ·(TA,dismounted)( tm ) ) return;
         t->hd = t->position;
       }
 
       Local _TM·CVT_ ·(TA,read)(T tm){
-        ·(TA,Tableau) *t = (·(TA,Tableau) *) tm.tableau;
+        ·(TA,StateParameter) *t = (·(TA,StateParameter) *) tm.state_parameter;
         return *t->hd;
       }
 
       Local void ·(TA,write)(T tm ,_TM·CVT_ *remote_pt){
-        ·(TA,Tableau) *t = (·(TA,Tableau) *) tm.tableau;
+        ·(TA,StateParameter) *t = (·(TA,StateParameter) *) tm.state_parameter;
         *t->hd = *remote_pt;
       }
 
@@ -203,7 +204,7 @@
        tm is up casted from being array specific, to being generic. Later it is downcasted within the array code before being used. This can be seen at the top of each of the array specific function. This is the only loss of static type safety, and it is embedded in the library code.
       */
       ·(TM,_TM·CVT_) ·(TA,init_pe)(
-         ·(TA,Tableau) *t
+         ·(TA,StateParameter) *t
         ,_TM·CVT_ *position
         ,TE extent
       ){
@@ -212,7 +213,7 @@
         t->extent   = extent;
 
         T tm = {
-           .tableau = (·(TM,_TM·CVT_,Tableau) *)t
+           .state_parameter = (·(TM,_TM·CVT_,StateParameter) *)t
           ,.pft      = &·(TA,pft)
         };
 
@@ -220,7 +221,7 @@
       }
 
       ·(TM,_TM·CVT_) ·(TA,init_pp)(
-         ·(TA,Tableau) *t
+         ·(TA,StateParameter) *t
         ,_TM·CVT_ *position_left
         ,_TM·CVT_ *position_right
       ){
