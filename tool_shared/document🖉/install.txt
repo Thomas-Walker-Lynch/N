@@ -47,16 +47,16 @@ gcc
     make sure `pragma_macro` project is installed and built. This provides gcc
     to multiple projects, so it is at the top level   ~/pragma_macro.
 
-    gcc_16=/home/Thomas/subu_data/developer/N/tool_shared/customized/gcc_16
 
-    cd $REPO_HOME/tool_shared/customized
-    ln -s /home/Thomas/subu_data/developer/pragma_macro/install $gcc_16
+    RT_gcc_16=/home/Thomas/subu_data/developer/N/tool_shared/customized/RT_gcc_16
 
-    place in bespoke🖉/env:
-      export PATH=$gcc_16:$PATH
-      export LIBRARY_PATH=$gcc_16/lib
-      export C_INCLUDE_PATH=$gcc_16/include
-      export LD_LIBRARY_PATH=$gcc_16/lib
+    ln -s /home/Thomas/subu_data/developer/RT_gcc_16/install $RT_gcc_16
+
+      PATH="$RT_gcc_16":"$PATH"
+      export PATH=$RT_gcc_16:$PATH
+      export LIBRARY_PATH=$RT_gcc_16/lib
+      export C_INCLUDE_PATH=$RT_gcc_16/include
+      export LD_LIBRARY_PATH=$RT_gcc_16/lib
 
 
 

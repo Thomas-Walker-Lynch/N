@@ -32,36 +32,40 @@ shopt -s nullglob
   export REPO_HOME PROJECT PROMPT_DECOR
 
 # --------------------------------------------------------------------------------
-# tool chain
+# RT_gcc_16
+#  note also PATH entry
+
+  export RT_gcc_16=/home/Thomas/subu_data/developer/N/tool_shared/customized/RT_gcc_16
+  export LIBRARY_PATH=$RT_gcc_16/lib
+  export C_INCLUDE_PATH=$RT_gcc_16/include
+  export LD_LIBRARY_PATH=$RT_gcc_16/lib
+
+# --------------------------------------------------------------------------------
+# Other Tool roots
 #
+  export JAVA_HOME="$REPO_HOME/tool_shared/third_party/jdk-23.0.1"
+  export MOSAIC_HOME="$REPO_HOME/tool_shared/third_party/Mosaic"
+
+
+# --------------------------------------------------------------------------------
+# PATH
+#   precedence: last defined, first discovered
+  
   PATH="$REPO_HOME/tool_shared/third_party/RT-project-share/release/bash:$PATH"
   PATH="$REPO_HOME/tool_shared/third_party/RT-project-share/release/amd64:$PATH"
   PATH="$REPO_HOME/tool_shared/third_party/emacs/bin:$PATH"
   PATH="$REPO_HOME/tool_shared/third_party/idea-IC-243.21565.193/bin:$PATH"
   PATH="$REPO_HOME/tool_shared/third_party:$PATH"
-
-  gcc_16=/home/Thomas/subu_data/developer/N/tool_shared/customized/gcc_16
-  PATH="$gcc_16":"$PATH"
-
+  PATH="$RT_gcc_16":"$PATH"
   PATH="$REPO_HOME/tool_shared/customized:$PATH"
   PATH="$REPO_HOME"/tool_shared/bespoke🖉:"$PATH"
 
-  # Remove duplicates and export path
+  # Remove duplicates
   clean_path() {
     PATH=$(echo ":$PATH" | awk -v RS=: -v ORS=: '!seen[$0]++' | sed 's/^://; s/:$//')
   }
   clean_path
   export PATH
-
-  # Toolchain roots
-  export JAVA_HOME="$REPO_HOME/tool_shared/third_party/jdk-23.0.1"
-  export MOSAIC_HOME="$REPO_HOME/tool_shared/third_party/Mosaic"
-
-  // for the customized gcc/cpp
-  export LIBRARY_PATH=$gcc_16/lib
-  export C_INCLUDE_PATH=$gcc_16/include
-  export LD_LIBRARY_PATH=$gcc_16/lib
-
 
 # --------------------------------------------------------------------------------
 # the following functions are provided for other scripts to use.
