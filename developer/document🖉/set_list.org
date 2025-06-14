@@ -1,0 +1,123 @@
+\#+TITLE: Using `#assign` to Construct Sets and Lists in the C Preprocessor
+\#+AUTHOR: Thomas Walker Lynch
+\#+DATE: 2025-05-06
+\#+OPTIONS: toc\:nil num\:nil
+\#+LANGUAGE: en
+
+The `#assign` directive allows the programmer to perform runtime macro redefinitions within the C preprocessor. This facility introduces mutability and symbolic indirection, enabling set and list representations not possible with static `#define`s alone.
+
+* Introduction
+
+Normally, the C preprocessor (`cpp`) operates as a single-pass, immutable macro expander. Once a macro is defined, it cannot be updated or re-bound without manual `#undef` intervention, and even then only in certain contexts. `#assign`, by design, bypasses this constraint.
+
+It enables symbolic mutation. With this, we can simulate associative data structures: sets, lists, cons cells, even environments.
+
+* Representing Sets with `#assign`
+
+In a conventional C macro environment, a set cannot be constructed dynamically because macro definitions are static. However, with `#assign`, we can model a set as a collection of defined macro names.
+
+\*\* Membership Test
+
+To test whether `X` is in a set:
+
+\#+begin\_src c
+\#ifndef \_SET\_\_X
+\#define NOT\_MEMBER
+\#else
+\#define MEMBER
+\#endif
+\#+end\_src
+
+We treat the existence of the macro `_SET__X` as a membership marker.
+
+\*\* Adding to the Set
+
+We can define an element by assigning an empty macro:
+
+\#+begin\_src c
+\#assign (\_SET\_\_X, )
+\#+end\_src
+
+This simulates inserting `X` into the set.
+
+\*\* Properties
+
+* Sets are /existence-based/: their content is inferred by symbol presence, not enumeration.
+* There is /no inherent order/ to the elements.
+* You /cannot enumerate/ the contents of the set without external bookkeeping.
+
+- Representing Lists with `#assign`
+
+Lists can be represented as chained macros where each node is a pair (a cons cell):
+
+\#+begin\_src c
+\#define c0 (a, b)
+\#define c1 (c, d)
+\#assign (SECOND(c0), c1)
+\#define c2 (e, f)
+\#assign (SECOND(c1), c2)
+\#+end\_src
+
+This forms a chain:
+
+\#+begin\_src
+c0 → (a, c1)
+c1 → (c, c2)
+c2 → (e, f)
+\#+end\_src
+
+Each assignment updates the /cdr/ or /tail/ of the previous node.
+
+\*\* Appending to a List
+
+Given a head macro `LIST`, we can append by updating its tail pointer:
+
+\#+begin\_src c
+\#assign (LIST, CAT(LIST, COMMA, NEW\_ELEMENT))
+\#+end\_src
+
+This mutates the list structure dynamically.
+
+\*\* Traversal
+
+Traversal is only possible if a symbolic walk is encoded or if a confederate macro is prepared to test known elements. This is limited and requires foreknowledge of the structure.
+
+* Sideways Lists (Symbol Table Indexed)
+
+An alternative to comma-based lists is to use macro names as nodes — each symbol representing a cons cell.
+
+You define each cons cell:
+
+\#+begin\_src c
+\#assign (\_cons\_a, (A, \_cons\_b))
+\#assign (\_cons\_b, (B, \_cons\_c))
+\#assign (\_cons\_c, (C, NIL))
+\#+end\_src
+
+Now `_cons_a` is the symbolic head. Each macro name points to a `(car, cdr)` pair.
+
+This format mirrors the representation of linked lists in Lisp, and mutation is achieved by re-assigning the `cdr` field via `#assign`.
+
+* Mutability
+
+What makes this all possible is that `#assign` allows redefinition. It effectively simulates mutable variables:
+
+\#+begin\_src c
+\#assign (X, 5)
+\#assign (X, 7)
+\#+end\_src
+
+Later macro expansions of `X` now yield `7`, not `5`. This is unlike `#define`, which would have required an `#undef` first and would have affected macro hygiene.
+
+* Limitations
+
+- No native enumeration of keys in the symbol table.
+- No stack or heap — only symbolic references.
+- No scoped environments unless explicitly constructed via naming schemes.
+- Risk of name collisions.
+
+* Conclusion
+
+The `#assign` directive reimagines the C preprocessor as a mutable symbolic computation engine. It opens the door to implementing symbolic sets, lists, and even cons structures within macro space, turning what is normally a static templating tool into a dynamic environment for structured symbolic logic.
+
+Future extensions could include associative maps, recursive evaluators, or stack machines — all using nothing but macro indirection and symbolic mutation.

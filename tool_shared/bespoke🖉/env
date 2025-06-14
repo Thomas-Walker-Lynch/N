@@ -32,13 +32,13 @@ shopt -s nullglob
   export REPO_HOME PROJECT PROMPT_DECOR
 
 # --------------------------------------------------------------------------------
-# RT_gcc_16
+# RT_gcc
 #  note also PATH entry
 
-  export RT_gcc_16=/home/Thomas/subu_data/developer/N/tool_shared/customized/RT_gcc_16
-  export LIBRARY_PATH=$RT_gcc_16/lib
-  export C_INCLUDE_PATH=$RT_gcc_16/include
-  export LD_LIBRARY_PATH=$RT_gcc_16/lib
+  export RT_gcc=/home/Thomas/subu_data/developer/N/tool_shared/customized/RT_gcc
+  export LIBRARY_PATH=$RT_gcc/lib
+  export C_INCLUDE_PATH=$RT_gcc/include
+  export LD_LIBRARY_PATH=$RT_gcc/lib
 
 # --------------------------------------------------------------------------------
 # Other Tool roots
@@ -56,7 +56,7 @@ shopt -s nullglob
   PATH="$REPO_HOME/tool_shared/third_party/emacs/bin:$PATH"
   PATH="$REPO_HOME/tool_shared/third_party/idea-IC-243.21565.193/bin:$PATH"
   PATH="$REPO_HOME/tool_shared/third_party:$PATH"
-  PATH="$RT_gcc_16":"$PATH"
+  PATH="$RT_gcc"/bin:"$PATH"
   PATH="$REPO_HOME/tool_shared/customized:$PATH"
   PATH="$REPO_HOME"/tool_shared/bespoke🖉:"$PATH"
 

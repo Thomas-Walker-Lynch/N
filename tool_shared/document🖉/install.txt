@@ -48,15 +48,15 @@ gcc
     to multiple projects, so it is at the top level   ~/pragma_macro.
 
 
-    RT_gcc_16=/home/Thomas/subu_data/developer/N/tool_shared/customized/RT_gcc_16
+    RT_gcc=/home/Thomas/subu_data/developer/N/tool_shared/customized/RT_gcc
 
-    ln -s /home/Thomas/subu_data/developer/RT_gcc_16/install $RT_gcc_16
+    ln -s /home/Thomas/subu_data/developer/RT_gcc/toolchain $RT_gcc
 
-      PATH="$RT_gcc_16":"$PATH"
-      export PATH=$RT_gcc_16:$PATH
-      export LIBRARY_PATH=$RT_gcc_16/lib
-      export C_INCLUDE_PATH=$RT_gcc_16/include
-      export LD_LIBRARY_PATH=$RT_gcc_16/lib
+      PATH="$RT_gcc":"$PATH"
+      export PATH=$RT_gcc:$PATH
+      export LIBRARY_PATH=$RT_gcc/lib
+      export C_INCLUDE_PATH=$RT_gcc/include
+      export LD_LIBRARY_PATH=$RT_gcc/lib
 
 
 
